@@ -1,0 +1,32 @@
+{
+  "name": "@miguelpazo/pulumi_aws_utils",
+  "main": "index.ts",
+  "version": "1.0.0",
+  "engines": {
+    "node": ">=22.14.0",
+    "npm": ">=10.9.2"
+  },
+  "scripts": {
+    "build": "tsc"
+  },
+  "keywords": [
+    "typescript",
+    "pulumi",
+    "aws"
+  ],
+  "author": "Miguel Pazo <https://miguelpazo.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.9.1",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "archiver": "^7.0.1",
+    "js-yaml": "^4.1.0"
+  },
+  "peerDependencies": {
+    "@pulumi/aws": "^6.9.0",
+    "@pulumi/awsx": "^2.1.1",
+    "@pulumi/pulumi": "^3.113.0"
+  }
+}
