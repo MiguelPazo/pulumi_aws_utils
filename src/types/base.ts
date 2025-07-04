@@ -4,6 +4,7 @@
 import * as aws from "@pulumi/aws";
 import * as awsx from "@pulumi/awsx";
 import * as pulumi from "@pulumi/pulumi";
+import {EcsServiceResult} from "./ecs";
 
 export type CloudFrontBaseResult = {
     oac: aws.cloudfront.OriginAccessControl;
@@ -33,4 +34,9 @@ export type Route53Result = {
 export type WafResult = {
     wafFrontend: aws.wafv2.WebAcl;
     wafBackend: aws.wafv2.WebAcl;
+};
+
+export type EcsServiceInstanceResult = {
+    oService: pulumi.Output<EcsServiceResult>;
+    securityGroupTask: pulumi.Output<awsx.classic.ec2.SecurityGroup>;
 };

@@ -17,8 +17,8 @@ export type TgConfigHealthcheck = {
     timeout: number;
     interval: number;
     matcher: string;
-    protocol: string;  // e.g., "HTTP", "HTTPS", "TCP"
-    port: number;
+    protocol?: string;  // e.g., "HTTP", "HTTPS", "TCP"
+    port?: number;
 };
 
 export type TgConfig = {

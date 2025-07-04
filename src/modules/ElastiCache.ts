@@ -28,24 +28,24 @@ class ElastiCache {
     async main(
         elastiCacheConfig: ElastiCacheConfig,
         vpc: pulumi.Output<awsx.classic.ec2.Vpc>,
-        securityGroupIngress: any [],
+        subnetIds: pulumi.Output<pulumi.Output<string>[]>,
         phz: pulumi.Output<PhzResult>,
     ): Promise<ElastiCacheResult> {
         /**
          * KMS
          */
-        const kms = new aws.kms.Key(`${this.config.project}-redis-kms`, {
+        const kms = new aws.kms.Key(`${this.config.project}-redis-${elastiCacheConfig.name}-kms`, {
             deletionWindowInDays: 30,
             customerMasterKeySpec: 'SYMMETRIC_DEFAULT',
-            description: `${this.config.generalPrefix}-redis-kms`,
+            description: `${this.config.generalPrefix}-redis-${elastiCacheConfig.name}-kms`,
             tags: {
                 ...this.config.generalTags,
-                Name: `${this.config.generalPrefix}-redis-kms`
+                Name: `${this.config.generalPrefix}-redis-${elastiCacheConfig.name}-kms`
             }
         });
 
-        new aws.kms.Alias(`${this.config.project}-redis-kms-alias`, {
-            name: `alias/${this.config.generalPrefix}-redis-kms`,
+        new aws.kms.Alias(`${this.config.project}-redis-${elastiCacheConfig.name}-kms-alias`, {
+            name: `alias/${this.config.generalPrefix}-redis-${elastiCacheConfig.name}-kms`,
             targetKeyId: kms.keyId
         });
 
@@ -53,13 +53,12 @@ class ElastiCache {
          * SG
          */
         const securityGroup = vpc.apply(x => {
-            return new awsx.classic.ec2.SecurityGroup(`${this.config.project}-redis-sg`, {
-                description: `${this.config.generalPrefix}-redis-sg`,
+            return new awsx.classic.ec2.SecurityGroup(`${this.config.project}-redis-${elastiCacheConfig.name}-sg`, {
+                description: `${this.config.generalPrefix}-redis-${elastiCacheConfig.name}-sg`,
                 vpc: x,
-                ingress: securityGroupIngress,
                 tags: {
                     ...this.config.generalTags,
-                    Name: `${this.config.generalPrefix}-redis-sg`,
+                    Name: `${this.config.generalPrefix}-redis-${elastiCacheConfig.name}-sg`,
                 },
             });
         });
@@ -67,17 +66,29 @@ class ElastiCache {
         /**
          * Database
          */
-        const subnetGroup = new aws.elasticache.SubnetGroup(`${this.config.project}-redis-subgrup`, {
-            name: `${this.config.generalPrefix}-redis-subgrup`,
-            subnetIds: vpc.isolatedSubnetIds,
+        const subnetGroup = new aws.elasticache.SubnetGroup(`${this.config.project}-redis-${elastiCacheConfig.name}-subgrup`, {
+            name: `${this.config.generalPrefix}-redis-${elastiCacheConfig.name}-subgrup`,
+            subnetIds: subnetIds,
             tags: {
                 ...this.config.generalTags,
-                Name: `${this.config.generalPrefix}-redis-subgrup`,
+                Name: `${this.config.generalPrefix}-redis-${elastiCacheConfig.name}-subgrup`,
             }
         });
 
-        const cluster = new aws.elasticache.ReplicationGroup(`${this.config.project}-redis-cluster`, {
-            description: `${this.config.generalPrefix}-redis-cluster`,
+        const parameterGroup = new aws.elasticache.ParameterGroup(`${this.config.project}-redis-${elastiCacheConfig.name}-paramgroup`, {
+            name: `${this.config.generalPrefix}-redis-${elastiCacheConfig.name}-paramgroup`,
+            description: `${this.config.generalPrefix}-redis-${elastiCacheConfig.name}-paramgroup`,
+            family: elastiCacheConfig.parameterGroupFamily,
+            parameters: elastiCacheConfig.parameterGroupValues,
+            tags: {
+                ...this.config.generalTags,
+                Name: `${this.config.generalPrefix}-redis-${elastiCacheConfig.name}-paramgroup`,
+            }
+        });
+
+        const cluster = new aws.elasticache.ReplicationGroup(`${this.config.project}-redis-${elastiCacheConfig.name}-cluster`, {
+            replicationGroupId: `${this.config.generalPrefix}-redis-${elastiCacheConfig.name}-cluster`,
+            description: `${this.config.generalPrefix}-redis-${elastiCacheConfig.name}-cluster`,
             engine: "redis",
             engineVersion: elastiCacheConfig.engineVersion,
             kmsKeyId: kms.arn,
@@ -87,33 +98,33 @@ class ElastiCache {
             replicasPerNodeGroup: elastiCacheConfig.replicasPerNodeGroup,
             snapshotRetentionLimit: elastiCacheConfig.snapshotRetentionLimit,
             subnetGroupName: subnetGroup.name,
-            parameterGroupName: elastiCacheConfig.parameterGroupName,
+            parameterGroupName: parameterGroup.name,
             securityGroupIds: [securityGroup.securityGroup.id],
             port: elastiCacheConfig.port,
             automaticFailoverEnabled: elastiCacheConfig.automaticFailoverEnabled,
             tags: {
                 ...this.config.generalTags,
-                Name: `${this.config.generalPrefix}-redis-cluster`,
+                Name: `${this.config.generalPrefix}-redis-${elastiCacheConfig.name}-cluster`,
             }
         });
 
         /**
          * DNS
          */
-        new aws.route53.Record(`${this.config.project}-redis-reader-dns`, {
+        new aws.route53.Record(`${this.config.project}-redis-${elastiCacheConfig.name}-reader-dns`, {
             name: elastiCacheConfig.domainRdsReader,
             type: "CNAME",
             zoneId: phz.zone.zoneId,
             ttl: 300,
-            records: [cluster.primaryEndpointAddress],
+            records: [cluster.readerEndpointAddress],
         });
 
-        new aws.route53.Record(`${this.config.project}-redis-writer-dns`, {
+        new aws.route53.Record(`${this.config.project}-redis-${elastiCacheConfig.name}-writer-dns`, {
             name: elastiCacheConfig.domainRdsWriter,
             type: "CNAME",
             zoneId: phz.zone.zoneId,
             ttl: 300,
-            records: [cluster.readerEndpointAddress],
+            records: [cluster.primaryEndpointAddress],
         });
 
         return {

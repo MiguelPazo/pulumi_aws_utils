@@ -56,7 +56,7 @@ class CloudFrontFrontend {
                 compress: true,
                 responseHeadersPolicyId: cfbase.hpFrontend.id,
                 cachePolicyId: cfbase.cpFrontend.id,
-                originRequestPolicyId: this.config.cfOriginPolicyCorsS3
+                originRequestPolicyId: "88a5eaf4-2fd4-4709-b370-b4c650ea3fcf"
             },
 
             customErrorResponses: [

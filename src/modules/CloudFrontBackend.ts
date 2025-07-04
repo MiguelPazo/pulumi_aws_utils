@@ -3,7 +3,7 @@
  */
 import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
-import {CertificatesResult, CloudFrontBaseResult} from "../types/base";
+import {CertificatesResult, CloudFrontBaseResult} from "../types";
 import {UtilsInfra} from "../common/UtilsInfra";
 import {getInit} from "../config";
 import {InitConfig} from "../types/module";
@@ -27,7 +27,10 @@ class CloudFrontBackend {
     async main(
         name: string,
         aliasDns: string,
-        apigwDns: string,
+        vpcOriginId: pulumi.Output<string>,
+        vpcOriginDns: pulumi.Output<string>,
+        vpcOriginPath: string,
+        apigwId: pulumi.Output<string>,
         cfbase: pulumi.Output<CloudFrontBaseResult>,
         s3Logs: pulumi.Output<aws.s3.Bucket>,
         certificate: CertificatesResult,
@@ -43,15 +46,13 @@ class CloudFrontBackend {
             origins: [
                 {
                     originId: name,
-                    domainName: apigwDns,
-                    customOriginConfig: {
-                        httpPort: 80,
-                        httpsPort: 443,
-                        originProtocolPolicy: "https-only",
-                        originSslProtocols: ["TLSv1.2"]
+                    domainName: vpcOriginDns,
+                    originPath: vpcOriginPath,
+                    vpcOriginConfig: {
+                        vpcOriginId: vpcOriginId
                     },
                     customHeaders: [
-                        {name: "x-api-key", value: ""}
+                        {name: "x-apigw-api-id", value: apigwId}
                     ]
                 }
             ],
@@ -63,15 +64,8 @@ class CloudFrontBackend {
                 cachedMethods: ["GET", "HEAD", "OPTIONS"],
                 compress: true,
                 responseHeadersPolicyId: cfbase.hpBackend.id,
-                minTtl: this.config.cfCachePolicyBackendMin,
-                defaultTtl: this.config.cfCachePolicyBackendDefault,
-                maxTtl: this.config.cfCachePolicyBackendMax,
-                forwardedValues: {
-                    queryString: false,
-                    cookies: {
-                        forward: "none"
-                    }
-                }
+                cachePolicyId: "4135ea2d-6df8-44a3-9df3-4b5a84be39ad",
+                originRequestPolicyId: "216adef6-5c7f-47e4-b989-5492eafa07d3"
             },
 
             customErrorResponses: [

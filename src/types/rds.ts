@@ -6,18 +6,20 @@ import * as pulumi from "@pulumi/pulumi";
 import * as aws from "@pulumi/aws";
 
 export type RdsConfig = {
+    name: string;
     allocatedStorage: number;
     engine: string;
     engineVersion: string;
     instanceClass: string;
-    dbName: string;
     port: number;
     username: string;
     password: string;
+    parameterGroupFamily: string;
+    parameterGroupValues: { name: string; value: string; }[];
     skipFinalSnapshot: boolean;
     publiclyAccessible: boolean;
-    domainRdsReader: string;
-    domainRdsWriter: string;
+    domainRdsReader?: string;
+    domainRdsWriter?: string;
 };
 
 export type RdsResult = {

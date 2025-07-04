@@ -20,10 +20,21 @@ export type ALBHealthCheck = {
 };
 
 export type ALBConfig = {
-    port: number;
-    protocol: string;
-    targetType: "ip" | "instance";
-    healthCheck: ALBHealthCheck;
+    lstPort: number;
+    lstProtocol: string;
+    tgProtocol: string;
+    tgPort: number;
+    tgTargetType: "ip" | "instance";
+    tgHealthCheck: ALBHealthCheck;
+};
+
+export type NLBConfig = {
+    lstPort: number;
+    lstProtocol: string;
+    tgProtocol: string;
+    tgPort: number;
+    tgTargetType: string;
+    tgHealthCheck: ALBHealthCheck;
 };
 
 export type EcsServiceConfig = {
@@ -45,7 +56,8 @@ export type EcsServiceConfig = {
     enableExecuteCommand: boolean;
     healthCheckGracePeriodSeconds: number;
     containerHealthCheckUrl: string;
-    alb: ALBConfig;
+    nlb?: NLBConfig;
+    alb?: ALBConfig;
 };
 
 export type EcsServiceResult = {

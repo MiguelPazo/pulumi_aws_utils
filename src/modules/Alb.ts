@@ -5,8 +5,7 @@ import * as awsx from "@pulumi/awsx";
 import {UtilsInfra} from "../common/UtilsInfra";
 import * as pulumi from "@pulumi/pulumi";
 import * as aws from "@pulumi/aws";
-import {CertificatesResult, PhzResult} from "../types/base";
-import {AlbResult} from "../types/alb";
+import {AlbResult, CertificatesResult, PhzResult} from "../types";
 import {getInit} from "../config";
 import {InitConfig} from "../types/module";
 
@@ -29,17 +28,19 @@ class Alb {
     async main(
         name: string,
         vpc: pulumi.Output<awsx.classic.ec2.Vpc>,
-        domain?: string,
-        phz?: pulumi.Output<PhzResult>,
+        certificate?: CertificatesResult,
         s3Logs?: pulumi.Output<aws.s3.Bucket>,
         enableDeletionProtection?: boolean,
+        domain?: string,
+        phz?: pulumi.Output<PhzResult>,
         createDefaultListener?: boolean,
         external?: boolean,
-        certificate?: CertificatesResult,
+        createRoute53Record?: boolean,
     ): Promise<AlbResult> {
         createDefaultListener = createDefaultListener == undefined ? false : createDefaultListener;
         external = external == undefined ? false : external;
         enableDeletionProtection = enableDeletionProtection == undefined ? true : enableDeletionProtection;
+        createRoute53Record = createRoute53Record == undefined ? true : createRoute53Record;
 
         const securityGroup = vpc.apply(x => {
             return new awsx.classic.ec2.SecurityGroup(`${this.config.project}-${name}-alb-sg`, {
@@ -96,7 +97,7 @@ class Alb {
                 }],
             });
 
-            if (external) {
+            if (external || certificate) {
                 new aws.lb.Listener(`${this.config.project}-${name}-alb-default-https`, {
                     loadBalancerArn: alb.loadBalancer.arn,
                     port: 443,
@@ -134,16 +135,18 @@ class Alb {
         /**
          * Route53
          */
-        if (external) {
-            pulumi.output(alb.loadBalancer).apply(x => {
-                UtilsInfra.createAliasRecord(certificate, x.dnsName, x.zoneId, true);
-            })
-        } else {
-            pulumi.all([phz.zone.zoneId, alb.loadBalancer]).apply(([zoneID, loadBalancer]) => {
-                pulumi.all([loadBalancer.dnsName, loadBalancer.zoneId]).apply(x => {
-                    UtilsInfra.createAliasRecordDirect(domain, zoneID, x[0], x[1], true);
+        if (createRoute53Record) {
+            if (external || certificate) {
+                pulumi.output(alb.loadBalancer).apply(x => {
+                    UtilsInfra.createAliasRecord(certificate, x.dnsName, x.zoneId, true);
                 })
-            });
+            } else {
+                pulumi.all([phz.zone.zoneId, alb.loadBalancer]).apply(([zoneID, loadBalancer]) => {
+                    pulumi.all([loadBalancer.dnsName, loadBalancer.zoneId]).apply(x => {
+                        UtilsInfra.createAliasRecordDirect(domain, zoneID, x[0], x[1], true);
+                    })
+                });
+            }
         }
 
         return {

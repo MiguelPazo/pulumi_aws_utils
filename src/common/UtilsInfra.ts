@@ -22,9 +22,12 @@ class UtilsInfra {
         zoneId: string,
         targetDnsName: string,
         targetZoneId: string,
-        evaluateTargetHealth?: boolean
+        evaluateTargetHealth?: boolean,
+        isAlias?: boolean,
+        targetIps?: string[],
     ): void {
-        evaluateTargetHealth = evaluateTargetHealth !== false;
+        evaluateTargetHealth = evaluateTargetHealth == undefined ? true : evaluateTargetHealth;
+        isAlias = isAlias == undefined ? true : isAlias;
 
         new aws.route53.Record(
             `${domain}-alb-record`,
@@ -32,13 +35,15 @@ class UtilsInfra {
                 name: `${domain}.`,
                 zoneId: zoneId,
                 type: aws.route53.RecordTypes.A,
-                aliases: [
+                aliases: isAlias ? [
                     {
                         name: targetDnsName,
                         zoneId: targetZoneId,
                         evaluateTargetHealth: evaluateTargetHealth
                     },
-                ],
+                ] : undefined,
+                records: !isAlias ? targetIps : undefined,
+                ttl: !isAlias ? 300 : undefined
             });
     }
 

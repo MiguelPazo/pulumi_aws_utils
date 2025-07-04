@@ -6,8 +6,7 @@ import * as pulumi from "@pulumi/pulumi";
 import {getInit} from "../config";
 import * as awsx from "@pulumi/awsx";
 import {InitConfig} from "../types/module";
-import {PhzResult} from "../types";
-import {RdsConfig, RdsResult} from "../types/rds";
+import {PhzResult, RdsConfig, RdsResult} from "../types";
 
 class Rds {
     private static __instance: Rds;
@@ -28,13 +27,14 @@ class Rds {
     async main(
         rdsConfig: RdsConfig,
         vpc: pulumi.Output<awsx.classic.ec2.Vpc>,
+        subnetIds: pulumi.Output<pulumi.Output<string>[]>,
         phz: pulumi.Output<PhzResult>,
     ): Promise<RdsResult> {
         /**
          * KMS
          */
-        const kms = new aws.kms.Key(`${this.config.project}-rds-${rdsConfig.engine}-kms`, {
-            description: `${this.config.generalPrefix}-rds-${rdsConfig.engine}-kms`,
+        const kms = new aws.kms.Key(`${this.config.project}-rds-${rdsConfig.engine}-${rdsConfig.name}-kms`, {
+            description: `${this.config.generalPrefix}-rds-${rdsConfig.engine}-${rdsConfig.name}-kms`,
             deletionWindowInDays: 30,
             customerMasterKeySpec: 'SYMMETRIC_DEFAULT',
             enableKeyRotation: true,
@@ -71,12 +71,12 @@ class Rds {
             }),
             tags: {
                 ...this.config.generalTags,
-                Name: `${this.config.generalPrefix}-rds-${rdsConfig.engine}-kms`
+                Name: `${this.config.generalPrefix}-rds-${rdsConfig.engine}-${rdsConfig.name}-kms`
             }
         });
 
-        new aws.kms.Alias(`${this.config.project}-rds-${rdsConfig.engine}-kms-alias`, {
-            name: `alias/${this.config.generalPrefix}-rds-${rdsConfig.engine}-kms`,
+        new aws.kms.Alias(`${this.config.project}-rds-${rdsConfig.engine}-${rdsConfig.name}-kms-alias`, {
+            name: `alias/${this.config.generalPrefix}-rds-${rdsConfig.engine}-${rdsConfig.name}-kms`,
             targetKeyId: kms.keyId
         });
 
@@ -84,12 +84,12 @@ class Rds {
          * SG
          */
         const securityGroup = vpc.apply(x => {
-            return new awsx.classic.ec2.SecurityGroup(`${this.config.project}-rds-${rdsConfig.engine}-sg`, {
-                description: `${this.config.generalPrefix}-rds-${rdsConfig.engine}-sg`,
+            return new awsx.classic.ec2.SecurityGroup(`${this.config.project}-rds-${rdsConfig.engine}-${rdsConfig.name}-sg`, {
+                description: `${this.config.generalPrefix}-rds-${rdsConfig.engine}-${rdsConfig.name}-sg`,
                 vpc: x,
                 tags: {
                     ...this.config.generalTags,
-                    Name: `${this.config.generalPrefix}-rds-${rdsConfig.engine}-sg`,
+                    Name: `${this.config.generalPrefix}-rds-${rdsConfig.engine}-${rdsConfig.name}-sg`,
                 },
             });
         });
@@ -97,27 +97,39 @@ class Rds {
         /**
          * Database
          */
-        const subnetGroup = new aws.rds.SubnetGroup(`${this.config.project}-rds-${rdsConfig.engine}-subgrup`, {
-            name: `${this.config.generalPrefix}-rds-${rdsConfig.engine}-subgrup`,
-            subnetIds: vpc.isolatedSubnetIds,
+        const subnetGroup = new aws.rds.SubnetGroup(`${this.config.project}-rds-${rdsConfig.engine}-${rdsConfig.name}-subgrup`, {
+            name: `${this.config.generalPrefix}-rds-${rdsConfig.engine}-${rdsConfig.name}-subgrup`,
+            subnetIds: subnetIds,
             tags: {
                 ...this.config.generalTags,
-                Name: `${this.config.generalPrefix}-rds-${rdsConfig.engine}-subgrup`,
+                Name: `${this.config.generalPrefix}-rds-${rdsConfig.engine}-${rdsConfig.name}-subgrup`,
             }
         });
 
-        const instance = new aws.rds.Instance(`${this.config.project}-rds-${rdsConfig.engine}`, {
+        const paramGroup = new aws.rds.ParameterGroup(`${this.config.project}-rds-${rdsConfig.engine}-${rdsConfig.name}-paramgroup`, {
+            name: `${this.config.generalPrefix}-rds-${rdsConfig.engine}-${rdsConfig.name}-paramgroup`,
+            description: `${this.config.generalPrefix}-rds-${rdsConfig.engine}-${rdsConfig.name}-paramgroup`,
+            family: rdsConfig.parameterGroupFamily,
+            parameters: rdsConfig.parameterGroupValues,
+            tags: {
+                ...this.config.generalTags,
+                Name: `${this.config.generalPrefix}-rds-${rdsConfig.engine}-${rdsConfig.name}-paramgroup`,
+            }
+        });
+
+        const instance = new aws.rds.Instance(`${this.config.project}-rds-${rdsConfig.engine}-${rdsConfig.name}`, {
+            identifier: `${this.config.generalPrefix}-rds-${rdsConfig.engine}-${rdsConfig.name}`,
             allocatedStorage: 20,
             engine: rdsConfig.engine,
             engineVersion: rdsConfig.engineVersion,
             instanceClass: rdsConfig.instanceClass,
             kmsKeyId: kms.arn,
             storageEncrypted: true,
-            dbName: rdsConfig.dbName,
             port: rdsConfig.port,
             username: rdsConfig.username,
             password: rdsConfig.password,
             dbSubnetGroupName: subnetGroup.name,
+            parameterGroupName: paramGroup.name,
             vpcSecurityGroupIds: [securityGroup.securityGroup.id],
             skipFinalSnapshot: rdsConfig.skipFinalSnapshot,
             publiclyAccessible: rdsConfig.publiclyAccessible
@@ -126,25 +138,27 @@ class Rds {
         /**
          * DNS
          */
-        instance.endpoint.apply(x => {
-            x = x.split(":")[0];
+        if (rdsConfig.domainRdsReader && rdsConfig.domainRdsWriter) {
+            instance.endpoint.apply(x => {
+                x = x.split(":")[0];
 
-            new aws.route53.Record(`${this.config.project}-rds-${rdsConfig.engine}-reader-dns`, {
-                name: rdsConfig.domainRdsReader,
-                type: "CNAME",
-                zoneId: phz.zone.zoneId,
-                ttl: 300,
-                records: [x],
-            });
+                new aws.route53.Record(`${this.config.project}-rds-${rdsConfig.engine}-${rdsConfig.name}-reader-dns`, {
+                    name: rdsConfig.domainRdsReader,
+                    type: "CNAME",
+                    zoneId: phz.zone.zoneId,
+                    ttl: 300,
+                    records: [x],
+                });
 
-            new aws.route53.Record(`${this.config.project}-rds-${rdsConfig.engine}-writer-dns`, {
-                name: rdsConfig.domainRdsWriter,
-                type: "CNAME",
-                zoneId: phz.zone.zoneId,
-                ttl: 300,
-                records: [x],
+                new aws.route53.Record(`${this.config.project}-rds-${rdsConfig.engine}-${rdsConfig.name}-writer-dns`, {
+                    name: rdsConfig.domainRdsWriter,
+                    type: "CNAME",
+                    zoneId: phz.zone.zoneId,
+                    ttl: 300,
+                    records: [x],
+                });
             });
-        });
+        }
 
         return {
             instance,

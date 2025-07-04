@@ -6,13 +6,15 @@ import * as pulumi from "@pulumi/pulumi";
 import * as awsx from "@pulumi/awsx";
 
 export type ElastiCacheConfig = {
+    name: string;
     allocatedStorage: number;
     engineVersion: string;
     nodeType: string;
     numNodeGroups: number;
     replicasPerNodeGroup: number;
     snapshotRetentionLimit: number;
-    parameterGroupName: string;
+    parameterGroupFamily: string;
+    parameterGroupValues: { name: string; value: string; }[];
     port: number;
     automaticFailoverEnabled: boolean;
     domainRdsReader: string;

@@ -22,8 +22,11 @@ import {EcsService} from './src/modules/EcsService';
 import {ElastiCache} from './src/modules/ElastiCache';
 import {Rds} from './src/modules/Rds';
 import {S3} from './src/modules/S3';
+import {ApiGatewayVpcLink} from './src/modules/ApiGatewayVpcLink';
 import {init} from './src/config';
 import {LambdaRole} from "./src/modules/LambdaRole";
+import {NlbListener} from "./src/modules/NlbListener";
+import {Ses} from "./src/modules/Ses";
 
 export const AwsUtilsInit = {
     init
@@ -46,7 +49,10 @@ export const AwsUtilsModules = {
     ElastiCache,
     LambdaRole,
     Rds,
-    S3
+    S3,
+    ApiGatewayVpcLink,
+    NlbListener,
+    Ses
 };
 
 export * from './src/types';

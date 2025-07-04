@@ -151,10 +151,10 @@ class EcsService {
                                 "awslogs-multiline-pattern": "\\d{2}:\\d{2}:\\d{2}\\.\\d{3}"
                             }
                         },
-                        healthCheck: service.containerHealthCheckUrl ? {
-                            retries: service.alb.healthCheck.unhealthyThreshold,
-                            timeout: service.alb.healthCheck.timeout,
-                            interval: service.alb.healthCheck.interval,
+                        healthCheck: (service.containerHealthCheckUrl && service.alb != undefined) ? {
+                            retries: service.alb.tgHealthCheck.unhealthyThreshold,
+                            timeout: service.alb.tgHealthCheck.timeout,
+                            interval: service.alb.tgHealthCheck.interval,
                             startPeriod: service.healthCheckGracePeriodSeconds,
                             command: [
                                 "CMD-SHELL",
@@ -174,7 +174,14 @@ class EcsService {
                     }
                 ])
             })
-        }, {dependsOn: [logGroup]});
+        }, {
+            dependsOn: [logGroup],
+            ignoreChanges: [
+                "cpu",
+                "memory",
+                "containerDefinitions"
+            ]
+        });
 
         /**
          * ECS Service
@@ -187,8 +194,7 @@ class EcsService {
                 deploymentMinimumHealthyPercent: service.deploymentMinimumHealthyPercent,
                 deploymentMaximumPercent: service.deploymentMaximumPercent,
                 enableExecuteCommand: service.enableExecuteCommand,
-                healthCheckGracePeriodSeconds: targetGroup ? service.healthCheckGracePeriodSeconds : null,
-                // healthCheckGracePeriodSeconds: targetGroup ? service.healthCheckGracePeriodSeconds : undefined,
+                healthCheckGracePeriodSeconds: targetGroup ? service.healthCheckGracePeriodSeconds : undefined,
                 propagateTags: "SERVICE",
                 availabilityZoneRebalancing: "ENABLED",
                 deploymentCircuitBreaker: {

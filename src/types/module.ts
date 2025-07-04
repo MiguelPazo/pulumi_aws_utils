@@ -11,11 +11,6 @@ export type InitConfig = {
     generalPrefixShort: string;
     generalTags: {};
     region: aws.Region;
-    albSslPolicyDefault: string;
+    albSslPolicyDefault?: string;
     cloudwatchRetentionLogs: number;
-    apigwLogLevel: string;
-    cfCachePolicyBackendMin: number;
-    cfCachePolicyBackendDefault: number;
-    cfCachePolicyBackendMax: number;
-    cfOriginPolicyCorsS3: string
 }
