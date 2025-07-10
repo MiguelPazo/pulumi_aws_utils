@@ -60,7 +60,7 @@ class CloudFrontBackend {
             defaultCacheBehavior: {
                 targetOriginId: name,
                 viewerProtocolPolicy: "redirect-to-https",
-                allowedMethods: ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"],
+                allowedMethods: ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT", "DELETE"],
                 cachedMethods: ["GET", "HEAD", "OPTIONS"],
                 compress: true,
                 responseHeadersPolicyId: cfbase.hpBackend.id,
