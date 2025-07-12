@@ -177,6 +177,7 @@ class S3 {
         }
 
         if (enableCors) {
+            console.log(`Enabling CORS for ${name}`);
             new aws.s3.BucketCorsConfigurationV2(`${this.config.project}-${name}-bucket-cors`, {
                 bucket: bucket.id,
                 corsRules: [

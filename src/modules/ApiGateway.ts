@@ -35,8 +35,10 @@ class ApiGateway {
         enableLogs?: boolean,
         enableXRay?: boolean,
         privateVpcEndpointIds?: pulumi.Output<string>[],
+        ignoreOpenApiChanges?: boolean,
     ): Promise<aws.apigateway.RestApi> {
         logLevel = logLevel == undefined ? "INFO" : logLevel;
+        ignoreOpenApiChanges = ignoreOpenApiChanges == undefined ? false : ignoreOpenApiChanges;
         const openApiSpec = yaml.load(template);
 
         /**
@@ -78,6 +80,8 @@ class ApiGateway {
                 ...this.config.generalTags,
                 Name: `${this.config.generalPrefix}-${name}-apirest`,
             }
+        }, {
+            ignoreChanges: ignoreOpenApiChanges ? ["body"] : undefined
         });
 
         const redeploymentHash = pulumi.all([api.body]).apply(([body]) => {
@@ -87,7 +91,7 @@ class ApiGateway {
 
         const deployment = new aws.apigateway.Deployment(`${this.config.project}-${name}-apirest-deployment`, {
             restApi: api.id,
-            triggers: {
+            triggers: ignoreOpenApiChanges ? undefined : {
                 redeployment: redeploymentHash,
             },
         });
