@@ -11,6 +11,7 @@ export type InitConfig = {
     generalPrefixShort: string;
     generalTags: {};
     region: aws.Region;
+    providerVirginia: aws.Provider;
     albSslPolicyDefault?: string;
     cloudwatchRetentionLogs: number;
 }

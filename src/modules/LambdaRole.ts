@@ -28,6 +28,7 @@ class LambdaRole {
         lambda: LambdaConfig,
         policyFilePath?: string,
         policy?: string,
+        isEdge?: boolean
     ): Promise<aws.iam.Role> {
         /**
          * Policy
@@ -65,7 +66,7 @@ class LambdaRole {
                     {
                         Effect: "Allow",
                         Principal: {
-                            Service: "lambda.amazonaws.com"
+                            Service: isEdge ? ["edgelambda.amazonaws.com", "lambda.amazonaws.com"] : "lambda.amazonaws.com"
                         },
                         Action: "sts:AssumeRole"
                     }
