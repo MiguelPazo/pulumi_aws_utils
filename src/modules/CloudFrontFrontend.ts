@@ -30,7 +30,8 @@ class CloudFrontFrontend {
         cfbase: pulumi.Output<CloudFrontBaseResult>,
         s3Logs: pulumi.Output<aws.s3.Bucket>,
         certificate: CertificatesResult,
-        waf: pulumi.Output<aws.wafv2.WebAcl>
+        waf: pulumi.Output<aws.wafv2.WebAcl>,
+        customErrorResponses?: aws.types.input.cloudfront.DistributionCustomErrorResponse[]
     ): Promise<aws.cloudfront.Distribution> {
         const cdn = new aws.cloudfront.Distribution(`${this.config.project}-${name}-cf`, {
             enabled: true,
@@ -59,7 +60,7 @@ class CloudFrontFrontend {
                 originRequestPolicyId: "88a5eaf4-2fd4-4709-b370-b4c650ea3fcf"
             },
 
-            customErrorResponses: [
+            customErrorResponses: customErrorResponses ?? [
                 {errorCode: 404, responseCode: 404, responsePagePath: "/errors/404.html"},
                 {errorCode: 503, responseCode: 503, responsePagePath: "/errors/503.html"},
                 {errorCode: 500, responseCode: 500, responsePagePath: "/errors/500.html"},
