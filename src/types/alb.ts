@@ -1,12 +1,12 @@
 /**
  * Created by Miguel Pazo (https://miguelpazo.com)
  */
-import * as awsx from "@pulumi/awsx";
-import * as pulumi from "@pulumi/pulumi";
 import * as aws from "@pulumi/aws";
+import * as pulumi from "@pulumi/pulumi";
+import * as awsx from "@pulumi/awsx";
 
 export type AlbResult = {
-    alb: pulumi.Output<awsx.classic.lb.ApplicationLoadBalancer>;
+    alb: aws.lb.LoadBalancer;
     securityGroup: aws.ec2.SecurityGroup;
     vpc: pulumi.Output<awsx.classic.ec2.Vpc>;
 };

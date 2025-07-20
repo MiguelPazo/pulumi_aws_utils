@@ -26,7 +26,7 @@ class ApiGatewayVpcLink {
 
     async main(
         name: string,
-        vpc: pulumi.Output<awsx.classic.ec2.Vpc>
+        vpc: pulumi.Output<awsx.classic.ec2.Vpc>,
     ): Promise<ApiGatewayVpcLinkResult> {
         const securityGroup = new aws.ec2.SecurityGroup(`${this.config.project}-${name}-apigw-nlb-sg`, {
             name: `${this.config.generalPrefixShort}-${name}-apigw-nlb-sg`,
@@ -48,8 +48,9 @@ class ApiGatewayVpcLink {
 
         const nlb = new aws.lb.LoadBalancer(`${this.config.project}-${name}-apigw-nlb`, {
             name: `${this.config.generalPrefix}-${name}-apigw-nlb`,
+            enableDeletionProtection: this.config.deleteProtection,
             internal: true,
-            loadBalancerType: "network",
+            loadBalancerType: aws.alb.LoadBalancerType.Network,
             enableCrossZoneLoadBalancing: true,
             subnets: vpc.privateSubnetIds,
             securityGroups: [securityGroup.id],

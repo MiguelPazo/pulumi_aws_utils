@@ -14,4 +14,5 @@ export type InitConfig = {
     providerVirginia: aws.Provider;
     albSslPolicyDefault?: string;
     cloudwatchRetentionLogs: number;
+    deleteProtection: boolean;
 }

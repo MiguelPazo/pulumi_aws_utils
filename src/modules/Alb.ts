@@ -30,16 +30,14 @@ class Alb {
         vpc: pulumi.Output<awsx.classic.ec2.Vpc>,
         certificate?: CertificatesResult,
         s3Logs?: pulumi.Output<aws.s3.Bucket>,
-        enableDeletionProtection?: boolean,
+        internal?: boolean,
         domain?: string,
+        createRoute53Record?: boolean,
         phz?: pulumi.Output<PhzResult>,
         createDefaultListener?: boolean,
-        external?: boolean,
-        createRoute53Record?: boolean,
     ): Promise<AlbResult> {
         createDefaultListener = createDefaultListener == undefined ? false : createDefaultListener;
-        external = external == undefined ? false : external;
-        enableDeletionProtection = enableDeletionProtection == undefined ? true : enableDeletionProtection;
+        internal = internal == undefined ? true : internal;
         createRoute53Record = createRoute53Record == undefined ? true : createRoute53Record;
 
         const securityGroup = new aws.ec2.SecurityGroup(`${this.config.project}-${name}-alb-sg`, {
@@ -60,31 +58,31 @@ class Alb {
             cidrIpv4: "0.0.0.0/0"
         });
 
-        const alb = vpc.apply(x => {
-            return new awsx.classic.lb.ApplicationLoadBalancer(`${this.config.project}-${name}-alb`, {
-                name: `${this.config.generalPrefixShort}-${name}-alb`,
-                enableDeletionProtection: enableDeletionProtection,
-                vpc: x,
-                external: external,
-                securityGroups: [securityGroup.id],
-                accessLogs: s3Logs ? {
-                    enabled: true,
-                    bucket: s3Logs.bucket,
-                    prefix: `${this.config.generalPrefixShort}-${name}-alb`
-                } : undefined,
-                tags: {
-                    ...this.config.generalTags,
-                    Name: `${this.config.generalPrefixShort}-${name}-alb`
-                }
-            });
-        })
+        const alb = new aws.lb.LoadBalancer(`${this.config.project}-${name}-alb`, {
+            name: `${this.config.generalPrefixShort}-${name}-alb`,
+            enableDeletionProtection: this.config.deleteProtection,
+            internal: internal,
+            loadBalancerType: aws.alb.LoadBalancerType.Application,
+            enableCrossZoneLoadBalancing: true,
+            subnets: vpc.privateSubnetIds,
+            securityGroups: [securityGroup.id],
+            accessLogs: s3Logs ? {
+                enabled: true,
+                bucket: s3Logs.bucket,
+                prefix: `${this.config.generalPrefixShort}-${name}-alb`
+            } : undefined,
+            tags: {
+                ...this.config.generalTags,
+                Name: `${this.config.generalPrefixShort}-${name}-alb`
+            }
+        });
 
         /**
          * Default Listener
          */
         if (createDefaultListener) {
             new aws.lb.Listener(`${this.config.project}-${name}-alb-default-http`, {
-                loadBalancerArn: alb.loadBalancer.arn,
+                loadBalancerArn: alb.arn,
                 port: 80,
                 protocol: "HTTP",
                 defaultActions: [{
@@ -97,9 +95,9 @@ class Alb {
                 }],
             });
 
-            if (external || certificate) {
+            if (internal || certificate) {
                 new aws.lb.Listener(`${this.config.project}-${name}-alb-default-https`, {
-                    loadBalancerArn: alb.loadBalancer.arn,
+                    loadBalancerArn: alb.arn,
                     port: 443,
                     protocol: "HTTPS",
                     sslPolicy: this.config.albSslPolicyDefault,
@@ -115,7 +113,7 @@ class Alb {
                 });
             } else {
                 new aws.lb.Listener(`${this.config.project}-${name}-alb-default-https`, {
-                    loadBalancerArn: alb.loadBalancer.arn,
+                    loadBalancerArn: alb.arn,
                     port: 443,
                     protocol: "HTTPS",
                     sslPolicy: this.config.albSslPolicyDefault,
@@ -136,15 +134,11 @@ class Alb {
          * Route53
          */
         if (createRoute53Record) {
-            if (external || certificate) {
-                pulumi.output(alb.loadBalancer).apply(x => {
-                    UtilsInfra.createAliasRecord(certificate, x.dnsName, x.zoneId, true);
-                })
-            } else {
-                pulumi.all([phz.zone.zoneId, alb.loadBalancer]).apply(([zoneID, loadBalancer]) => {
-                    pulumi.all([loadBalancer.dnsName, loadBalancer.zoneId]).apply(x => {
-                        UtilsInfra.createAliasRecordDirect(domain, zoneID, x[0], x[1], true);
-                    })
+            if (certificate) {
+                UtilsInfra.createAliasRecord(certificate, alb.dnsName, alb.zoneId, true);
+            } else if (phz) {
+                pulumi.all([phz.zone.zoneId, alb.dnsName, alb.zoneId]).apply(([zoneID, dnsName, zoneId]) => {
+                    UtilsInfra.createAliasRecordDirect(domain, zoneID, dnsName, zoneId, true);
                 });
             }
         }
