@@ -83,15 +83,13 @@ class Rds {
         /**
          * SG
          */
-        const securityGroup = vpc.apply(x => {
-            return new awsx.classic.ec2.SecurityGroup(`${this.config.project}-rds-${rdsConfig.engine}-${rdsConfig.name}-sg`, {
-                description: `${this.config.generalPrefix}-rds-${rdsConfig.engine}-${rdsConfig.name}-sg`,
-                vpc: x,
-                tags: {
-                    ...this.config.generalTags,
-                    Name: `${this.config.generalPrefix}-rds-${rdsConfig.engine}-${rdsConfig.name}-sg`,
-                },
-            });
+        const securityGroup = new aws.ec2.SecurityGroup(`${this.config.project}-rds-${rdsConfig.engine}-${rdsConfig.name}-sg`, {
+            name: `${this.config.generalPrefix}-rds-${rdsConfig.engine}-${rdsConfig.name}-sg`,
+            vpcId: vpc.vpc.id,
+            tags: {
+                ...this.config.generalTags,
+                Name: `${this.config.generalPrefix}-rds-${rdsConfig.engine}-${rdsConfig.name}-sg`,
+            },
         });
 
         /**
@@ -130,7 +128,7 @@ class Rds {
             password: rdsConfig.password,
             dbSubnetGroupName: subnetGroup.name,
             parameterGroupName: paramGroup.name,
-            vpcSecurityGroupIds: [securityGroup.securityGroup.id],
+            vpcSecurityGroupIds: [securityGroup.id],
             skipFinalSnapshot: rdsConfig.skipFinalSnapshot,
             publiclyAccessible: rdsConfig.publiclyAccessible
         });

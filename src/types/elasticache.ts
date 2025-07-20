@@ -2,8 +2,6 @@
  * Created by Miguel Pazo (https://miguelpazo.com)
  */
 import * as aws from "@pulumi/aws";
-import * as pulumi from "@pulumi/pulumi";
-import * as awsx from "@pulumi/awsx";
 
 export type ElastiCacheConfig = {
     name: string;
@@ -24,5 +22,5 @@ export type ElastiCacheConfig = {
 export type ElastiCacheResult = {
     cluster: aws.elasticache.ReplicationGroup;
     kms: aws.kms.Key;
-    securityGroup: pulumi.Output<awsx.classic.ec2.SecurityGroup>;
+    securityGroup: aws.ec2.SecurityGroup;
 };

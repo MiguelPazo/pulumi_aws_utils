@@ -2,7 +2,6 @@
  * Created by Miguel Pazo (https://miguelpazo.com)
  */
 import * as aws from "@pulumi/aws";
-import * as awsx from "@pulumi/awsx";
 import * as pulumi from "@pulumi/pulumi";
 import {EcsServiceResult} from "./ecs";
 
@@ -38,5 +37,5 @@ export type WafResult = {
 
 export type EcsServiceInstanceResult = {
     oService: pulumi.Output<EcsServiceResult>;
-    securityGroupTask: pulumi.Output<awsx.classic.ec2.SecurityGroup>;
+    securityGroupTask: aws.ec2.SecurityGroup;
 };

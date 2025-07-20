@@ -75,6 +75,12 @@ class UtilsInfra {
 
         return {certificate, certValidation};
     }
+
+    static getSgByExportedId(sgIds: pulumi.Output<any>, alias: string, project: string): pulumi.Output<aws.ec2.SecurityGroup> {
+        return sgIds.apply(id =>
+            aws.ec2.SecurityGroup.get(`${project}-${alias.toLowerCase()}-sg`, id[alias])
+        );
+    }
 }
 
 export {UtilsInfra}

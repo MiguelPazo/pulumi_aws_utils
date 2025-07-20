@@ -2,7 +2,6 @@
  * Created by Miguel Pazo (https://miguelpazo.com)
  */
 import * as aws from "@pulumi/aws";
-import * as pulumi from "@pulumi/pulumi";
 import {InitConfig} from "../types/module";
 import {getInit} from "../config";
 
@@ -24,7 +23,7 @@ class Ecr {
 
     async main(
         service: string,
-        execRole: pulumi.Output<aws.iam.Role>,
+        // execRole: pulumi.Output<aws.iam.Role>,
         immutable?: boolean
     ): Promise<aws.ecr.Repository> {
         const ecrRepo = new aws.ecr.Repository(`${this.config.project}-${service}-ecr`, {
@@ -44,27 +43,27 @@ class Ecr {
             }
         });
 
-        new aws.ecr.RepositoryPolicy(`${this.config.project}-${service}-ecr-policy`, {
-            repository: ecrRepo.name,
-            policy: pulumi.output(execRole.arn).apply(x => {
-                return JSON.stringify({
-                    "Version": "2008-10-17",
-                    "Statement": [
-                        {
-                            "Effect": "Allow",
-                            "Principal": {
-                                "AWS": x.toString()
-                            },
-                            "Action": [
-                                "ecr:GetDownloadUrlForLayer",
-                                "ecr:BatchGetImage",
-                                "ecr:BatchCheckLayerAvailability",
-                            ]
-                        }
-                    ]
-                })
-            })
-        });
+        // new aws.ecr.RepositoryPolicy(`${this.config.project}-${service}-ecr-policy`, {
+        //     repository: ecrRepo.name,
+        //     policy: pulumi.output(execRole.arn).apply(x => {
+        //         return JSON.stringify({
+        //             "Version": "2008-10-17",
+        //             "Statement": [
+        //                 {
+        //                     "Effect": "Allow",
+        //                     "Principal": {
+        //                         "AWS": x.toString()
+        //                     },
+        //                     "Action": [
+        //                         "ecr:GetDownloadUrlForLayer",
+        //                         "ecr:BatchGetImage",
+        //                         "ecr:BatchCheckLayerAvailability",
+        //                     ]
+        //                 }
+        //             ]
+        //         })
+        //     })
+        // });
 
         return ecrRepo;
     }

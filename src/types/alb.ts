@@ -3,10 +3,11 @@
  */
 import * as awsx from "@pulumi/awsx";
 import * as pulumi from "@pulumi/pulumi";
+import * as aws from "@pulumi/aws";
 
 export type AlbResult = {
     alb: pulumi.Output<awsx.classic.lb.ApplicationLoadBalancer>;
-    securityGroup: pulumi.Output<awsx.classic.ec2.SecurityGroup>;
+    securityGroup: aws.ec2.SecurityGroup;
     vpc: pulumi.Output<awsx.classic.ec2.Vpc>;
 };
 
@@ -28,6 +29,6 @@ export type LBHealthCheck = {
     timeout: number;
     unhealthyThreshold: number;
     matcher: string;
-    protocol: string;  // e.g., "HTTP", "HTTPS", "TCP"
-    port: number;
+    protocol?: string;  // e.g., "HTTP", "HTTPS", "TCP"
+    port?: number;
 };

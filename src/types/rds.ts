@@ -1,7 +1,6 @@
 /**
  * Created by Miguel Pazo (https://miguelpazo.com)
  */
-import * as awsx from "@pulumi/awsx";
 import * as pulumi from "@pulumi/pulumi";
 import * as aws from "@pulumi/aws";
 
@@ -12,8 +11,8 @@ export type RdsConfig = {
     engineVersion: string;
     instanceClass: string;
     port: number;
-    username: string;
-    password: string;
+    username: pulumi.Output<string>;
+    password: pulumi.Output<string>;
     parameterGroupFamily: string;
     parameterGroupValues: { name: string; value: string; }[];
     skipFinalSnapshot: boolean;
@@ -25,5 +24,5 @@ export type RdsConfig = {
 export type RdsResult = {
     instance: aws.rds.Instance;
     kms: aws.kms.Key;
-    securityGroup: pulumi.Output<awsx.classic.ec2.SecurityGroup>;
+    securityGroup: aws.ec2.SecurityGroup;
 };

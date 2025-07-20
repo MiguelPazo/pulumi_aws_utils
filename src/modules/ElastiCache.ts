@@ -52,15 +52,13 @@ class ElastiCache {
         /**
          * SG
          */
-        const securityGroup = vpc.apply(x => {
-            return new awsx.classic.ec2.SecurityGroup(`${this.config.project}-redis-${elastiCacheConfig.name}-sg`, {
-                description: `${this.config.generalPrefix}-redis-${elastiCacheConfig.name}-sg`,
-                vpc: x,
-                tags: {
-                    ...this.config.generalTags,
-                    Name: `${this.config.generalPrefix}-redis-${elastiCacheConfig.name}-sg`,
-                },
-            });
+        const securityGroup = new aws.ec2.SecurityGroup(`${this.config.project}-redis-${elastiCacheConfig.name}-sg`, {
+            name: `${this.config.generalPrefix}-redis-${elastiCacheConfig.name}-sg`,
+            vpcId: vpc.vpc.id,
+            tags: {
+                ...this.config.generalTags,
+                Name: `${this.config.generalPrefix}-redis-${elastiCacheConfig.name}-sg`,
+            },
         });
 
         /**
@@ -99,7 +97,7 @@ class ElastiCache {
             snapshotRetentionLimit: elastiCacheConfig.snapshotRetentionLimit,
             subnetGroupName: subnetGroup.name,
             parameterGroupName: parameterGroup.name,
-            securityGroupIds: [securityGroup.securityGroup.id],
+            securityGroupIds: [securityGroup.id],
             port: elastiCacheConfig.port,
             automaticFailoverEnabled: elastiCacheConfig.automaticFailoverEnabled,
             tags: {

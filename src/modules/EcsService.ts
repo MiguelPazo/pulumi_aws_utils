@@ -28,7 +28,7 @@ class EcsService {
         service: EcsServiceConfig,
         ecsCluster: pulumi.Output<aws.ecs.Cluster>,
         vpc: pulumi.Output<awsx.classic.ec2.Vpc>,
-        securityGroups: pulumi.Output<awsx.classic.ec2.SecurityGroup>[],
+        securityGroups: aws.ec2.SecurityGroup[],
         createLogGroup: boolean,
         targetGroup?: pulumi.Output<aws.lb.TargetGroup>,
         enableAsg?: boolean,

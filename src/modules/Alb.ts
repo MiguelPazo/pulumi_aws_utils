@@ -42,23 +42,23 @@ class Alb {
         enableDeletionProtection = enableDeletionProtection == undefined ? true : enableDeletionProtection;
         createRoute53Record = createRoute53Record == undefined ? true : createRoute53Record;
 
-        const securityGroup = vpc.apply(x => {
-            return new awsx.classic.ec2.SecurityGroup(`${this.config.project}-${name}-alb-sg`, {
-                description: `${this.config.generalPrefixShort}-${name}-alb-sg`,
-                vpc: x,
-                egress: [{
-                    protocol: "-1",
-                    fromPort: 0,
-                    toPort: 0,
-                    cidrBlocks: ["0.0.0.0/0"],
-                    description: "Egress to all"
-                }],
-                tags: {
-                    ...this.config.generalTags,
-                    Name: `${this.config.generalPrefixShort}-${name}-alb-sg`,
-                },
-            });
-        })
+        const securityGroup = new aws.ec2.SecurityGroup(`${this.config.project}-${name}-alb-sg`, {
+            name: `${this.config.generalPrefixShort}-${name}-alb-sg`,
+            vpcId: vpc.vpc.id,
+            tags: {
+                ...this.config.generalTags,
+                Name: `${this.config.generalPrefixShort}-${name}-alb-sg`,
+            },
+        });
+
+        new aws.vpc.SecurityGroupEgressRule(`${this.config.project}-${name}-alb-sg-rule-1`, {
+            securityGroupId: securityGroup.id,
+            description: "Egress to all",
+            ipProtocol: aws.ec2.ProtocolType.TCP,
+            fromPort: 0,
+            toPort: 0,
+            cidrIpv4: "0.0.0.0/0"
+        });
 
         const alb = vpc.apply(x => {
             return new awsx.classic.lb.ApplicationLoadBalancer(`${this.config.project}-${name}-alb`, {
@@ -66,7 +66,7 @@ class Alb {
                 enableDeletionProtection: enableDeletionProtection,
                 vpc: x,
                 external: external,
-                securityGroups: [securityGroup.securityGroup.id],
+                securityGroups: [securityGroup.id],
                 accessLogs: s3Logs ? {
                     enabled: true,
                     bucket: s3Logs.bucket,

@@ -28,23 +28,23 @@ class ApiGatewayVpcLink {
         name: string,
         vpc: pulumi.Output<awsx.classic.ec2.Vpc>
     ): Promise<ApiGatewayVpcLinkResult> {
-        const securityGroup = vpc.apply(x => {
-            return new awsx.classic.ec2.SecurityGroup(`${this.config.project}-${name}-apigw-nlb-sg`, {
-                description: `${this.config.generalPrefixShort}-${name}-apigw-nlb-sg`,
-                vpc: x,
-                egress: [{
-                    protocol: "-1",
-                    fromPort: 0,
-                    toPort: 0,
-                    cidrBlocks: ["0.0.0.0/0"],
-                    description: "Egress to all"
-                }],
-                tags: {
-                    ...this.config.generalTags,
-                    Name: `${this.config.generalPrefixShort}-${name}-apigw-nlb-sg`,
-                },
-            });
-        })
+        const securityGroup = new aws.ec2.SecurityGroup(`${this.config.project}-${name}-apigw-nlb-sg`, {
+            name: `${this.config.generalPrefixShort}-${name}-apigw-nlb-sg`,
+            vpcId: vpc.vpc.id,
+            tags: {
+                ...this.config.generalTags,
+                Name: `${this.config.generalPrefixShort}-${name}-apigw-nlb-sg`,
+            },
+        });
+
+        new aws.vpc.SecurityGroupEgressRule(`${this.config.project}-${name}-apigw-nlb-sg-rule-1`, {
+            securityGroupId: securityGroup.id,
+            description: "Egress to all",
+            ipProtocol: aws.ec2.ProtocolType.TCP,
+            fromPort: 0,
+            toPort: 0,
+            cidrIpv4: "0.0.0.0/0"
+        });
 
         const nlb = new aws.lb.LoadBalancer(`${this.config.project}-${name}-apigw-nlb`, {
             name: `${this.config.generalPrefix}-${name}-apigw-nlb`,
@@ -52,7 +52,7 @@ class ApiGatewayVpcLink {
             loadBalancerType: "network",
             enableCrossZoneLoadBalancing: true,
             subnets: vpc.privateSubnetIds,
-            securityGroups: [securityGroup.securityGroup.id],
+            securityGroups: [securityGroup.id],
             enforceSecurityGroupInboundRulesOnPrivateLinkTraffic: "off",
             tags: {
                 ...this.config.generalTags,
