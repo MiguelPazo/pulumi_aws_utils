@@ -10,22 +10,24 @@ export type AlbResult = {
     vpc: pulumi.Output<awsx.classic.ec2.Vpc>;
 };
 
-export type TgConfigHealthcheck = {
-    path: string;
-    healthyThreshold: number;
-    unhealthyThreshold: number;
-    timeout: number;
-    interval: number;
-    matcher: string;
-    protocol?: string;  // e.g., "HTTP", "HTTPS", "TCP"
-    port?: number;
+export type LBConfig = {
+    lstPort: number;
+    lstProtocol: string;
+    tgProtocol: string;
+    tgPort: number;
+    tgTargetType: string;
+    tgHealthCheck: LBHealthCheck;
+    tgStickinessEnabled?: boolean;
+    tgCookieDuration?: number;
 };
 
-export type TgConfig = {
-    port: number,
-    protocol: string,
-    targetType: string,
-    healthCheck: TgConfigHealthcheck,
-    stickinessEnabled?: boolean,
-    cookieDuration?: number,
+export type LBHealthCheck = {
+    healthyThreshold: number;
+    interval: number;
+    path: string;
+    timeout: number;
+    unhealthyThreshold: number;
+    matcher: string;
+    protocol: string;  // e.g., "HTTP", "HTTPS", "TCP"
+    port: number;
 };

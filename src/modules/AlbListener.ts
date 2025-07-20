@@ -3,7 +3,7 @@
  */
 import * as pulumi from "@pulumi/pulumi";
 import * as aws from "@pulumi/aws";
-import {AlbResult, TgConfig} from "../types/alb";
+import {AlbResult, LBConfig} from "../types/alb";
 import {InitConfig} from "../types/module";
 import {getInit} from "../config";
 import {CertificatesResult} from "../types";
@@ -27,39 +27,37 @@ class AlbListener {
     async main(
         name: string,
         alb: AlbResult,
-        lstProtocol: string,
-        lstPort: number,
         lstCertificate: CertificatesResult,
-        tgConfig: TgConfig,
+        lbConfig: LBConfig,
         targetIps?: string[],
         hostHeaderRules?: { host: string; priority: number }[]
     ): Promise<pulumi.Output<aws.lb.TargetGroup>> {
-        tgConfig.stickinessEnabled = tgConfig.stickinessEnabled == undefined ? false : tgConfig.stickinessEnabled;
+        lbConfig.tgStickinessEnabled = lbConfig.tgStickinessEnabled == undefined ? false : lbConfig.tgStickinessEnabled;
 
         const targetGroup = alb.vpc.apply(x => {
             return new aws.lb.TargetGroup(`${this.config.project}-${name}-tg`, {
                 name: `${this.config.generalPrefixShort}-${name}-tg`,
                 vpcId: x.id,
-                port: tgConfig.port,
-                protocol: tgConfig.protocol.toUpperCase(),
-                targetType: tgConfig.targetType,
+                port: lbConfig.tgPort,
+                protocol: lbConfig.tgProtocol.toUpperCase(),
+                targetType: lbConfig.tgTargetType,
                 deregistrationDelay: 10,
                 slowStart: 0,
                 proxyProtocolV2: false,
                 healthCheck: {
                     enabled: true,
-                    path: tgConfig.healthCheck.path,
-                    healthyThreshold: tgConfig.healthCheck.healthyThreshold,
-                    unhealthyThreshold: tgConfig.healthCheck.unhealthyThreshold,
-                    timeout: tgConfig.healthCheck.timeout,
-                    interval: tgConfig.healthCheck.interval,
-                    matcher: tgConfig.healthCheck.matcher,
-                    protocol: tgConfig.healthCheck.protocol ? tgConfig.healthCheck.protocol.toUpperCase() : tgConfig.protocol.toUpperCase(),
-                    port: tgConfig.healthCheck.port ? tgConfig.healthCheck.port.toString() : "traffic-port"
+                    path: lbConfig.tgHealthCheck.path,
+                    healthyThreshold: lbConfig.tgHealthCheck.healthyThreshold,
+                    unhealthyThreshold: lbConfig.tgHealthCheck.unhealthyThreshold,
+                    timeout: lbConfig.tgHealthCheck.timeout,
+                    interval: lbConfig.tgHealthCheck.interval,
+                    matcher: lbConfig.tgHealthCheck.matcher,
+                    protocol: lbConfig.tgHealthCheck.protocol ? lbConfig.tgHealthCheck.protocol.toUpperCase() : lbConfig.tgProtocol.toUpperCase(),
+                    port: lbConfig.tgHealthCheck.port ? lbConfig.tgHealthCheck.port.toString() : "traffic-port"
                 },
-                stickiness: tgConfig.stickinessEnabled ? {
-                    enabled: tgConfig.stickinessEnabled,
-                    cookieDuration: tgConfig.cookieDuration,
+                stickiness: lbConfig.tgStickinessEnabled ? {
+                    enabled: lbConfig.tgStickinessEnabled,
+                    cookieDuration: lbConfig.tgCookieDuration,
                     type: "lb_cookie",
                 } : undefined,
 
@@ -70,13 +68,13 @@ class AlbListener {
             });
         });
 
-        lstProtocol = lstProtocol.toUpperCase();
+        const lstProtocol = lbConfig.lstProtocol.toUpperCase();
         const isHttps: boolean = lstProtocol === "HTTPS";
 
         targetGroup.apply(tg => {
             const listener = new aws.lb.Listener(`${this.config.project}-${name}-lst`, {
                 loadBalancerArn: alb.alb.loadBalancer.arn,
-                port: lstPort,
+                port: lbConfig.lstPort,
                 protocol: lstProtocol,
                 certificateArn: isHttps ? lstCertificate.arn : undefined,
                 sslPolicy: isHttps ? this.config.albSslPolicyDefault : undefined,
@@ -124,7 +122,7 @@ class AlbListener {
                     new aws.lb.TargetGroupAttachment(`${this.config.project}-${name}-tgattach-${index + 1}`, {
                         targetGroupArn: tg.arn,
                         targetId: ip,
-                        port: tgConfig.port,
+                        port: lbConfig.tgPort,
                     });
                 });
             }

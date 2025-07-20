@@ -27,7 +27,6 @@ class EcsService {
     async main(
         service: EcsServiceConfig,
         ecsCluster: pulumi.Output<aws.ecs.Cluster>,
-        executionRole: pulumi.Output<aws.iam.Role>,
         vpc: pulumi.Output<awsx.classic.ec2.Vpc>,
         securityGroups: pulumi.Output<awsx.classic.ec2.SecurityGroup>[],
         createLogGroup: boolean,
@@ -43,6 +42,29 @@ class EcsService {
         envTask?: { name: string; value: string }[],
     ): Promise<EcsServiceResult> {
         provider = provider == undefined ? "FARGATE" : provider;
+
+        /**
+         * Task Execute Role
+         */
+        const taskExecRole = new aws.iam.Role(`${this.config.project}-${service.nameShort}-ecs-task-exec-role`, {
+            name: `${this.config.generalPrefixShort}-${service.name}-ecs-task-exec-role`,
+            assumeRolePolicy: {
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Effect": "Allow",
+                        "Principal": {
+                            "Service": "ecs-tasks.amazonaws.com"
+                        },
+                        "Action": "sts:AssumeRole"
+                    }
+                ]
+            },
+            tags: {
+                ...this.config.generalTags,
+                Name: `${this.config.generalPrefixShort}-task-execute-role`,
+            }
+        });
 
         /**
          * Task Role
@@ -99,7 +121,7 @@ class EcsService {
             memory: service.memory.toString(),
             requiresCompatibilities: [provider],
             networkMode: "awsvpc",
-            executionRoleArn: executionRole.arn,
+            executionRoleArn: taskExecRole.arn,
             taskRoleArn: taskRole.arn,
             ephemeralStorage: {
                 sizeInGib: service.storage
@@ -274,6 +296,7 @@ class EcsService {
 
         return {
             ecsService,
+            taskExecRole,
             taskRole,
             logGroup
         } as EcsServiceResult;

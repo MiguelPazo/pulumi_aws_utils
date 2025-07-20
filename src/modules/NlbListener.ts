@@ -3,7 +3,7 @@
  */
 import * as pulumi from "@pulumi/pulumi";
 import * as aws from "@pulumi/aws";
-import {TgConfig} from "../types/alb";
+import {LBConfig} from "../types/alb";
 import {InitConfig} from "../types/module";
 import {getInit} from "../config";
 import * as awsx from "@pulumi/awsx";
@@ -29,30 +29,28 @@ class NlbListener {
         name: string,
         nlb: pulumi.Output<aws.lb.LoadBalancer>,
         vpc: pulumi.Output<awsx.classic.ec2.Vpc>,
-        lstProtocol: string,
-        lstPort: number,
         lstCertificate: CertificatesResult,
-        tgConfig: TgConfig
+        lbConfig: LBConfig
     ): Promise<aws.lb.TargetGroup> {
         const targetGroup = new aws.lb.TargetGroup(`${this.config.project}-${name}-tg`, {
             name: `${this.config.generalPrefixShort}-${name}-tg`,
             vpcId: vpc.vpc.id,
-            port: tgConfig.port,
-            protocol: tgConfig.protocol.toUpperCase(),
-            targetType: tgConfig.targetType,
+            port: lbConfig.tgPort,
+            protocol: lbConfig.tgProtocol.toUpperCase(),
+            targetType: lbConfig.tgTargetType,
             deregistrationDelay: 10,
             slowStart: 0,
             proxyProtocolV2: false,
             healthCheck: {
                 enabled: true,
-                healthyThreshold: tgConfig.healthCheck.healthyThreshold,
-                unhealthyThreshold: tgConfig.healthCheck.unhealthyThreshold,
-                timeout: tgConfig.healthCheck.timeout,
-                interval: tgConfig.healthCheck.interval,
-                protocol: tgConfig.healthCheck.protocol,
-                port: tgConfig.healthCheck.port.toString(),
-                matcher: tgConfig.healthCheck.protocol === "TCP" ? undefined : tgConfig.healthCheck.matcher,
-                path: tgConfig.healthCheck.protocol === "TCP" ? undefined : tgConfig.healthCheck.path,
+                healthyThreshold: lbConfig.tgHealthCheck.healthyThreshold,
+                unhealthyThreshold: lbConfig.tgHealthCheck.unhealthyThreshold,
+                timeout: lbConfig.tgHealthCheck.timeout,
+                interval: lbConfig.tgHealthCheck.interval,
+                protocol: lbConfig.tgHealthCheck.protocol,
+                port: lbConfig.tgHealthCheck.port.toString(),
+                matcher: lbConfig.tgHealthCheck.protocol === "TCP" ? undefined : lbConfig.tgHealthCheck.matcher,
+                path: lbConfig.tgHealthCheck.protocol === "TCP" ? undefined : lbConfig.tgHealthCheck.path,
             },
             tags: {
                 ...this.config.generalTags,
@@ -60,11 +58,11 @@ class NlbListener {
             }
         });
 
-        lstProtocol = lstProtocol.toUpperCase();
+        const lstProtocol = lbConfig.lstProtocol.toUpperCase();
 
         new aws.lb.Listener(`${this.config.project}-${name}-lst`, {
             loadBalancerArn: nlb.arn,
-            port: lstPort,
+            port: lbConfig.lstPort,
             protocol: lstProtocol,
             certificateArn: lstProtocol === "TLS" ? lstCertificate.arn : undefined,
             sslPolicy: lstProtocol === "TLS" ? this.config.albSslPolicyDefault : undefined,

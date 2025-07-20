@@ -28,12 +28,32 @@ class ApiGatewayVpcLink {
         name: string,
         vpc: pulumi.Output<awsx.classic.ec2.Vpc>
     ): Promise<ApiGatewayVpcLinkResult> {
+        const securityGroup = vpc.apply(x => {
+            return new awsx.classic.ec2.SecurityGroup(`${this.config.project}-${name}-apigw-nlb-sg`, {
+                description: `${this.config.generalPrefixShort}-${name}-apigw-nlb-sg`,
+                vpc: x,
+                egress: [{
+                    protocol: "-1",
+                    fromPort: 0,
+                    toPort: 0,
+                    cidrBlocks: ["0.0.0.0/0"],
+                    description: "Egress to all"
+                }],
+                tags: {
+                    ...this.config.generalTags,
+                    Name: `${this.config.generalPrefixShort}-${name}-apigw-nlb-sg`,
+                },
+            });
+        })
+
         const nlb = new aws.lb.LoadBalancer(`${this.config.project}-${name}-apigw-nlb`, {
             name: `${this.config.generalPrefix}-${name}-apigw-nlb`,
             internal: true,
             loadBalancerType: "network",
             enableCrossZoneLoadBalancing: true,
             subnets: vpc.privateSubnetIds,
+            securityGroups: [securityGroup.securityGroup.id],
+            enforceSecurityGroupInboundRulesOnPrivateLinkTraffic: "off",
             tags: {
                 ...this.config.generalTags,
                 Name: `${this.config.generalPrefix}-${name}-apigw-nlb`,
@@ -50,40 +70,10 @@ class ApiGatewayVpcLink {
             }
         });
 
-        // const nlbArnSuffix = nlb.arn.apply(arn => arn.split("/").pop()!);
-
-        // const nlbPrivateIps = vpc.apply(x => {
-        //     return pulumi.all(x.privateSubnetIds).apply()
-        // })
-
-        // const nlbPrivateIps = vpc.privateSubnetIds.apply(x => {
-        //     return pulumi.all(x).apply(subnetIds => {
-        //         const result = subnetIds.map(subnetId =>
-        //             nlbArnSuffix.apply(suffix =>
-        //                 aws.ec2.getNetworkInterface({
-        //                     filters: [
-        //                         {
-        //                             name: "description",
-        //                             values: [`ELB ${suffix}`],
-        //                         },
-        //                         {
-        //                             name: "subnet-id",
-        //                             values: [subnetId],
-        //                         },
-        //                     ],
-        //                 }, {async: true}).then(eni => eni.privateIp)
-        //             )
-        //         );
-        //
-        //         console.log(result)
-        //
-        //         return result
-        //     })
-        // });
-
         return {
             nlb,
-            vpcLink
+            vpcLink,
+            securityGroup
         } as ApiGatewayVpcLinkResult
     }
 }
