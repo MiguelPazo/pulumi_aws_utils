@@ -52,9 +52,9 @@ class Alb {
         new aws.vpc.SecurityGroupEgressRule(`${this.config.project}-${name}-alb-sg-rule-1`, {
             securityGroupId: securityGroup.id,
             description: "Egress to all",
-            ipProtocol: aws.ec2.ProtocolType.TCP,
-            fromPort: 0,
-            toPort: 0,
+            ipProtocol: aws.ec2.ProtocolType.All,
+            fromPort: -1,
+            toPort: -1,
             cidrIpv4: "0.0.0.0/0"
         });
 
