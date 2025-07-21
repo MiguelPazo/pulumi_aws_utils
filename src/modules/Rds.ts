@@ -85,6 +85,7 @@ class Rds {
          */
         const securityGroup = new aws.ec2.SecurityGroup(`${this.config.project}-rds-${rdsConfig.engine}-${rdsConfig.name}-sg`, {
             name: `${this.config.generalPrefix}-rds-${rdsConfig.engine}-${rdsConfig.name}-sg`,
+            description: `${this.config.generalPrefix}-rds-${rdsConfig.engine}-${rdsConfig.name}-sg`,
             vpcId: vpc.vpc.id,
             tags: {
                 ...this.config.generalTags,

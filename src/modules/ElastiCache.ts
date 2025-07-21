@@ -54,6 +54,7 @@ class ElastiCache {
          */
         const securityGroup = new aws.ec2.SecurityGroup(`${this.config.project}-redis-${elastiCacheConfig.name}-sg`, {
             name: `${this.config.generalPrefix}-redis-${elastiCacheConfig.name}-sg`,
+            description: `${this.config.generalPrefix}-redis-${elastiCacheConfig.name}-sg`,
             vpcId: vpc.vpc.id,
             tags: {
                 ...this.config.generalTags,

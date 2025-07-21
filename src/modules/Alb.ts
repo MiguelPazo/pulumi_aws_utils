@@ -42,6 +42,7 @@ class Alb {
 
         const securityGroup = new aws.ec2.SecurityGroup(`${this.config.project}-${name}-alb-sg`, {
             name: `${this.config.generalPrefixShort}-${name}-alb-sg`,
+            description: `${this.config.generalPrefixShort}-${name}-alb-sg`,
             vpcId: vpc.vpc.id,
             tags: {
                 ...this.config.generalTags,

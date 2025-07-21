@@ -30,6 +30,7 @@ class ApiGatewayVpcLink {
     ): Promise<ApiGatewayVpcLinkResult> {
         const securityGroup = new aws.ec2.SecurityGroup(`${this.config.project}-${name}-apigw-nlb-sg`, {
             name: `${this.config.generalPrefixShort}-${name}-apigw-nlb-sg`,
+            description: `${this.config.generalPrefixShort}-${name}-apigw-nlb-sg`,
             vpcId: vpc.vpc.id,
             tags: {
                 ...this.config.generalTags,
