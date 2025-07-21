@@ -65,7 +65,7 @@ class Alb {
             internal: internal,
             loadBalancerType: aws.alb.LoadBalancerType.Application,
             enableCrossZoneLoadBalancing: true,
-            subnets: vpc.privateSubnetIds,
+            subnets: internal ? vpc.privateSubnetIds : vpc.publicSubnetIds,
             securityGroups: [securityGroup.id],
             accessLogs: s3Logs ? {
                 enabled: true,
