@@ -3,8 +3,7 @@
  */
 import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
-import * as awsx from "@pulumi/awsx";
-import {EcsServiceConfig, EcsServiceResult} from "../types";
+import {EcsServiceConfig, EcsServiceResult, VpcImportResult} from "../types";
 import {InitConfig} from "../types/module";
 import {getInit} from "../config";
 
@@ -27,7 +26,7 @@ class EcsService {
     async main(
         service: EcsServiceConfig,
         ecsCluster: pulumi.Output<aws.ecs.Cluster>,
-        vpc: pulumi.Output<awsx.classic.ec2.Vpc>,
+        vpc: pulumi.Output<VpcImportResult>,
         securityGroups: aws.ec2.SecurityGroup[],
         createLogGroup: boolean,
         targetGroup?: pulumi.Output<aws.lb.TargetGroup>,

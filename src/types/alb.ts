@@ -3,12 +3,12 @@
  */
 import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
-import * as awsx from "@pulumi/awsx";
+import {VpcImportResult} from "./vpc";
 
 export type AlbResult = {
     alb: aws.lb.LoadBalancer;
     securityGroup: aws.ec2.SecurityGroup;
-    vpc: pulumi.Output<awsx.classic.ec2.Vpc>;
+    vpc: pulumi.Output<VpcImportResult>;
 };
 
 export type LBConfig = {

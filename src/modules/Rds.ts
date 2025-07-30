@@ -4,9 +4,8 @@
 import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
 import {getInit} from "../config";
-import * as awsx from "@pulumi/awsx";
 import {InitConfig} from "../types/module";
-import {PhzResult, RdsConfig, RdsResult} from "../types";
+import {PhzResult, RdsConfig, RdsResult, VpcImportResult} from "../types";
 
 class Rds {
     private static __instance: Rds;
@@ -26,8 +25,8 @@ class Rds {
 
     async main(
         rdsConfig: RdsConfig,
-        vpc: pulumi.Output<awsx.classic.ec2.Vpc>,
-        subnetIds: pulumi.Output<pulumi.Output<string>[]>,
+        vpc: pulumi.Output<VpcImportResult>,
+        subnetIds: pulumi.Output<string[]>,
         phz: pulumi.Output<PhzResult>,
     ): Promise<RdsResult> {
         /**
@@ -86,7 +85,7 @@ class Rds {
         const securityGroup = new aws.ec2.SecurityGroup(`${this.config.project}-rds-${rdsConfig.engine}-${rdsConfig.name}-sg`, {
             name: `${this.config.generalPrefix}-rds-${rdsConfig.engine}-${rdsConfig.name}-sg`,
             description: `${this.config.generalPrefix}-rds-${rdsConfig.engine}-${rdsConfig.name}-sg`,
-            vpcId: vpc.vpc.id,
+            vpcId: vpc.id,
             tags: {
                 ...this.config.generalTags,
                 Name: `${this.config.generalPrefix}-rds-${rdsConfig.engine}-${rdsConfig.name}-sg`,

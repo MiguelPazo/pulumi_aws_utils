@@ -8,3 +8,4 @@ export * from './stack';
 export * from './elasticache';
 export * from './rds';
 export * from './apigw';
+export * from './vpc';

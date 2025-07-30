@@ -5,8 +5,7 @@ import * as pulumi from "@pulumi/pulumi";
 import * as aws from "@pulumi/aws";
 import {getInit} from "../config";
 import {InitConfig} from "../types/module";
-import * as awsx from "@pulumi/awsx";
-import {ApiGatewayVpcLinkResult} from "../types";
+import {ApiGatewayVpcLinkResult, VpcImportResult} from "../types";
 
 class ApiGatewayVpcLink {
     private static __instance: ApiGatewayVpcLink;
@@ -26,12 +25,12 @@ class ApiGatewayVpcLink {
 
     async main(
         name: string,
-        vpc: pulumi.Output<awsx.classic.ec2.Vpc>,
+        vpc: pulumi.Output<VpcImportResult>
     ): Promise<ApiGatewayVpcLinkResult> {
         const securityGroup = new aws.ec2.SecurityGroup(`${this.config.project}-${name}-apigw-nlb-sg`, {
             name: `${this.config.generalPrefixShort}-${name}-apigw-nlb-sg`,
             description: `${this.config.generalPrefixShort}-${name}-apigw-nlb-sg`,
-            vpcId: vpc.vpc.id,
+            vpcId: vpc.id,
             tags: {
                 ...this.config.generalTags,
                 Name: `${this.config.generalPrefixShort}-${name}-apigw-nlb-sg`,

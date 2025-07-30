@@ -1,11 +1,10 @@
 /**
  * Created by Miguel Pazo (https://miguelpazo.com)
  */
-import * as awsx from "@pulumi/awsx";
 import {UtilsInfra} from "../common/UtilsInfra";
 import * as pulumi from "@pulumi/pulumi";
 import * as aws from "@pulumi/aws";
-import {AlbResult, CertificatesResult, PhzResult} from "../types";
+import {AlbResult, CertificatesResult, PhzResult, VpcImportResult} from "../types";
 import {getInit} from "../config";
 import {InitConfig} from "../types/module";
 
@@ -27,7 +26,7 @@ class Alb {
 
     async main(
         name: string,
-        vpc: pulumi.Output<awsx.classic.ec2.Vpc>,
+        vpc: pulumi.Output<VpcImportResult>,
         certificate?: CertificatesResult,
         s3Logs?: pulumi.Output<aws.s3.Bucket>,
         internal?: boolean,
@@ -43,7 +42,7 @@ class Alb {
         const securityGroup = new aws.ec2.SecurityGroup(`${this.config.project}-${name}-alb-sg`, {
             name: `${this.config.generalPrefixShort}-${name}-alb-sg`,
             description: `${this.config.generalPrefixShort}-${name}-alb-sg`,
-            vpcId: vpc.vpc.id,
+            vpcId: vpc.id,
             tags: {
                 ...this.config.generalTags,
                 Name: `${this.config.generalPrefixShort}-${name}-alb-sg`,

@@ -3,7 +3,7 @@
  */
 import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
-import {CertificatesResult} from "../types/base";
+import {CertificatesResult} from "../types";
 
 class UtilsInfra {
     static createAliasRecord(

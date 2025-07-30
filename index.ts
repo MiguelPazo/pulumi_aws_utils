@@ -27,6 +27,7 @@ import {init} from './src/config';
 import {LambdaRole} from "./src/modules/LambdaRole";
 import {NlbListener} from "./src/modules/NlbListener";
 import {Ses} from "./src/modules/Ses";
+import {VpcImport} from "./src/modules/VpcImport";
 
 export const AwsUtilsInit = {
     init
@@ -52,7 +53,8 @@ export const AwsUtilsModules = {
     S3,
     ApiGatewayVpcLink,
     NlbListener,
-    Ses
+    Ses,
+    VpcImport
 };
 
 export * from './src/types';

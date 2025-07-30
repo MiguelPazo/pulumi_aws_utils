@@ -3,11 +3,9 @@
  */
 import * as pulumi from "@pulumi/pulumi";
 import * as aws from "@pulumi/aws";
-import {LBConfig} from "../types/alb";
+import {CertificatesResult, LBConfig, VpcImportResult} from "../types";
 import {InitConfig} from "../types/module";
 import {getInit} from "../config";
-import * as awsx from "@pulumi/awsx";
-import {CertificatesResult} from "../types";
 
 class NlbListener {
     private static __instance: NlbListener;
@@ -28,13 +26,13 @@ class NlbListener {
     async main(
         name: string,
         nlb: pulumi.Output<aws.lb.LoadBalancer>,
-        vpc: pulumi.Output<awsx.classic.ec2.Vpc>,
+        vpc: pulumi.Output<VpcImportResult>,
         lstCertificate: CertificatesResult,
         lbConfig: LBConfig
     ): Promise<aws.lb.TargetGroup> {
         const targetGroup = new aws.lb.TargetGroup(`${this.config.project}-${name}-tg`, {
             name: `${this.config.generalPrefixShort}-${name}-tg`,
-            vpcId: vpc.vpc.id,
+            vpcId: vpc.id,
             port: lbConfig.tgPort,
             protocol: lbConfig.tgProtocol.toUpperCase(),
             targetType: lbConfig.tgTargetType,

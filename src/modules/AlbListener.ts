@@ -2,10 +2,9 @@
  * Created by Miguel Pazo (https://miguelpazo.com)
  */
 import * as aws from "@pulumi/aws";
-import {AlbResult, LBConfig} from "../types/alb";
+import {AlbResult, CertificatesResult, LBConfig} from "../types";
 import {InitConfig} from "../types/module";
 import {getInit} from "../config";
-import {CertificatesResult} from "../types";
 
 class AlbListener {
     private static __instance: AlbListener;
@@ -35,7 +34,7 @@ class AlbListener {
 
         const targetGroup = new aws.lb.TargetGroup(`${this.config.project}-${name}-tg`, {
             name: `${this.config.generalPrefixShort}-${name}-tg`,
-            vpcId: alb.vpc.vpc.id,
+            vpcId: alb.vpc.id,
             port: lbConfig.tgPort,
             protocol: lbConfig.tgProtocol.toUpperCase(),
             targetType: lbConfig.tgTargetType,

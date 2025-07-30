@@ -4,10 +4,8 @@
 import * as aws from "@pulumi/aws";
 import {getInit} from "../config";
 import * as pulumi from "@pulumi/pulumi";
-import * as awsx from "@pulumi/awsx";
 import {InitConfig} from "../types/module";
-import {PhzResult} from "../types";
-import {ElastiCacheConfig, ElastiCacheResult} from "../types/elasticache";
+import {ElastiCacheConfig, ElastiCacheResult, PhzResult, VpcImportResult} from "../types";
 
 class ElastiCache {
     private static __instance: ElastiCache;
@@ -27,8 +25,8 @@ class ElastiCache {
 
     async main(
         elastiCacheConfig: ElastiCacheConfig,
-        vpc: pulumi.Output<awsx.classic.ec2.Vpc>,
-        subnetIds: pulumi.Output<pulumi.Output<string>[]>,
+        vpc: pulumi.Output<VpcImportResult>,
+        subnetIds: pulumi.Output<string[]>,
         phz: pulumi.Output<PhzResult>,
     ): Promise<ElastiCacheResult> {
         /**
@@ -55,7 +53,7 @@ class ElastiCache {
         const securityGroup = new aws.ec2.SecurityGroup(`${this.config.project}-redis-${elastiCacheConfig.name}-sg`, {
             name: `${this.config.generalPrefix}-redis-${elastiCacheConfig.name}-sg`,
             description: `${this.config.generalPrefix}-redis-${elastiCacheConfig.name}-sg`,
-            vpcId: vpc.vpc.id,
+            vpcId: vpc.id,
             tags: {
                 ...this.config.generalTags,
                 Name: `${this.config.generalPrefix}-redis-${elastiCacheConfig.name}-sg`,

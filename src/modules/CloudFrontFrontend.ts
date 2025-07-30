@@ -3,7 +3,7 @@
  */
 import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
-import {CertificatesResult, CloudFrontBaseResult} from "../types/base";
+import {CertificatesResult, CloudFrontBaseResult} from "../types";
 import {UtilsInfra} from "../common/UtilsInfra";
 import {getInit} from "../config";
 import {InitConfig} from "../types/module";
