@@ -48,8 +48,7 @@ class UtilsInfra {
     }
 
     static async createCertificate(domain: string, zone: aws.route53.Zone, generalTags, provider?: aws.Provider): Promise<any> {
-        const certOps: any = provider ? {provider: provider} : {};
-        const certValidOps: any = provider ? {provider: provider} : {};
+        const certOps: any = provider ? {provider: provider, dependsOn: [zone]} : {dependsOn: [zone]};
 
         const certificate = new aws.acm.Certificate(`${domain}-certificate`, {
             domainName: domain,
@@ -71,7 +70,7 @@ class UtilsInfra {
         const certValidation = new aws.acm.CertificateValidation(`${domain}-certificateValidation`, {
             certificateArn: certificate.arn,
             validationRecordFqdns: [certificateValidationDomain.fqdn],
-        }, certValidOps);
+        }, certOps);
 
         return {certificate, certValidation};
     }
