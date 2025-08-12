@@ -27,7 +27,8 @@ class Rds {
         rdsConfig: RdsConfig,
         vpc: pulumi.Output<VpcImportResult>,
         subnetIds: pulumi.Output<string[]>,
-        phz: pulumi.Output<PhzResult>,
+        phz?: pulumi.Output<PhzResult>,
+        publicZoneRoodId?: pulumi.Output<string>,
     ): Promise<RdsResult> {
         /**
          * KMS
@@ -144,7 +145,7 @@ class Rds {
                 new aws.route53.Record(`${this.config.project}-rds-${rdsConfig.engine}-${rdsConfig.name}-reader-dns`, {
                     name: rdsConfig.domainRdsReader,
                     type: "CNAME",
-                    zoneId: phz.zone.zoneId,
+                    zoneId: phz ? phz.zone.zoneId : publicZoneRoodId,
                     ttl: 300,
                     records: [x],
                 });
@@ -152,7 +153,7 @@ class Rds {
                 new aws.route53.Record(`${this.config.project}-rds-${rdsConfig.engine}-${rdsConfig.name}-writer-dns`, {
                     name: rdsConfig.domainRdsWriter,
                     type: "CNAME",
-                    zoneId: phz.zone.zoneId,
+                    zoneId: phz ? phz.zone.zoneId : publicZoneRoodId,
                     ttl: 300,
                     records: [x],
                 });
