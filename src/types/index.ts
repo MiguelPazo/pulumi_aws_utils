@@ -9,3 +9,5 @@ export * from './elasticache';
 export * from './rds';
 export * from './apigw';
 export * from './vpc';
+export * from './efs';
+export * from './sqs';

@@ -36,6 +36,7 @@ class ApiGateway {
         enableXRay?: boolean,
         privateVpcEndpointIds?: pulumi.Output<string>[],
         ignoreOpenApiChanges?: boolean,
+        dependsOn?: any[],
     ): Promise<aws.apigateway.RestApi> {
         logLevel = logLevel == undefined ? "INFO" : logLevel;
         ignoreOpenApiChanges = ignoreOpenApiChanges == undefined ? false : ignoreOpenApiChanges;
@@ -81,6 +82,7 @@ class ApiGateway {
                 Name: `${this.config.generalPrefix}-${name}-apirest`,
             }
         }, {
+            dependsOn: dependsOn,
             ignoreChanges: ignoreOpenApiChanges ? ["body"] : undefined
         });
 

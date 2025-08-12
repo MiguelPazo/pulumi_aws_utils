@@ -88,7 +88,7 @@ class AlbListener {
                 ...this.config.generalTags,
                 Name: `${this.config.generalPrefix}-${name}-lst`
             }
-        });
+        }, {dependsOn: [alb.alb, targetGroup]});
 
         if (hostHeaderRules && hostHeaderRules.length > 0) {
             for (const rule of hostHeaderRules) {

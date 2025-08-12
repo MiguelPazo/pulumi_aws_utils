@@ -19,9 +19,11 @@ import {CloudFrontFrontend} from './src/modules/CloudFrontFrontend';
 import {Ecr} from './src/modules/Ecr';
 import {EcsCluster} from './src/modules/EcsCluster';
 import {EcsService} from './src/modules/EcsService';
+import {Efs} from './src/modules/Efs';
 import {ElastiCache} from './src/modules/ElastiCache';
 import {Rds} from './src/modules/Rds';
 import {S3} from './src/modules/S3';
+import {Sqs} from './src/modules/Sqs';
 import {ApiGatewayVpcLink} from './src/modules/ApiGatewayVpcLink';
 import {init} from './src/config';
 import {LambdaRole} from "./src/modules/LambdaRole";
@@ -47,10 +49,12 @@ export const AwsUtilsModules = {
     Ecr,
     EcsCluster,
     EcsService,
+    Efs,
     ElastiCache,
     LambdaRole,
     Rds,
     S3,
+    Sqs,
     ApiGatewayVpcLink,
     NlbListener,
     Ses,
