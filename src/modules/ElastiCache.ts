@@ -83,7 +83,7 @@ class ElastiCache {
             }
         });
 
-        const cluster = new aws.elasticache.ReplicationGroup(`${this.config.project}-redis-${elastiCacheConfig.name}-cluster`, {
+        const clusterConfig: any = {
             replicationGroupId: `${this.config.generalPrefix}-redis-${elastiCacheConfig.name}-cluster`,
             description: `${this.config.generalPrefix}-redis-${elastiCacheConfig.name}-cluster`,
             engine: "redis",
@@ -91,8 +91,6 @@ class ElastiCache {
             kmsKeyId: kms.arn,
             atRestEncryptionEnabled: true,
             nodeType: elastiCacheConfig.nodeType,
-            numNodeGroups: elastiCacheConfig.numNodeGroups,
-            replicasPerNodeGroup: elastiCacheConfig.replicasPerNodeGroup,
             snapshotRetentionLimit: elastiCacheConfig.snapshotRetentionLimit,
             subnetGroupName: subnetGroup.name,
             parameterGroupName: parameterGroup.name,
@@ -103,7 +101,21 @@ class ElastiCache {
                 ...this.config.generalTags,
                 Name: `${this.config.generalPrefix}-redis-${elastiCacheConfig.name}-cluster`,
             }
-        });
+        };
+
+        if (elastiCacheConfig.authToken) {
+            clusterConfig.authToken = elastiCacheConfig.authToken;
+            clusterConfig.transitEncryptionEnabled = true;
+        }
+
+        if (elastiCacheConfig.clusterMode) {
+            clusterConfig.numNodeGroups = elastiCacheConfig.numNodeGroups;
+            clusterConfig.replicasPerNodeGroup = elastiCacheConfig.replicasPerNodeGroup;
+        } else {
+            clusterConfig.numCacheClusters = elastiCacheConfig.numNodeGroups;
+        }
+
+        const cluster = new aws.elasticache.ReplicationGroup(`${this.config.project}-redis-${elastiCacheConfig.name}-cluster`, clusterConfig);
 
         /**
          * DNS

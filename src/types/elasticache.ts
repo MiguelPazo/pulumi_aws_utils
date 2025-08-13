@@ -2,6 +2,7 @@
  * Created by Miguel Pazo (https://miguelpazo.com)
  */
 import * as aws from "@pulumi/aws";
+import * as pulumi from "@pulumi/pulumi";
 
 export type ElastiCacheConfig = {
     name: string;
@@ -9,12 +10,14 @@ export type ElastiCacheConfig = {
     engineVersion: string;
     nodeType: string;
     numNodeGroups: number;
-    replicasPerNodeGroup: number;
+    replicasPerNodeGroup?: number;
     snapshotRetentionLimit: number;
     parameterGroupFamily: string;
     parameterGroupValues: { name: string; value: string; }[];
     port: number;
     automaticFailoverEnabled: boolean;
+    authToken?: pulumi.Output<string>;
+    clusterMode?: boolean;
     domainRdsReader: string;
     domainRdsWriter: string;
 };
