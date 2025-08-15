@@ -30,6 +30,7 @@ import {LambdaRole} from "./src/modules/LambdaRole";
 import {NlbListener} from "./src/modules/NlbListener";
 import {Ses} from "./src/modules/Ses";
 import {VpcImport} from "./src/modules/VpcImport";
+import {Ssm} from "./src/modules/Ssm";
 
 export const AwsUtilsInit = {
     init
@@ -55,6 +56,7 @@ export const AwsUtilsModules = {
     Rds,
     S3,
     Sqs,
+    Ssm,
     ApiGatewayVpcLink,
     NlbListener,
     Ses,
@@ -62,3 +64,4 @@ export const AwsUtilsModules = {
 };
 
 export * from './src/types';
+export * from './src/common/Enums';

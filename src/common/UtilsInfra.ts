@@ -4,6 +4,7 @@
 import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
 import {CertificatesResult} from "../types";
+import {CertificateKeyAlgorithm} from "./Enums";
 
 class UtilsInfra {
     static createAliasRecord(
@@ -47,12 +48,19 @@ class UtilsInfra {
             });
     }
 
-    static async createCertificate(domain: string, zone: aws.route53.Zone, generalTags, provider?: aws.Provider): Promise<any> {
+    static async createCertificate(
+        domain: string,
+        zone: aws.route53.Zone,
+        generalTags,
+        provider?: aws.Provider,
+        keyAlgorithm: CertificateKeyAlgorithm = CertificateKeyAlgorithm.RSA_2048
+    ): Promise<any> {
         const certOps: any = provider ? {provider: provider, dependsOn: [zone]} : {dependsOn: [zone]};
 
         const certificate = new aws.acm.Certificate(`${domain}-certificate`, {
             domainName: domain,
             validationMethod: "DNS",
+            keyAlgorithm: keyAlgorithm,
             tags: {
                 ...generalTags,
                 Name: `${domain}-certificate`,
