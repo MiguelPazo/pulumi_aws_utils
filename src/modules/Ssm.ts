@@ -23,7 +23,7 @@ class Ssm {
         return this.__instance;
     }
 
-    async main(ec2Role: aws.iam.InstanceProfile): Promise<void> {
+    async main(ec2Role: pulumi.Output<aws.iam.Role>): Promise<void> {
         /**
          * S3
          */
