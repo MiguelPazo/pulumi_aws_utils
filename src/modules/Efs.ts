@@ -26,12 +26,13 @@ class Efs {
     async main(
         efsConfig: EfsConfig,
         vpc: pulumi.Output<VpcImportResult>,
-        subnetIds: pulumi.Output<string[]>
+        subnetIds: pulumi.Output<string[]>,
+        kmsKey?: pulumi.Output<aws.kms.Key>
     ): Promise<EfsResult> {
         /**
          * KMS
          */
-        const kms = new aws.kms.Key(`${this.config.project}-efs-${efsConfig.name}-kms`, {
+        const kms = kmsKey || new aws.kms.Key(`${this.config.project}-efs-${efsConfig.name}-kms`, {
             description: `${this.config.generalPrefix}-efs-${efsConfig.name}-kms`,
             deletionWindowInDays: 30,
             customerMasterKeySpec: 'SYMMETRIC_DEFAULT',
@@ -74,10 +75,12 @@ class Efs {
             }
         });
 
-        new aws.kms.Alias(`${this.config.project}-efs-${efsConfig.name}-kms-alias`, {
-            name: `alias/${this.config.generalPrefix}-efs-${efsConfig.name}-kms`,
-            targetKeyId: kms.keyId
-        });
+        if (!kmsKey) {
+            new aws.kms.Alias(`${this.config.project}-efs-${efsConfig.name}-kms-alias`, {
+                name: `alias/${this.config.generalPrefix}-efs-${efsConfig.name}-kms`,
+                targetKeyId: kms.keyId
+            });
+        }
 
         /**
          * Security Group

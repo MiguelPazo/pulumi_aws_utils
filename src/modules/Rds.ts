@@ -27,13 +27,14 @@ class Rds {
         rdsConfig: RdsConfig,
         vpc: pulumi.Output<VpcImportResult>,
         subnetIds: pulumi.Output<string[]>,
+        kmsKey?: pulumi.Output<aws.kms.Key>,
         phz?: pulumi.Output<PhzResult>,
         publicZoneRoodId?: pulumi.Output<string>,
     ): Promise<RdsResult> {
         /**
          * KMS
          */
-        const kms = new aws.kms.Key(`${this.config.project}-rds-${rdsConfig.engine}-${rdsConfig.name}-kms`, {
+        const kms = kmsKey || new aws.kms.Key(`${this.config.project}-rds-${rdsConfig.engine}-${rdsConfig.name}-kms`, {
             description: `${this.config.generalPrefix}-rds-${rdsConfig.engine}-${rdsConfig.name}-kms`,
             deletionWindowInDays: 30,
             customerMasterKeySpec: 'SYMMETRIC_DEFAULT',
@@ -76,10 +77,12 @@ class Rds {
             }
         });
 
-        new aws.kms.Alias(`${this.config.project}-rds-${rdsConfig.engine}-${rdsConfig.name}-kms-alias`, {
-            name: `alias/${this.config.generalPrefix}-rds-${rdsConfig.engine}-${rdsConfig.name}-kms`,
-            targetKeyId: kms.keyId
-        });
+        if (!kmsKey) {
+            new aws.kms.Alias(`${this.config.project}-rds-${rdsConfig.engine}-${rdsConfig.name}-kms-alias`, {
+                name: `alias/${this.config.generalPrefix}-rds-${rdsConfig.engine}-${rdsConfig.name}-kms`,
+                targetKeyId: kms.keyId
+            });
+        }
 
         /**
          * SG

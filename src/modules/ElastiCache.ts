@@ -28,11 +28,12 @@ class ElastiCache {
         vpc: pulumi.Output<VpcImportResult>,
         subnetIds: pulumi.Output<string[]>,
         phz: pulumi.Output<PhzResult>,
+        kmsKey?: pulumi.Output<aws.kms.Key>
     ): Promise<ElastiCacheResult> {
         /**
          * KMS
          */
-        const kms = new aws.kms.Key(`${this.config.project}-redis-${elastiCacheConfig.name}-kms`, {
+        const kms = kmsKey || new aws.kms.Key(`${this.config.project}-redis-${elastiCacheConfig.name}-kms`, {
             deletionWindowInDays: 30,
             customerMasterKeySpec: 'SYMMETRIC_DEFAULT',
             description: `${this.config.generalPrefix}-redis-${elastiCacheConfig.name}-kms`,
@@ -42,10 +43,12 @@ class ElastiCache {
             }
         });
 
-        new aws.kms.Alias(`${this.config.project}-redis-${elastiCacheConfig.name}-kms-alias`, {
-            name: `alias/${this.config.generalPrefix}-redis-${elastiCacheConfig.name}-kms`,
-            targetKeyId: kms.keyId
-        });
+        if (!kmsKey) {
+            new aws.kms.Alias(`${this.config.project}-redis-${elastiCacheConfig.name}-kms-alias`, {
+                name: `alias/${this.config.generalPrefix}-redis-${elastiCacheConfig.name}-kms`,
+                targetKeyId: kms.keyId
+            });
+        }
 
         /**
          * SG

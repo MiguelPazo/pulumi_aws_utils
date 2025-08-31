@@ -23,11 +23,14 @@ class Sqs {
         return this.__instance;
     }
 
-    async main(sqsConfig: SqsConfig): Promise<SqsResult> {
+    async main(
+        sqsConfig: SqsConfig,
+        kmsKey?: pulumi.Output<aws.kms.Key>
+    ): Promise<SqsResult> {
         /**
          * KMS
          */
-        const kms = new aws.kms.Key(`${this.config.project}-sqs-${sqsConfig.name}-kms`, {
+        const kms = kmsKey || new aws.kms.Key(`${this.config.project}-sqs-${sqsConfig.name}-kms`, {
             description: `${this.config.generalPrefix}-sqs-${sqsConfig.name}-kms`,
             deletionWindowInDays: 30,
             customerMasterKeySpec: 'SYMMETRIC_DEFAULT',
@@ -70,18 +73,20 @@ class Sqs {
             }
         });
 
-        new aws.kms.Alias(`${this.config.project}-sqs-${sqsConfig.name}-kms-alias`, {
-            name: `alias/${this.config.generalPrefix}-sqs-${sqsConfig.name}-kms`,
-            targetKeyId: kms.keyId
-        });
+        if (!kmsKey) {
+            new aws.kms.Alias(`${this.config.project}-sqs-${sqsConfig.name}-kms-alias`, {
+                name: `alias/${this.config.generalPrefix}-sqs-${sqsConfig.name}-kms`,
+                targetKeyId: kms.keyId
+            });
+        }
 
         /**
          * Dead Letter Queue (DLQ)
          */
-        const dlqName = sqsConfig.fifoQueue 
+        const dlqName = sqsConfig.fifoQueue
             ? `${this.config.generalPrefix}-sqs-${sqsConfig.name}-dlq.fifo`
             : `${this.config.generalPrefix}-sqs-${sqsConfig.name}-dlq`;
-        
+
         const dlq = new aws.sqs.Queue(`${this.config.project}-sqs-${sqsConfig.name}-dlq`, {
             name: dlqName,
             kmsDataKeyReusePeriodSeconds: sqsConfig.kmsDataKeyReusePeriodSeconds || 300,
@@ -104,10 +109,10 @@ class Sqs {
         /**
          * Main Queue
          */
-        const queueName = sqsConfig.fifoQueue 
+        const queueName = sqsConfig.fifoQueue
             ? `${this.config.generalPrefix}-sqs-${sqsConfig.name}.fifo`
             : `${this.config.generalPrefix}-sqs-${sqsConfig.name}`;
-        
+
         const queue = new aws.sqs.Queue(`${this.config.project}-sqs-${sqsConfig.name}`, {
             name: queueName,
             kmsDataKeyReusePeriodSeconds: sqsConfig.kmsDataKeyReusePeriodSeconds || 300,

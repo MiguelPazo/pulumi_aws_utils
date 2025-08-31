@@ -31,6 +31,8 @@ import {NlbListener} from "./src/modules/NlbListener";
 import {Ses} from "./src/modules/Ses";
 import {VpcImport} from "./src/modules/VpcImport";
 import {Ssm} from "./src/modules/Ssm";
+import {Kms} from "./src/modules/Kms";
+import {DynamoDb} from "./src/modules/DynamoDb";
 
 export const AwsUtilsInit = {
     init
@@ -47,11 +49,13 @@ export const AwsUtilsModules = {
     ApiGateway,
     CloudFrontBackend,
     CloudFrontFrontend,
+    DynamoDb,
     Ecr,
     EcsCluster,
     EcsService,
     Efs,
     ElastiCache,
+    Kms,
     LambdaRole,
     Rds,
     S3,

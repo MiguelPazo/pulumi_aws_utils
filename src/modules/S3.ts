@@ -24,9 +24,10 @@ class S3 {
 
     async main(
         name: string,
+        kmsKey?: pulumi.Output<aws.kms.Key>,
         enableCors?: boolean,
         cdn?: pulumi.Output<aws.cloudfront.Distribution>,
-        enableAlbLogs?: boolean,
+        enableReceiveLogs?: boolean,
     ): Promise<aws.s3.Bucket> {
         const bucketName = pulumi.interpolate`${this.config.generalPrefix}-${this.config.accountId}-${name}`;
 
@@ -50,7 +51,8 @@ class S3 {
             bucket: bucket.id,
             rules: [{
                 applyServerSideEncryptionByDefault: {
-                    sseAlgorithm: "AES256",
+                    sseAlgorithm: kmsKey ? "aws:kms" : "AES256",
+                    kmsMasterKeyId: kmsKey?.arn,
                 },
             }],
         });
@@ -58,7 +60,7 @@ class S3 {
         if (cdn) {
             new aws.s3.BucketPolicy(`${this.config.project}-${name}-bucket-policy`, {
                 bucket: bucket.id,
-                policy: pulumi.all([bucket.arn, this.config.accountId, cdn.id]).apply(x => {
+                policy: pulumi.all([bucket.arn, this.config.accountId, cdn.id]).apply(([bucketArn, accountId, cdnId]) => {
                     return JSON.stringify({
                         "Version": "2012-10-17",
                         "Statement": [
@@ -67,8 +69,8 @@ class S3 {
                                 "Principal": "*",
                                 "Action": "s3:*",
                                 "Resource": [
-                                    x[0],
-                                    `${x[0]}/*`
+                                    bucketArn,
+                                    `${bucketArn}/*`
                                 ],
                                 "Condition": {
                                     "Bool": {
@@ -82,10 +84,10 @@ class S3 {
                                     "Service": "cloudfront.amazonaws.com"
                                 },
                                 "Action": "s3:GetObject",
-                                "Resource": `${x[0]}/*`,
+                                "Resource": `${bucketArn}/*`,
                                 "Condition": {
                                     "StringEquals": {
-                                        "AWS:SourceArn": `arn:aws:cloudfront::${x[1]}:distribution/${x[2]}`
+                                        "AWS:SourceArn": `arn:aws:cloudfront::${accountId}:distribution/${cdnId}`
                                     }
                                 }
                             }
@@ -93,7 +95,7 @@ class S3 {
                     })
                 })
             });
-        } else if (enableAlbLogs) {
+        } else if (enableReceiveLogs) {
             const elbServiceAcc = aws.elb.getServiceAccount({});
 
             new aws.s3.BucketPolicy(`${this.config.project}-${name}-bucket-policy`, {
@@ -143,7 +145,7 @@ class S3 {
                                     "Service": "delivery.logs.amazonaws.com"
                                 },
                                 "Action": "S3:GetBucketAcl",
-                                "Resource": `${bucketArn}`
+                                "Resource": bucketArn
                             },
                         ]
                     })
@@ -152,7 +154,7 @@ class S3 {
         } else {
             new aws.s3.BucketPolicy(`${this.config.project}-${name}-bucket-policy`, {
                 bucket: bucket.id,
-                policy: pulumi.output(bucket.arn).apply(x => {
+                policy: pulumi.output(bucket.arn).apply(bucketArn => {
                     return JSON.stringify({
                         "Version": "2012-10-17",
                         "Statement": [
@@ -161,8 +163,8 @@ class S3 {
                                 "Principal": "*",
                                 "Action": "s3:*",
                                 "Resource": [
-                                    x,
-                                    `${x}/*`
+                                    bucketArn,
+                                    `${bucketArn}/*`
                                 ],
                                 "Condition": {
                                     "Bool": {

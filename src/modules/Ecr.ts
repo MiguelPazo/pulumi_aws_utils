@@ -25,7 +25,8 @@ class Ecr {
     async main(
         service: string,
         execRole: pulumi.Output<aws.iam.Role>,
-        immutable?: boolean
+        immutable?: boolean,
+        kmsKey?: pulumi.Output<aws.kms.Key>
     ): Promise<aws.ecr.Repository> {
         const ecrRepo = new aws.ecr.Repository(`${this.config.project}-${service}-ecr`, {
             name: `${this.config.generalPrefix}/${service}`,
@@ -35,7 +36,8 @@ class Ecr {
             },
             encryptionConfigurations: [
                 {
-                    encryptionType: "AES256"
+                    encryptionType: kmsKey ? "KMS" : "AES256",
+                    kmsKey: kmsKey?.arn
                 }
             ],
             tags: {

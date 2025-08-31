@@ -11,3 +11,5 @@ export * from './apigw';
 export * from './vpc';
 export * from './efs';
 export * from './sqs';
+export * from './kms';
+export * from './dynamodb';
