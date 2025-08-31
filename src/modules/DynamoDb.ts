@@ -73,6 +73,7 @@ class DynamoDb {
                 pointInTimeRecovery: {
                     enabled: config.pointInTimeRecovery || false
                 },
+                deletionProtectionEnabled: config.deleteProtection || false,
                 tags: {
                     ...this.config.generalTags,
                     Name: `${this.config.generalPrefix}-table-${config.name}`,

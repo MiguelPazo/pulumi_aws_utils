@@ -33,6 +33,7 @@ export type DynamoDbTableConfig = {
     readCapacity?: number;
     writeCapacity?: number;
     pointInTimeRecovery?: boolean;
+    deleteProtection?: boolean;
     attributes: DynamoDbAttribute[];
     globalSecondaryIndexes?: DynamoDbGlobalSecondaryIndex[];
     localSecondaryIndexes?: DynamoDbLocalSecondaryIndex[];
