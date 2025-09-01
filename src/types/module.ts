@@ -9,6 +9,7 @@ export type InitConfig = {
     accountId: Promise<string>;
     generalPrefix: string;
     generalPrefixShort: string;
+    generalPrefixShort2: string;
     generalTags: {};
     region: aws.Region;
     providerVirginia: aws.Provider;

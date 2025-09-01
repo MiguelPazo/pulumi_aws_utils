@@ -58,8 +58,11 @@ class Alb {
             cidrIpv4: "0.0.0.0/0"
         });
 
+        let albName = `${this.config.generalPrefixShort}-${name}-alb`;
+        albName = albName.length > 32 ? `${this.config.generalPrefixShort2}-${name}-alb` : albName;
+
         const alb = new aws.lb.LoadBalancer(`${this.config.project}-${name}-alb`, {
-            name: `${this.config.generalPrefixShort}-${name}-alb`,
+            name: albName,
             enableDeletionProtection: this.config.deleteProtection,
             internal: internal,
             loadBalancerType: aws.alb.LoadBalancerType.Application,

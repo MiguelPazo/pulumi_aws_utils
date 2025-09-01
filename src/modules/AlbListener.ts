@@ -32,8 +32,11 @@ class AlbListener {
     ): Promise<aws.lb.TargetGroup> {
         lbConfig.tgStickinessEnabled = lbConfig.tgStickinessEnabled == undefined ? false : lbConfig.tgStickinessEnabled;
 
+        let tgName = `${this.config.generalPrefixShort}-${name}-tg`;
+        tgName = tgName.length > 32 ? `${this.config.generalPrefixShort2}-${name}-tg` : tgName;
+
         const targetGroup = new aws.lb.TargetGroup(`${this.config.project}-${name}-tg`, {
-            name: `${this.config.generalPrefixShort}-${name}-tg`,
+            name: tgName,
             vpcId: alb.vpc.id,
             port: lbConfig.tgPort,
             protocol: lbConfig.tgProtocol.toUpperCase(),
