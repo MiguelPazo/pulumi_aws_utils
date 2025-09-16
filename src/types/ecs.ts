@@ -28,7 +28,7 @@ export type EcsServiceConfig = {
 };
 
 export type EcsServiceResult = {
-    ecsService: aws.ecs.Service;
+    ecsService: aws.ecs.Service | any;
     taskExecRole: aws.iam.Role;
     taskRole: aws.iam.Role;
     logGroup: aws.cloudwatch.LogGroup;

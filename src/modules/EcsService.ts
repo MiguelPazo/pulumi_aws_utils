@@ -39,8 +39,10 @@ class EcsService {
         provider?: string,
         ecrImage?: pulumi.Output<string>,
         envTask?: { name: string; value: string }[],
+        createService?: boolean,
     ): Promise<EcsServiceResult> {
         provider = provider == undefined ? "FARGATE" : provider;
+        createService = createService == undefined ? true : createService;
 
         /**
          * Task Execute Role
@@ -207,90 +209,94 @@ class EcsService {
         /**
          * ECS Service
          */
-        const ecsService = new aws.ecs.Service(`${this.config.project}-${service.nameShort}-ecs-serv`, {
-                name: `${this.config.generalPrefix}-${service.name}`,
-                cluster: ecsCluster.id,
-                taskDefinition: task.arn,
-                desiredCount: service.asgDesiredCount,
-                deploymentMinimumHealthyPercent: service.deploymentMinimumHealthyPercent,
-                deploymentMaximumPercent: service.deploymentMaximumPercent,
-                enableExecuteCommand: service.enableExecuteCommand,
-                healthCheckGracePeriodSeconds: targetGroup ? service.healthCheckGracePeriodSeconds : undefined,
-                propagateTags: "SERVICE",
-                availabilityZoneRebalancing: "ENABLED",
-                deploymentCircuitBreaker: {
-                    enable: true,
-                    rollback: true
-                },
-                capacityProviderStrategies: [
-                    {
-                        base: 1,
-                        capacityProvider: provider,
-                        weight: 100
-                    }
-                ],
-                deploymentController: {
-                    type: "ECS"
-                },
-                networkConfiguration: {
-                    subnets: vpc.privateSubnetIds,
-                    securityGroups: pulumi.all(securityGroups.map(sg => sg.id)),
-                    assignPublicIp: false
-                },
-                loadBalancers: targetGroup ? [
-                    {
-                        targetGroupArn: targetGroup.arn,
-                        containerName: `${this.config.generalPrefix}-${service.name}`,
-                        containerPort: service.port
-                    }
-                ] : [],
-                serviceRegistries: cmDomain ? {
-                    registryArn: cmDomain.arn,
-                    port: service.port
-                } : null
-            }, {
-                dependsOn: [task],
-                ignoreChanges: ['desiredCount', 'taskDefinition']
+        let ecsService = null;
+
+        if (createService) {
+            ecsService = new aws.ecs.Service(`${this.config.project}-${service.nameShort}-ecs-serv`, {
+                    name: `${this.config.generalPrefix}-${service.name}`,
+                    cluster: ecsCluster.id,
+                    taskDefinition: task.arn,
+                    desiredCount: service.asgDesiredCount,
+                    deploymentMinimumHealthyPercent: service.deploymentMinimumHealthyPercent,
+                    deploymentMaximumPercent: service.deploymentMaximumPercent,
+                    enableExecuteCommand: service.enableExecuteCommand,
+                    healthCheckGracePeriodSeconds: targetGroup ? service.healthCheckGracePeriodSeconds : undefined,
+                    propagateTags: "SERVICE",
+                    availabilityZoneRebalancing: "ENABLED",
+                    deploymentCircuitBreaker: {
+                        enable: true,
+                        rollback: true
+                    },
+                    capacityProviderStrategies: [
+                        {
+                            base: 1,
+                            capacityProvider: provider,
+                            weight: 100
+                        }
+                    ],
+                    deploymentController: {
+                        type: "ECS"
+                    },
+                    networkConfiguration: {
+                        subnets: vpc.privateSubnetIds,
+                        securityGroups: pulumi.all(securityGroups.map(sg => sg.id)),
+                        assignPublicIp: false
+                    },
+                    loadBalancers: targetGroup ? [
+                        {
+                            targetGroupArn: targetGroup.arn,
+                            containerName: `${this.config.generalPrefix}-${service.name}`,
+                            containerPort: service.port
+                        }
+                    ] : [],
+                    serviceRegistries: cmDomain ? {
+                        registryArn: cmDomain.arn,
+                        port: service.port
+                    } : null
+                }, {
+                    dependsOn: [task],
+                    ignoreChanges: ['desiredCount', 'taskDefinition']
+                }
+            );
+
+            /**
+             * ASG
+             */
+            if (enableAsg) {
+                const asgTarget = new aws.appautoscaling.Target(`${this.config.project}-${service.nameShort}-ecs-asg-tg`, {
+                    maxCapacity: service.asgMaxCount,
+                    minCapacity: service.asgMinCount,
+                    resourceId: pulumi.interpolate`service/${ecsCluster.name}/${ecsService.name}`,
+                    scalableDimension: "ecs:service:DesiredCount",
+                    serviceNamespace: "ecs",
+                });
+
+                new aws.appautoscaling.Policy(`${this.config.project}-${service.nameShort}-ecs-asg-memory`, {
+                    policyType: "TargetTrackingScaling",
+                    resourceId: asgTarget.resourceId,
+                    scalableDimension: asgTarget.scalableDimension,
+                    serviceNamespace: asgTarget.serviceNamespace,
+                    targetTrackingScalingPolicyConfiguration: {
+                        predefinedMetricSpecification: {
+                            predefinedMetricType: "ECSServiceAverageMemoryUtilization",
+                        },
+                        targetValue: service.asgMaxMemory
+                    },
+                });
+
+                new aws.appautoscaling.Policy(`${this.config.project}-${service.nameShort}-ecs-asg-cpu`, {
+                    policyType: "TargetTrackingScaling",
+                    resourceId: asgTarget.resourceId,
+                    scalableDimension: asgTarget.scalableDimension,
+                    serviceNamespace: asgTarget.serviceNamespace,
+                    targetTrackingScalingPolicyConfiguration: {
+                        predefinedMetricSpecification: {
+                            predefinedMetricType: "ECSServiceAverageCPUUtilization",
+                        },
+                        targetValue: service.asgMaxCpu
+                    },
+                });
             }
-        );
-
-        /**
-         * ASG
-         */
-        if (enableAsg) {
-            const asgTarget = new aws.appautoscaling.Target(`${this.config.project}-${service.nameShort}-ecs-asg-tg`, {
-                maxCapacity: service.asgMaxCount,
-                minCapacity: service.asgMinCount,
-                resourceId: pulumi.interpolate`service/${ecsCluster.name}/${ecsService.name}`,
-                scalableDimension: "ecs:service:DesiredCount",
-                serviceNamespace: "ecs",
-            });
-
-            new aws.appautoscaling.Policy(`${this.config.project}-${service.nameShort}-ecs-asg-memory`, {
-                policyType: "TargetTrackingScaling",
-                resourceId: asgTarget.resourceId,
-                scalableDimension: asgTarget.scalableDimension,
-                serviceNamespace: asgTarget.serviceNamespace,
-                targetTrackingScalingPolicyConfiguration: {
-                    predefinedMetricSpecification: {
-                        predefinedMetricType: "ECSServiceAverageMemoryUtilization",
-                    },
-                    targetValue: service.asgMaxMemory
-                },
-            });
-
-            new aws.appautoscaling.Policy(`${this.config.project}-${service.nameShort}-ecs-asg-cpu`, {
-                policyType: "TargetTrackingScaling",
-                resourceId: asgTarget.resourceId,
-                scalableDimension: asgTarget.scalableDimension,
-                serviceNamespace: asgTarget.serviceNamespace,
-                targetTrackingScalingPolicyConfiguration: {
-                    predefinedMetricSpecification: {
-                        predefinedMetricType: "ECSServiceAverageCPUUtilization",
-                    },
-                    targetValue: service.asgMaxCpu
-                },
-            });
         }
 
         return {
