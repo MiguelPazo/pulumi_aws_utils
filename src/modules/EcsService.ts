@@ -301,6 +301,7 @@ class EcsService {
 
         return {
             ecsService,
+            task,
             taskExecRole,
             taskRole,
             logGroup
