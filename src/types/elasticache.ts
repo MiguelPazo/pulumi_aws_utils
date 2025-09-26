@@ -16,6 +16,7 @@ export type ElastiCacheConfig = {
     parameterGroupValues: { name: string; value: string; }[];
     port: number;
     automaticFailoverEnabled: boolean;
+    applyImmediately: boolean;
     authToken?: pulumi.Output<string>;
     clusterMode?: boolean;
     domainRdsReader: string;
