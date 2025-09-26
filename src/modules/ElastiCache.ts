@@ -100,7 +100,7 @@ class ElastiCache {
             securityGroupIds: [securityGroup.id],
             port: elastiCacheConfig.port,
             automaticFailoverEnabled: elastiCacheConfig.automaticFailoverEnabled,
-            applyImmediately: elastiCacheConfig.applyImmediately,
+            applyImmediately: elastiCacheConfig.applyImmediately ?? true,
             tags: {
                 ...this.config.generalTags,
                 Name: `${this.config.generalPrefix}-redis-${elastiCacheConfig.name}-cluster`,
