@@ -15,4 +15,5 @@ export interface EcsServicesConfig {
 export type LambdaConfig = {
     name: string;
     policy?: string;
+    assume?: boolean;
 };

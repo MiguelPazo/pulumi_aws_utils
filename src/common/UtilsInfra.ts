@@ -30,6 +30,7 @@ class UtilsInfra {
         evaluateTargetHealth = evaluateTargetHealth == undefined ? true : evaluateTargetHealth;
         isAlias = isAlias == undefined ? true : isAlias;
 
+        // TODO: update record name
         new aws.route53.Record(
             `${domain}-alb-record`,
             {
