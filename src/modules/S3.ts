@@ -28,7 +28,10 @@ class S3 {
         enableCors?: boolean,
         cdn?: pulumi.Output<aws.cloudfront.Distribution>,
         enableReceiveLogs?: boolean,
+        defaultPolicy?: boolean,
     ): Promise<aws.s3.Bucket> {
+        defaultPolicy = defaultPolicy == undefined ? true : defaultPolicy;
+
         const bucketName = pulumi.interpolate`${this.config.generalPrefix}-${this.config.accountId}-${name}`;
 
         const bucket = new aws.s3.Bucket(`${this.config.project}-${name}-bucket`, {
@@ -151,7 +154,7 @@ class S3 {
                     })
                 })
             });
-        } else {
+        } else if (defaultPolicy) {
             new aws.s3.BucketPolicy(`${this.config.project}-${name}-bucket-policy`, {
                 bucket: bucket.id,
                 policy: pulumi.output(bucket.arn).apply(bucketArn => {
