@@ -13,8 +13,33 @@ class UtilsInfra {
         targetZoneId: pulumi.Output<string>,
         evaluateTargetHealth?: boolean
     ): void {
-        pulumi.all([domainCert.domain, domainCert.zoneId, targetDnsName, targetZoneId]).apply(x => {
-            this.createAliasRecordDirect(x[0], x[1], x[2], x[3], evaluateTargetHealth);
+        pulumi.all([
+            domainCert.domain,
+            domainCert.zoneId,
+            targetDnsName,
+            targetZoneId]).apply(([
+                                      domain,
+                                      zoneId,
+                                      targetDns,
+                                      targetZone
+                                  ]) => {
+            this.createAliasRecordDirect(domain, zoneId, targetDns, targetZone, evaluateTargetHealth);
+        });
+    }
+
+    static createIpRecord(
+        domainCert: CertificatesResult,
+        targetIps?: pulumi.Output<string[]>
+    ): void {
+        pulumi.all([
+            domainCert.domain,
+            domainCert.zoneId,
+            targetIps]).apply(([
+                                   domain,
+                                   zoneId,
+                                   ips
+                               ]) => {
+            this.createAliasRecordDirect(domain, zoneId, null, null, null, false, ips);
         });
     }
 

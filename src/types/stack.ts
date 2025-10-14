@@ -17,3 +17,8 @@ export type LambdaConfig = {
     policy?: string;
     assume?: boolean;
 };
+
+export type VpceDnsOutput = {
+    dnsName: string;
+    hostedZoneId: string;
+};
