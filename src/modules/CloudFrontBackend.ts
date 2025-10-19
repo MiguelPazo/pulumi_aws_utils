@@ -30,7 +30,7 @@ class CloudFrontBackend {
         vpcOriginId: pulumi.Output<string>,
         vpcOriginDns: pulumi.Output<string>,
         vpcOriginPath: string,
-        apigwId: pulumi.Output<string>,
+        apigw: pulumi.Output<aws.apigateway.RestApi>,
         cfbase: pulumi.Output<CloudFrontBaseResult>,
         s3Logs: pulumi.Output<aws.s3.Bucket>,
         certificate: CertificatesResult,
@@ -52,7 +52,7 @@ class CloudFrontBackend {
                         vpcOriginId: vpcOriginId
                     },
                     customHeaders: [
-                        {name: "x-apigw-api-id", value: apigwId}
+                        {name: "x-apigw-api-id", value: apigw.id}
                     ]
                 }
             ],
@@ -96,6 +96,10 @@ class CloudFrontBackend {
                 ...this.config.generalTags,
                 Name: `${this.config.generalPrefix}-${name}-cf`,
             }
+        }, {
+            dependsOn: [
+                apigw
+            ]
         });
 
         UtilsInfra.createAliasRecord(certificate, cdn.domainName, cdn.hostedZoneId, true);

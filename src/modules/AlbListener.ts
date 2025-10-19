@@ -65,6 +65,10 @@ class AlbListener {
                 ...this.config.generalTags,
                 Name: `${this.config.generalPrefixShort}-${name}-tg`,
             }
+        }, {
+            dependsOn: [
+                alb.alb
+            ]
         });
 
         const lstProtocol = lbConfig.lstProtocol.toUpperCase();

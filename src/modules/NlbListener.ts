@@ -54,6 +54,10 @@ class NlbListener {
                 ...this.config.generalTags,
                 Name: `${this.config.generalPrefixShort}-${name}-tg`,
             }
+        }, {
+            dependsOn: [
+                nlb
+            ]
         });
 
         const lstProtocol = lbConfig.lstProtocol.toUpperCase();
