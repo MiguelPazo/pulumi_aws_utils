@@ -4,7 +4,7 @@
 import * as pulumi from "@pulumi/pulumi";
 import * as aws from "@pulumi/aws";
 import * as crypto from "crypto";
-import {CertificatesResult, VpceDnsOutput} from "../types";
+import {ApiGatewayResult, CertificatesResult, VpceDnsOutput} from "../types";
 import * as yaml from "js-yaml";
 import {UtilsInfra} from "../common/UtilsInfra";
 import {getInit} from "../config";
@@ -38,7 +38,7 @@ class ApiGateway {
         ignoreOpenApiChanges?: boolean,
         dependsOn?: any[],
         vpceApiGwDns?: pulumi.Output<VpceDnsOutput>
-    ): Promise<aws.apigateway.RestApi> {
+    ): Promise<ApiGatewayResult> {
         logLevel = logLevel == undefined ? "INFO" : logLevel;
         ignoreOpenApiChanges = ignoreOpenApiChanges == undefined ? false : ignoreOpenApiChanges;
         const openApiSpec = yaml.load(template);
@@ -58,27 +58,22 @@ class ApiGateway {
                     return JSON.stringify({
                         Version: "2012-10-17",
                         Statement: [
-                            // {
-                            //     Effect: "Deny",
-                            //     Principal: "*",
-                            //     Action: "execute-api:Invoke",
-                            //     Resource: `arn:aws:execute-api:${region}:${accountId}:*/*`,
-                            //     Condition: {
-                            //         StringNotEquals: {
-                            //             "aws:SourceVpce": endpoints,
-                            //         },
-                            //     },
-                            // },
+                            {
+                                Effect: "Deny",
+                                Principal: "*",
+                                Action: "execute-api:Invoke",
+                                Resource: `arn:aws:execute-api:${region}:${accountId}:*/*`,
+                                Condition: {
+                                    StringNotEquals: {
+                                        "aws:SourceVpce": endpoints,
+                                    },
+                                },
+                            },
                             {
                                 Effect: "Allow",
                                 Principal: "*",
                                 Action: "execute-api:Invoke",
                                 Resource: `arn:aws:execute-api:${region}:${accountId}:*/*`,
-                                // Condition: {
-                                //     StringNotEquals: {
-                                //         "aws:SourceVpce": endpoints,
-                                //     },
-                                // },
                             }
                         ],
                     })
@@ -202,7 +197,10 @@ class ApiGateway {
             }
         });
 
-        return api
+        return {
+            api,
+            stage
+        } as ApiGatewayResult
     }
 }
 
