@@ -145,7 +145,6 @@ class ElastiCache {
             dependsOn: [cluster]
         });
 
-
         return {
             cluster,
             kms,
