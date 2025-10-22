@@ -100,6 +100,7 @@ class ElastiCache {
             securityGroupIds: [securityGroup.id],
             port: elastiCacheConfig.port,
             automaticFailoverEnabled: elastiCacheConfig.automaticFailoverEnabled,
+            multiAzEnabled: elastiCacheConfig.multiAzEnabled,
             applyImmediately: elastiCacheConfig.applyImmediately ?? true,
             tags: {
                 ...this.config.generalTags,
@@ -125,20 +126,25 @@ class ElastiCache {
          * DNS
          */
         new aws.route53.Record(`${this.config.project}-redis-${elastiCacheConfig.name}-reader-dns`, {
-            name: elastiCacheConfig.domainRdsReader,
+            name: elastiCacheConfig.domainReader,
             type: "CNAME",
             zoneId: phz.zone.zoneId,
             ttl: 300,
-            records: [cluster.readerEndpointAddress],
+            records: [elastiCacheConfig.clusterMode ? cluster.configurationEndpointAddress : cluster.readerEndpointAddress],
+        }, {
+            dependsOn: [cluster]
         });
 
         new aws.route53.Record(`${this.config.project}-redis-${elastiCacheConfig.name}-writer-dns`, {
-            name: elastiCacheConfig.domainRdsWriter,
+            name: elastiCacheConfig.domainWriter,
             type: "CNAME",
             zoneId: phz.zone.zoneId,
             ttl: 300,
-            records: [cluster.primaryEndpointAddress],
+            records: [elastiCacheConfig.clusterMode ? cluster.configurationEndpointAddress : cluster.primaryEndpointAddress],
+        }, {
+            dependsOn: [cluster]
         });
+
 
         return {
             cluster,

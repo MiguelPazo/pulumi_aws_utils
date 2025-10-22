@@ -16,11 +16,12 @@ export type ElastiCacheConfig = {
     parameterGroupValues: { name: string; value: string; }[];
     port: number;
     automaticFailoverEnabled: boolean;
+    multiAzEnabled: boolean;
     applyImmediately?: boolean;
     authToken?: pulumi.Output<string>;
     clusterMode?: boolean;
-    domainRdsReader: string;
-    domainRdsWriter: string;
+    domainReader: string;
+    domainWriter: string;
 };
 
 export type ElastiCacheResult = {
