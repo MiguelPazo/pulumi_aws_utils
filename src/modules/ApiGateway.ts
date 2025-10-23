@@ -29,6 +29,7 @@ class ApiGateway {
     async main(
         name: string,
         isPrivate: boolean,
+        stageName: string,
         template?: string,
         certificates?: CertificatesResult[],
         logLevel?: string,
@@ -37,7 +38,7 @@ class ApiGateway {
         privateVpcEndpointIds?: pulumi.Output<string>[],
         ignoreOpenApiChanges?: boolean,
         dependsOn?: any[],
-        vpceApiGwDns?: pulumi.Output<VpceDnsOutput>
+        vpceApiGwDns?: pulumi.Output<VpceDnsOutput>,
     ): Promise<ApiGatewayResult> {
         logLevel = logLevel == undefined ? "INFO" : logLevel;
         ignoreOpenApiChanges = ignoreOpenApiChanges == undefined ? false : ignoreOpenApiChanges;
@@ -113,7 +114,7 @@ class ApiGateway {
         }
 
         const stage = new aws.apigateway.Stage(`${this.config.project}-${name}-apirest-stage`, {
-            stageName: this.config.stack,
+            stageName: stageName || this.config.stack,
             restApi: api.id,
             deployment: deployment.id,
             xrayTracingEnabled: enableXRay,
@@ -146,6 +147,8 @@ class ApiGateway {
                     metricsEnabled: true,
                     loggingLevel: logLevel
                 },
+            }, {
+                dependsOn: [stage]
             });
         }
 
