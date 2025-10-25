@@ -18,6 +18,11 @@ export type LambdaConfig = {
     assume?: boolean;
 };
 
+export type SgRuleConfig = {
+    description: string;
+    cidr: string;
+};
+
 export type VpceDnsOutput = {
     dnsName: string;
     hostedZoneId: string;

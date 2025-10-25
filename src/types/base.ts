@@ -33,6 +33,8 @@ export type Route53Result = {
 export type WafResult = {
     wafFrontend: aws.wafv2.WebAcl;
     wafBackend: aws.wafv2.WebAcl;
+    wafFrontend2?: aws.wafv2.WebAcl;
+    wafBackend2?: aws.wafv2.WebAcl;
 };
 
 export type EcsServiceInstanceResult = {

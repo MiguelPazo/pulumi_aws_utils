@@ -29,10 +29,11 @@ class S3 {
         cdn?: pulumi.Output<aws.cloudfront.Distribution>,
         enableReceiveLogs?: boolean,
         defaultPolicy?: boolean,
+        fullName?: string
     ): Promise<aws.s3.Bucket> {
         defaultPolicy = defaultPolicy == undefined ? true : defaultPolicy;
 
-        const bucketName = pulumi.interpolate`${this.config.generalPrefix}-${this.config.accountId}-${name}`;
+        const bucketName = fullName || pulumi.interpolate`${this.config.generalPrefix}-${this.config.accountId}-${name}`;
 
         const bucket = new aws.s3.Bucket(`${this.config.project}-${name}-bucket`, {
             bucket: bucketName,
