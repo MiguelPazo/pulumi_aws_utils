@@ -18,7 +18,7 @@ export type LambdaConfig = {
     assume?: boolean;
 };
 
-export type SgRuleConfig = {
+export type Cidr = {
     description: string;
     cidr: string;
 };
