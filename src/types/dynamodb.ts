@@ -25,6 +25,24 @@ export type DynamoDbLocalSecondaryIndex = {
     projectionAttributes?: string[];
 };
 
+export type DynamoDbAutoScalingConfig = {
+    enabled: boolean;
+    minCapacity: number;
+    maxCapacity: number;
+    targetValue: number;
+    scaleInCooldown?: number;
+    scaleOutCooldown?: number;
+};
+
+export type DynamoDbAutoScaling = {
+    read?: DynamoDbAutoScalingConfig;
+    write?: DynamoDbAutoScalingConfig;
+};
+
+export type DynamoDbGsiAutoScaling = {
+    [indexName: string]: DynamoDbAutoScaling;
+};
+
 export type DynamoDbTableConfig = {
     name: string;
     hashKey: string;
@@ -40,6 +58,9 @@ export type DynamoDbTableConfig = {
     streamEnabled?: boolean;
     streamViewType?: "KEYS_ONLY" | "NEW_IMAGE" | "OLD_IMAGE" | "NEW_AND_OLD_IMAGES";
     tags?: Record<string, string>;
+    autoScaling?: DynamoDbAutoScaling;
+    gsiAutoScaling?: DynamoDbGsiAutoScaling;
+    applyAutoScalingToAllGsi?: boolean;
 };
 
 export type DynamoDbResult = {

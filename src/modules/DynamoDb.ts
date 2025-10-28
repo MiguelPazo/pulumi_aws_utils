@@ -36,7 +36,7 @@ class DynamoDb {
             const tableKey = `table${tableName.charAt(0).toUpperCase() + tableName.slice(1).replace(/_([a-z])/g, (match, letter) => letter.toUpperCase())}`;
 
             // Create DynamoDB table
-            tables[tableKey] = new aws.dynamodb.Table(`${this.config.project}-dynamodb-${config.name}`, {
+            const table = new aws.dynamodb.Table(`${this.config.project}-dynamodb-${config.name}`, {
                 name: `${this.config.generalPrefix}-table-${config.name}`,
                 attributes: config.attributes,
                 hashKey: config.hashKey,
@@ -80,9 +80,185 @@ class DynamoDb {
                     ...config.tags
                 }
             });
+
+            tables[tableKey] = table;
+
+            // Configure Auto Scaling for table if enabled and billingMode is PROVISIONED
+            if (config.billingMode === "PROVISIONED" && config.autoScaling) {
+                this.configureTableAutoScaling(config, table);
+            }
+
+            // Configure Auto Scaling for GSI if enabled
+            if (config.billingMode === "PROVISIONED" && config.globalSecondaryIndexes) {
+                config.globalSecondaryIndexes.forEach(gsi => {
+                    // Apply table auto scaling to all GSI if flag is enabled
+                    if (config.applyAutoScalingToAllGsi && config.autoScaling) {
+                        this.configureGsiAutoScaling(config, table, gsi.name, config.autoScaling);
+                    }
+                    // Apply specific GSI auto scaling configuration
+                    else if (config.gsiAutoScaling && config.gsiAutoScaling[gsi.name]) {
+                        this.configureGsiAutoScaling(config, table, gsi.name, config.gsiAutoScaling[gsi.name]);
+                    }
+                });
+            }
         });
 
         return tables as DynamoDbResult;
+    }
+
+    private configureTableAutoScaling(config: DynamoDbTableConfig, table: aws.dynamodb.Table): void {
+        const tableName = `${this.config.generalPrefix}-table-${config.name}`;
+
+        // Read Auto Scaling
+        if (config.autoScaling?.read?.enabled) {
+            const readTarget = new aws.appautoscaling.Target(
+                `${this.config.project}-dynamodb-${config.name}-read-target`,
+                {
+                    maxCapacity: config.autoScaling.read.maxCapacity,
+                    minCapacity: config.autoScaling.read.minCapacity,
+                    resourceId: pulumi.interpolate`table/${table.name}`,
+                    scalableDimension: "dynamodb:table:ReadCapacityUnits",
+                    serviceNamespace: "dynamodb",
+                }
+            );
+
+            new aws.appautoscaling.Policy(
+                `${this.config.project}-dynamodb-${config.name}-read-policy`,
+                {
+                    policyType: "TargetTrackingScaling",
+                    resourceId: readTarget.resourceId,
+                    scalableDimension: readTarget.scalableDimension,
+                    serviceNamespace: readTarget.serviceNamespace,
+                    targetTrackingScalingPolicyConfiguration: {
+                        predefinedMetricSpecification: {
+                            predefinedMetricType: "DynamoDBReadCapacityUtilization",
+                        },
+                        targetValue: config.autoScaling.read.targetValue,
+                        ...(config.autoScaling.read.scaleInCooldown && {
+                            scaleInCooldown: config.autoScaling.read.scaleInCooldown
+                        }),
+                        ...(config.autoScaling.read.scaleOutCooldown && {
+                            scaleOutCooldown: config.autoScaling.read.scaleOutCooldown
+                        })
+                    },
+                }
+            );
+        }
+
+        // Write Auto Scaling
+        if (config.autoScaling?.write?.enabled) {
+            const writeTarget = new aws.appautoscaling.Target(
+                `${this.config.project}-dynamodb-${config.name}-write-target`,
+                {
+                    maxCapacity: config.autoScaling.write.maxCapacity,
+                    minCapacity: config.autoScaling.write.minCapacity,
+                    resourceId: pulumi.interpolate`table/${table.name}`,
+                    scalableDimension: "dynamodb:table:WriteCapacityUnits",
+                    serviceNamespace: "dynamodb",
+                }
+            );
+
+            new aws.appautoscaling.Policy(
+                `${this.config.project}-dynamodb-${config.name}-write-policy`,
+                {
+                    policyType: "TargetTrackingScaling",
+                    resourceId: writeTarget.resourceId,
+                    scalableDimension: writeTarget.scalableDimension,
+                    serviceNamespace: writeTarget.serviceNamespace,
+                    targetTrackingScalingPolicyConfiguration: {
+                        predefinedMetricSpecification: {
+                            predefinedMetricType: "DynamoDBWriteCapacityUtilization",
+                        },
+                        targetValue: config.autoScaling.write.targetValue,
+                        ...(config.autoScaling.write.scaleInCooldown && {
+                            scaleInCooldown: config.autoScaling.write.scaleInCooldown
+                        }),
+                        ...(config.autoScaling.write.scaleOutCooldown && {
+                            scaleOutCooldown: config.autoScaling.write.scaleOutCooldown
+                        })
+                    },
+                }
+            );
+        }
+    }
+
+    private configureGsiAutoScaling(
+        config: DynamoDbTableConfig,
+        table: aws.dynamodb.Table,
+        indexName: string,
+        autoScaling: { read?: any; write?: any }
+    ): void {
+        // Read Auto Scaling for GSI
+        if (autoScaling.read?.enabled) {
+            const readTarget = new aws.appautoscaling.Target(
+                `${this.config.project}-dynamodb-${config.name}-gsi-${indexName}-read-target`,
+                {
+                    maxCapacity: autoScaling.read.maxCapacity,
+                    minCapacity: autoScaling.read.minCapacity,
+                    resourceId: pulumi.interpolate`table/${table.name}/index/${indexName}`,
+                    scalableDimension: "dynamodb:index:ReadCapacityUnits",
+                    serviceNamespace: "dynamodb",
+                }
+            );
+
+            new aws.appautoscaling.Policy(
+                `${this.config.project}-dynamodb-${config.name}-gsi-${indexName}-read-policy`,
+                {
+                    policyType: "TargetTrackingScaling",
+                    resourceId: readTarget.resourceId,
+                    scalableDimension: readTarget.scalableDimension,
+                    serviceNamespace: readTarget.serviceNamespace,
+                    targetTrackingScalingPolicyConfiguration: {
+                        predefinedMetricSpecification: {
+                            predefinedMetricType: "DynamoDBReadCapacityUtilization",
+                        },
+                        targetValue: autoScaling.read.targetValue,
+                        ...(autoScaling.read.scaleInCooldown && {
+                            scaleInCooldown: autoScaling.read.scaleInCooldown
+                        }),
+                        ...(autoScaling.read.scaleOutCooldown && {
+                            scaleOutCooldown: autoScaling.read.scaleOutCooldown
+                        })
+                    },
+                }
+            );
+        }
+
+        // Write Auto Scaling for GSI
+        if (autoScaling.write?.enabled) {
+            const writeTarget = new aws.appautoscaling.Target(
+                `${this.config.project}-dynamodb-${config.name}-gsi-${indexName}-write-target`,
+                {
+                    maxCapacity: autoScaling.write.maxCapacity,
+                    minCapacity: autoScaling.write.minCapacity,
+                    resourceId: pulumi.interpolate`table/${table.name}/index/${indexName}`,
+                    scalableDimension: "dynamodb:index:WriteCapacityUnits",
+                    serviceNamespace: "dynamodb",
+                }
+            );
+
+            new aws.appautoscaling.Policy(
+                `${this.config.project}-dynamodb-${config.name}-gsi-${indexName}-write-policy`,
+                {
+                    policyType: "TargetTrackingScaling",
+                    resourceId: writeTarget.resourceId,
+                    scalableDimension: writeTarget.scalableDimension,
+                    serviceNamespace: writeTarget.serviceNamespace,
+                    targetTrackingScalingPolicyConfiguration: {
+                        predefinedMetricSpecification: {
+                            predefinedMetricType: "DynamoDBWriteCapacityUtilization",
+                        },
+                        targetValue: autoScaling.write.targetValue,
+                        ...(autoScaling.write.scaleInCooldown && {
+                            scaleInCooldown: autoScaling.write.scaleInCooldown
+                        }),
+                        ...(autoScaling.write.scaleOutCooldown && {
+                            scaleOutCooldown: autoScaling.write.scaleOutCooldown
+                        })
+                    },
+                }
+            );
+        }
     }
 }
 
