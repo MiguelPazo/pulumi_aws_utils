@@ -43,8 +43,8 @@ class DynamoDb {
                 ...(config.rangeKey && {rangeKey: config.rangeKey}),
                 billingMode: config.billingMode,
                 ...(config.billingMode === "PROVISIONED" && {
-                    readCapacity: config.readCapacity || 5,
-                    writeCapacity: config.writeCapacity || 5
+                    readCapacity: config.readCapacity,
+                    writeCapacity: config.writeCapacity
                 }),
                 ...(config.globalSecondaryIndexes && {
                     globalSecondaryIndexes: config.globalSecondaryIndexes.map(gsi => ({
