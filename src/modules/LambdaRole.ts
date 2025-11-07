@@ -27,7 +27,7 @@ class LambdaRole {
     async main(
         lambda: LambdaConfig,
         policyFilePath?: string,
-        policy?: string,
+        policy?: pulumi.Output<string>,
         isEdge?: boolean
     ): Promise<aws.iam.Role> {
         /**

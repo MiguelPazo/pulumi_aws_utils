@@ -34,6 +34,7 @@ import {VpcImport} from "./src/modules/VpcImport";
 import {Ssm} from "./src/modules/Ssm";
 import {Kms} from "./src/modules/Kms";
 import {DynamoDb} from "./src/modules/DynamoDb";
+import {LambdaRestart} from "./src/tools/LambdaRestart";
 
 export const AwsUtilsInit = {
     init
@@ -42,6 +43,10 @@ export const AwsUtilsInit = {
 export const AwsUtilsCommon = {
     General,
     UtilsInfra
+};
+
+export const AwsUtilsTools = {
+    LambdaRestart,
 };
 
 export const AwsUtilsModules = {
