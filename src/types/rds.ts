@@ -11,8 +11,8 @@ export type RdsConfig = {
     engineVersion: string;
     instanceClass: string;
     port: number;
-    username: pulumi.Output<string>;
-    password: pulumi.Output<string>;
+    username: pulumi.Output<string> | string;
+    password: pulumi.Output<string> | string;
     parameterGroupFamily: string;
     parameterGroupValues: { name: string; value: string; }[];
     skipFinalSnapshot: boolean;
@@ -35,8 +35,8 @@ export type RdsAuroraConfig = {
     instanceCount: number;
     port: number;
     databaseName: string;
-    username: pulumi.Output<string>;
-    password: pulumi.Output<string>;
+    username: pulumi.Output<string> | string;
+    password: pulumi.Output<string> | string;
     parameterGroupFamily: string;
     parameterGroupValues?: { name: string; value: string; }[];
     clusterParameterGroupValues?: { name: string; value: string; }[];
@@ -60,4 +60,34 @@ export type RdsAuroraResult = {
     securityGroup: aws.ec2.SecurityGroup;
     clusterParameterGroup?: aws.rds.ClusterParameterGroup;
     parameterGroup?: aws.rds.ParameterGroup;
+};
+
+export type RdsProxyAuth = {
+    authScheme?: "SECRETS";
+    iamAuth?: "DISABLED" | "REQUIRED";
+    secretArn: pulumi.Output<string> | string;
+    clientPasswordAuthType?: "MYSQL_CACHING_SHA2_PASSWORD" | "MYSQL_NATIVE_PASSWORD" | "POSTGRES_SCRAM_SHA_256" | "POSTGRES_MD5" | "SQL_SERVER_AUTHENTICATION";
+};
+
+export type RdsProxyConfig = {
+    name: string;
+    engineFamily: "MYSQL" | "POSTGRESQL" | "SQLSERVER";
+    auths: RdsProxyAuth[];
+    requireTls?: boolean;
+    debugLogging?: boolean;
+    idleClientTimeout?: number;
+    connectionBorrowTimeout?: number;
+    maxConnectionsPercent?: number;
+    maxIdleConnectionsPercent?: number;
+    domainRdsProxy?: string;
+    domainPublicRdsProxy?: string;
+};
+
+export type RdsProxyResult = {
+    proxy: aws.rds.Proxy;
+    defaultTargetGroup: aws.rds.ProxyDefaultTargetGroup;
+    target: aws.rds.ProxyTarget;
+    securityGroup: aws.ec2.SecurityGroup;
+    iamRole: aws.iam.Role;
+    secretsPolicy: aws.iam.RolePolicy;
 };

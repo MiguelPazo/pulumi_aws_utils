@@ -28,7 +28,9 @@ class VpcImport {
         patterns = {
             public: "*-public*",
             private: "*-private*",
-            isolated: "*-isolated*"
+            isolated: "*-isolated*",
+            databases: "*-databases*",
+            elasticache: "*-elasticache*",
         }
     ): Promise<VpcImportResult> {
         const vpc = aws.ec2.Vpc.get(`${this.config.project}-vpc`, vpcId);
@@ -63,6 +65,8 @@ class VpcImport {
         const publicResult = getSubnets(patterns.public);
         const privateResult = getSubnets(patterns.private);
         const isolatedResult = getSubnets(patterns.isolated);
+        const databasesResult = getSubnets(patterns.databases);
+        const elasticacheResult = getSubnets(patterns.elasticache);
 
         return {
             vpc,
@@ -70,9 +74,13 @@ class VpcImport {
             publicSubnets: publicResult.subnets,
             privateSubnets: privateResult.subnets,
             isolatedSubnets: isolatedResult.subnets,
+            databasesSubnets: databasesResult.subnets,
+            elasticacheSubnets: elasticacheResult.subnets,
             publicSubnetIds: publicResult.subnetIds,
             privateSubnetIds: privateResult.subnetIds,
             isolatedSubnetIds: isolatedResult.subnetIds,
+            databasesSubnetIds: databasesResult.subnetIds,
+            elasticacheSubnetIds: elasticacheResult.subnetIds,
         } as VpcImportResult;
     }
 }

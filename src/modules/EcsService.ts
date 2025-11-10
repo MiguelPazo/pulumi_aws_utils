@@ -50,14 +50,14 @@ class EcsService {
         const taskExecRole = new aws.iam.Role(`${this.config.project}-${service.nameShort}-ecs-task-exec-role`, {
             name: `${this.config.generalPrefixShort}-${service.name}-ecs-task-exec-role`,
             assumeRolePolicy: {
-                "Version": "2012-10-17",
-                "Statement": [
+                Version: "2012-10-17",
+                Statement: [
                     {
-                        "Effect": "Allow",
-                        "Principal": {
-                            "Service": "ecs-tasks.amazonaws.com"
+                        Effect: "Allow",
+                        Principal: {
+                            Service: "ecs-tasks.amazonaws.com"
                         },
-                        "Action": "sts:AssumeRole"
+                        Action: "sts:AssumeRole"
                     }
                 ]
             },
@@ -74,16 +74,16 @@ class EcsService {
             name: `${this.config.generalPrefixShort}-${service.name}-ecs-task-role`,
             assumeRolePolicy: pulumi.output(this.config.accountId).apply(x => {
                 return JSON.stringify({
-                    "Version": "2012-10-17",
-                    "Statement": [
+                    Version: "2012-10-17",
+                    Statement: [
                         {
-                            "Effect": "Allow",
-                            "Principal": {
-                                "Service": "ecs-tasks.amazonaws.com"
+                            Effect: "Allow",
+                            Principal: {
+                                Service: "ecs-tasks.amazonaws.com"
                             },
-                            "Action": "sts:AssumeRole",
-                            "Condition": {
-                                "ArnLike": {
+                            Action: "sts:AssumeRole",
+                            Condition: {
+                                ArnLike: {
                                     "aws:SourceArn": `arn:aws:ecs:${aws.config.region}:${x}:*`
                                 }
                             }

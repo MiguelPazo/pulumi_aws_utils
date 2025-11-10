@@ -10,7 +10,11 @@ export type VpcImportResult = {
     publicSubnets: pulumi.Output<aws.ec2.Subnet[]>;
     privateSubnets: pulumi.Output<aws.ec2.Subnet[]>;
     isolatedSubnets: pulumi.Output<aws.ec2.Subnet[]>;
+    databasesSubnets: pulumi.Output<aws.ec2.Subnet[]>;
+    elasticacheSubnets: pulumi.Output<aws.ec2.Subnet[]>;
     publicSubnetIds: pulumi.Output<string[]>;
     privateSubnetIds: pulumi.Output<string[]>;
     isolatedSubnetIds: pulumi.Output<string[]>;
+    databasesSubnetIds: pulumi.Output<string[]>;
+    elasticacheSubnetIds: pulumi.Output<string[]>;
 }
