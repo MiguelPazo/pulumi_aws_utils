@@ -13,11 +13,12 @@ export type EcsServiceConfig = {
     cpu: number;
     memory: number;
     storage: number;
+    asgEnabled: boolean;
     asgDesiredCount: number;
-    asgMinCount: number;
-    asgMaxCount: number;
-    asgMaxMemory: number;
-    asgMaxCpu: number;
+    asgMinCount?: number;
+    asgMaxCount?: number;
+    asgMaxMemory?: number;
+    asgMaxCpu?: number;
     deploymentMinimumHealthyPercent: number;
     deploymentMaximumPercent: number;
     enableExecuteCommand: boolean;

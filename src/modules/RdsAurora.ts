@@ -165,6 +165,7 @@ class RdsAurora {
             skipFinalSnapshot: auroraConfig.skipFinalSnapshot,
             enabledCloudwatchLogsExports: auroraConfig.enableCloudwatchLogsExports,
             deletionProtection: this.config.deleteProtection,
+            applyImmediately: auroraConfig.applyImmediately ?? false,
             tags: {
                 ...this.config.generalTags,
                 Name: `${this.config.generalPrefix}-${auroraConfig.engine}-${auroraConfig.name}`,

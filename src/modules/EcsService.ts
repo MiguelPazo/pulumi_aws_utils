@@ -30,7 +30,6 @@ class EcsService {
         securityGroups: aws.ec2.SecurityGroup[],
         createLogGroup: boolean,
         targetGroup?: pulumi.Output<aws.lb.TargetGroup>,
-        enableAsg?: boolean,
         containerDefinitions?: any,
         cmDomain?: aws.servicediscovery.Service,
         efs?: pulumi.Output<aws.efs.FileSystem>,
@@ -262,7 +261,7 @@ class EcsService {
             /**
              * ASG
              */
-            if (enableAsg) {
+            if (service.asgEnabled) {
                 const asgTarget = new aws.appautoscaling.Target(`${this.config.project}-${service.nameShort}-ecs-asg-tg`, {
                     maxCapacity: service.asgMaxCount,
                     minCapacity: service.asgMinCount,

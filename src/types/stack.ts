@@ -3,9 +3,10 @@
  */
 
 interface EcsServiceConfig {
+    asgEnabled: boolean;
     asgDesiredCount: number;
-    asgMinCount: number;
-    asgMaxCount: number;
+    asgMinCount?: number;
+    asgMaxCount?: number;
 }
 
 export interface EcsServicesConfig {

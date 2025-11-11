@@ -6,6 +6,7 @@ import * as aws from "@pulumi/aws";
 export type InitConfig = {
     project: string;
     stack: string;
+    stackAlias: string;
     accountId: Promise<string>;
     generalPrefix: string;
     generalPrefixShort: string;

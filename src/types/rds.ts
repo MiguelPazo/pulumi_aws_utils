@@ -51,6 +51,7 @@ export type RdsAuroraConfig = {
     enableCloudwatchLogsExports?: string[];
     enablePerformanceInsights?: boolean;
     publiclyAccessible?: boolean;
+    applyImmediately?: boolean;
 };
 
 export type RdsAuroraResult = {
