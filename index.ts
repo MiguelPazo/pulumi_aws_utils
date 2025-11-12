@@ -16,6 +16,7 @@ import {AlbListener} from './src/modules/AlbListener';
 import {ApiGateway} from './src/modules/ApiGateway';
 import {CloudFrontBackend} from './src/modules/CloudFrontBackend';
 import {CloudFrontFrontend} from './src/modules/CloudFrontFrontend';
+import {CloudMap} from './src/modules/CloudMap';
 import {Ecr} from './src/modules/Ecr';
 import {EcsCluster} from './src/modules/EcsCluster';
 import {EcsService} from './src/modules/EcsService';
@@ -56,6 +57,7 @@ export const AwsUtilsModules = {
     ApiGateway,
     CloudFrontBackend,
     CloudFrontFrontend,
+    CloudMap,
     DynamoDb,
     Ecr,
     EcsCluster,

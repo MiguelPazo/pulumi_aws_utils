@@ -100,6 +100,7 @@ class EcsService {
          * LogGroup
          */
         let logGroup: aws.cloudwatch.LogGroup;
+        let logGroupServiceConnect: aws.cloudwatch.LogGroup;
 
         if (createLogGroup) {
             logGroup = new aws.cloudwatch.LogGroup(`${this.config.project}-${service.nameShort}-ecs-task-loggroup`, {
@@ -108,6 +109,17 @@ class EcsService {
                 tags: {
                     ...this.config.generalTags,
                     Name: `/aws/ecs/task/${this.config.generalPrefix}-${service.name}`
+                }
+            });
+        }
+
+        if (createLogGroup && service.serviceConnect?.enabled) {
+            logGroupServiceConnect = new aws.cloudwatch.LogGroup(`${this.config.project}-${service.nameShort}-ecs-sc-loggroup`, {
+                name: `/aws/ecs/service-connect/${this.config.generalPrefix}-${service.name}`,
+                retentionInDays: this.config.cloudwatchRetentionLogs,
+                tags: {
+                    ...this.config.generalTags,
+                    Name: `/aws/ecs/service-connect/${this.config.generalPrefix}-${service.name}`
                 }
             });
         }
@@ -152,7 +164,9 @@ class EcsService {
                             {
                                 containerPort: service.port,
                                 hostPort: service.port,
-                                protocol: "tcp"
+                                protocol: "tcp",
+                                name: service.serviceConnect?.enabled ? service.serviceConnect.serviceName : undefined,
+                                appProtocol: service.serviceConnect?.enabled ? "http" : undefined
                             }
                         ],
                         essential: true,
@@ -251,7 +265,28 @@ class EcsService {
                     serviceRegistries: cmDomain ? {
                         registryArn: cmDomain.arn,
                         port: service.port
-                    } : null
+                    } : null,
+                    serviceConnectConfiguration: service.serviceConnect?.enabled ? {
+                        enabled: true,
+                        namespace: service.serviceConnect.namespace,
+                        logConfiguration: {
+                            logDriver: "awslogs",
+                            options: {
+                                "awslogs-group": logGroupServiceConnect.name,
+                                "awslogs-region": aws.config.region,
+                                "awslogs-stream-prefix": "service-connect"
+                            }
+                        },
+                        services: [{
+                            portName: service.serviceConnect.serviceName,
+                            discoveryName: service.serviceConnect.serviceName,
+                            clientAlias: [{
+                                port: service.serviceConnect.port || service.port,
+                                dnsName: service.serviceConnect.dnsName || service.name
+                            }],
+                            ingressPortOverride: service.serviceConnect.ingressPortOverride
+                        }]
+                    } : undefined
                 }, {
                     dependsOn: [task],
                     ignoreChanges: ['desiredCount', 'taskDefinition']

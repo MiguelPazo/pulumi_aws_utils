@@ -2,7 +2,17 @@
  * Created by Miguel Pazo (https://miguelpazo.com)
  */
 import * as aws from "@pulumi/aws";
+import * as pulumi from "@pulumi/pulumi";
 import {LBConfig} from "./alb";
+
+export type ServiceConnectConfig = {
+    enabled: boolean;
+    namespace: pulumi.Output<string>;
+    serviceName: string;
+    port?: number;
+    dnsName?: string;
+    ingressPortOverride?: number;
+};
 
 export type EcsServiceConfig = {
     name: string;
@@ -26,6 +36,7 @@ export type EcsServiceConfig = {
     containerHealthCheckUrl: string;
     nlb?: LBConfig;
     alb?: LBConfig;
+    serviceConnect?: ServiceConnectConfig;
 };
 
 export type EcsServiceResult = {

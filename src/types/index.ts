@@ -14,3 +14,4 @@ export * from './sqs';
 export * from './kms';
 export * from './dynamodb';
 export * from './lambdas';
+export * from './cloudmap';
