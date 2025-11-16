@@ -68,11 +68,11 @@ class LambdaRestart {
          */
         const lambdaFunction = new aws.lambda.Function(`${this.config.project}-${config.lambdaName}-lambda`, {
             name: lambdaFullName,
-            runtime: aws.lambda.Runtime.Python3d12,
-            handler: "main.lambda_handler",
+            runtime: aws.lambda.Runtime.NodeJS22dX,
+            handler: "index.handler",
             role: lambdaRole.arn,
             code: new pulumi.asset.AssetArchive({
-                "main.py": new pulumi.asset.FileAsset(__dirname + '/../resources/lambdas/lambda_restart/main.py')
+                "index.mjs": new pulumi.asset.FileAsset(__dirname + '/../resources/lambdas/lambda_restart/index.mjs')
             }),
             timeout: 60,
             memorySize: 128,

@@ -222,7 +222,7 @@ class EcsService {
         /**
          * ECS Service
          */
-        let ecsService = null;
+        let ecsService: aws.ecs.Service;
 
         if (createService) {
             ecsService = new aws.ecs.Service(`${this.config.project}-${service.nameShort}-ecs-serv`, {

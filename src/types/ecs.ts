@@ -25,9 +25,9 @@ export type EcsServiceConfig = {
     storage: number;
     asgEnabled: boolean;
     asgDesiredCount: number;
-    asgMinCount?: number;
-    asgMaxCount?: number;
-    asgMaxMemory?: number;
+    asgMinCount: pulumi.Output<number> | number;
+    asgMaxCount?: pulumi.Output<number> | number;
+    asgMaxMemory?: pulumi.Output<number> | number;
     asgMaxCpu?: number;
     deploymentMinimumHealthyPercent: number;
     deploymentMaximumPercent: number;
@@ -40,7 +40,7 @@ export type EcsServiceConfig = {
 };
 
 export type EcsServiceResult = {
-    ecsService: aws.ecs.Service | any;
+    ecsService: aws.ecs.Service;
     task: aws.ecs.TaskDefinition;
     taskExecRole: aws.iam.Role;
     taskRole: aws.iam.Role;

@@ -11,6 +11,7 @@ import {UtilsInfra} from './src/common/UtilsInfra';
 /**
  * Modules
  */
+import {Alarms} from './src/modules/Alarms';
 import {Alb} from './src/modules/Alb';
 import {AlbListener} from './src/modules/AlbListener';
 import {ApiGateway} from './src/modules/ApiGateway';
@@ -37,6 +38,8 @@ import {Ssm} from "./src/modules/Ssm";
 import {Kms} from "./src/modules/Kms";
 import {DynamoDb} from "./src/modules/DynamoDb";
 import {LambdaRestart} from "./src/tools/LambdaRestart";
+import {LambdaAlarms} from "./src/tools/LambdaAlarms";
+import {LambdaNotifications} from "./src/tools/LambdaNotifications";
 
 export const AwsUtilsInit = {
     init
@@ -49,9 +52,12 @@ export const AwsUtilsCommon = {
 
 export const AwsUtilsTools = {
     LambdaRestart,
+    LambdaAlarms,
+    LambdaNotifications,
 };
 
 export const AwsUtilsModules = {
+    Alarms,
     Alb,
     AlbListener,
     ApiGateway,

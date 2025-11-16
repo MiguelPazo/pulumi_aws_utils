@@ -1,6 +1,7 @@
 /**
  * Created by Miguel Pazo (https://miguelpazo.com)
  */
+export * from './alarms';
 export * from './alb';
 export * from './base';
 export * from './ecs';
