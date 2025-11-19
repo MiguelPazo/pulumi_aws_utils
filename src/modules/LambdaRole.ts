@@ -38,6 +38,7 @@ class LambdaRole {
                 .replace(/rep_region/g, aws.config.region)
                 .replace(/rep_accountid/g, data[0])
                 .replace(/rep_stack/g, this.config.stack)
+                .replace(/rep_stack_alias/g, this.config.stackAlias)
                 .replace(/rep_project/g, this.config.project)
                 .replace(/rep_log_grup/g, `${this.config.generalPrefix}-${lambda.name}`);
 
