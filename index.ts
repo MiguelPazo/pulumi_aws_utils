@@ -40,6 +40,7 @@ import {DynamoDb} from "./src/modules/DynamoDb";
 import {LambdaRestart} from "./src/tools/LambdaRestart";
 import {LambdaAlarms} from "./src/tools/LambdaAlarms";
 import {LambdaNotifications} from "./src/tools/LambdaNotifications";
+import {UserProwler} from "./src/tools/UserProwler";
 
 export const AwsUtilsInit = {
     init
@@ -54,6 +55,7 @@ export const AwsUtilsTools = {
     LambdaRestart,
     LambdaAlarms,
     LambdaNotifications,
+    UserProwler,
 };
 
 export const AwsUtilsModules = {
