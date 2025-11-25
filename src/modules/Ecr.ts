@@ -68,6 +68,26 @@ class Ecr {
             })
         });
 
+        new aws.ecr.LifecyclePolicy(`${this.config.project}-${service}-ecr-lifecycle`, {
+            repository: ecrRepo.name,
+            policy: JSON.stringify({
+                rules: [
+                    {
+                        rulePriority: 1,
+                        description: "Keep only last 10 images",
+                        selection: {
+                            tagStatus: "any",
+                            countType: "imageCountMoreThan",
+                            countNumber: 10
+                        },
+                        action: {
+                            type: "expire"
+                        }
+                    }
+                ]
+            })
+        });
+
         return ecrRepo;
     }
 }
