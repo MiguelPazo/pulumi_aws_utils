@@ -27,8 +27,8 @@ class Alb {
     async main(
         name: string,
         vpc: pulumi.Output<VpcImportResult>,
-        certificate?: CertificatesResult,
         s3Logs?: pulumi.Output<aws.s3.Bucket>,
+        certificate?: CertificatesResult,
         internal?: boolean,
         domain?: string,
         createRoute53Record?: boolean,
