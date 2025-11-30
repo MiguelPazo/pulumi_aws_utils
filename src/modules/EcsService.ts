@@ -29,7 +29,7 @@ class EcsService {
         vpc: pulumi.Output<VpcImportResult>,
         securityGroups: aws.ec2.SecurityGroup[],
         createLogGroup: boolean,
-        targetGroup?: pulumi.Output<aws.lb.TargetGroup>,
+        targetGroups?: pulumi.Output<aws.lb.TargetGroup>[],
         containerDefinitions?: any,
         cmDomain?: aws.servicediscovery.Service,
         efs?: pulumi.Output<aws.efs.FileSystem>,
@@ -233,7 +233,7 @@ class EcsService {
                     deploymentMinimumHealthyPercent: service.deploymentMinimumHealthyPercent,
                     deploymentMaximumPercent: service.deploymentMaximumPercent,
                     enableExecuteCommand: service.enableExecuteCommand,
-                    healthCheckGracePeriodSeconds: targetGroup ? service.healthCheckGracePeriodSeconds : undefined,
+                    healthCheckGracePeriodSeconds: targetGroups && targetGroups.length > 0 ? service.healthCheckGracePeriodSeconds : undefined,
                     propagateTags: "SERVICE",
                     availabilityZoneRebalancing: "ENABLED",
                     deploymentCircuitBreaker: {
@@ -255,13 +255,11 @@ class EcsService {
                         securityGroups: pulumi.all(securityGroups.map(sg => sg.id)),
                         assignPublicIp: false
                     },
-                    loadBalancers: targetGroup ? [
-                        {
-                            targetGroupArn: targetGroup.arn,
-                            containerName: `${this.config.generalPrefix}-${service.name}`,
-                            containerPort: service.port
-                        }
-                    ] : [],
+                    loadBalancers: targetGroups && targetGroups.length > 0 ? targetGroups.map(tg => ({
+                        targetGroupArn: tg.arn,
+                        containerName: `${this.config.generalPrefix}-${service.name}`,
+                        containerPort: service.port
+                    })) : [],
                     serviceRegistries: cmDomain ? {
                         registryArn: cmDomain.arn,
                         port: service.port

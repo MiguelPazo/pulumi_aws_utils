@@ -5,6 +5,7 @@ import * as aws from "@pulumi/aws";
 import {AlbResult, CertificatesResult, LBConfig} from "../types";
 import {InitConfig} from "../types/module";
 import {getInit} from "../config";
+import {UtilsInfra} from "../common/UtilsInfra";
 
 class AlbListener {
     private static __instance: AlbListener;
@@ -25,12 +26,14 @@ class AlbListener {
     async main(
         name: string,
         alb: AlbResult,
-        lstCertificate: CertificatesResult,
+        certificate: CertificatesResult,
         lbConfig: LBConfig,
+        hostHeaderRules?: { host: string; priority: number }[],
+        createRoute53Record?: boolean,
         targetIps?: string[],
-        hostHeaderRules?: { host: string; priority: number }[]
     ): Promise<aws.lb.TargetGroup> {
         lbConfig.tgStickinessEnabled = lbConfig.tgStickinessEnabled == undefined ? false : lbConfig.tgStickinessEnabled;
+        createRoute53Record = createRoute53Record == undefined ? false : createRoute53Record;
 
         let tgName = `${this.config.generalPrefixShort}-${name}-tg`;
         tgName = tgName.length > 32 ? `${this.config.generalPrefixShort2}-${name}-tg` : tgName;
@@ -78,7 +81,7 @@ class AlbListener {
             loadBalancerArn: alb.alb.arn,
             port: lbConfig.lstPort,
             protocol: lstProtocol,
-            certificateArn: isHttps ? lstCertificate.arn : undefined,
+            certificateArn: isHttps ? certificate.arn : undefined,
             sslPolicy: isHttps ? this.config.albSslPolicyDefault : undefined,
             defaultActions: hostHeaderRules && hostHeaderRules.length > 0 ? [{
                 type: "fixed-response",
@@ -127,6 +130,15 @@ class AlbListener {
                     port: lbConfig.tgPort,
                 });
             });
+        }
+
+        /**
+         * Route53
+         */
+        if (createRoute53Record) {
+            if (certificate) {
+                UtilsInfra.createAliasRecord(certificate, alb.alb.dnsName, alb.alb.zoneId, true);
+            }
         }
 
         return targetGroup;

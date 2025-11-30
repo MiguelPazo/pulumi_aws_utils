@@ -17,7 +17,8 @@ export type ServiceConnectConfig = {
 export type EcsServiceConfig = {
     name: string;
     nameShort: string;
-    dns?: string;
+    dnsInternal?: string;
+    dnsExternal?: string;
     image: string;
     policyName: string;
     port: number;
