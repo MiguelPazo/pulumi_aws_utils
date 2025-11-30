@@ -4,7 +4,7 @@
 import * as pulumi from "@pulumi/pulumi";
 import * as aws from "@pulumi/aws";
 import * as crypto from "crypto";
-import {ApiGatewayResult, CertificatesResult, VpceDnsOutput} from "../types";
+import {ApiGatewayResult, CertificatesResult, VpceDnsOutput, VpcImportResult} from "../types";
 import * as yaml from "js-yaml";
 import {UtilsInfra} from "../common/UtilsInfra";
 import {getInit} from "../config";
@@ -39,6 +39,7 @@ class ApiGateway {
         ignoreOpenApiChanges?: boolean,
         dependsOn?: any[],
         vpceApiGwDns?: pulumi.Output<VpceDnsOutput>,
+        vpc?: pulumi.Output<VpcImportResult>,
     ): Promise<ApiGatewayResult> {
         logLevel = logLevel == undefined ? "INFO" : logLevel;
         ignoreOpenApiChanges = ignoreOpenApiChanges == undefined ? false : ignoreOpenApiChanges;
@@ -164,6 +165,34 @@ class ApiGateway {
                 endpointConfiguration: {
                     types: isPrivate ? "PRIVATE" : "REGIONAL",
                 },
+                policy: isPrivate && vpc ? pulumi.all([
+                    this.config.region,
+                    this.config.accountId,
+                    cert.domain,
+                    vpc.vpc.cidrBlock
+                ]).apply(([
+                              region,
+                              accountId,
+                              domain,
+                              vpcCidrBlock
+                          ]) => {
+                    return JSON.stringify({
+                        Version: "2012-10-17",
+                        Statement: [
+                            {
+                                Effect: "Allow",
+                                Principal: "*",
+                                Action: "execute-api:Invoke",
+                                Resource: `arn:aws:execute-api:${region}:${accountId}:/domainnames/${domain}*`,
+                                Condition: {
+                                    IpAddress: {
+                                        "aws:VpcSourceIp": vpcCidrBlock
+                                    }
+                                }
+                            }
+                        ],
+                    })
+                }) : undefined,
                 tags: {
                     ...this.config.generalTags,
                     Name: `${this.config.generalPrefix}-${name}-apirest-domain-${index}`,
