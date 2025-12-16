@@ -186,6 +186,7 @@ class RdsAurora {
                 dbParameterGroupName: parameterGroup?.name,
                 performanceInsightsEnabled: auroraConfig.enablePerformanceInsights || false,
                 publiclyAccessible: auroraConfig.publiclyAccessible,
+                applyImmediately: auroraConfig.applyImmediately ?? false,
                 tags: {
                     ...this.config.generalTags,
                     Name: `${this.config.generalPrefix}-${auroraConfig.engine}-${auroraConfig.name}-instance-${i}`,
