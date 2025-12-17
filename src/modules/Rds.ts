@@ -139,7 +139,7 @@ class Rds {
         });
 
         /**
-         * DNS
+         * PHZ Records
          */
         if (rdsConfig.domainRdsReader && rdsConfig.domainRdsWriter) {
             instance.endpoint.apply(x => {
@@ -148,7 +148,7 @@ class Rds {
                 new aws.route53.Record(`${this.config.project}-rds-${rdsConfig.engine}-${rdsConfig.name}-reader-dns`, {
                     name: rdsConfig.domainRdsReader,
                     type: "CNAME",
-                    zoneId: phz ? phz.zone.zoneId : publicZoneRoodId,
+                    zoneId: phz.zone.zoneId,
                     ttl: 300,
                     records: [x],
                 });
@@ -156,7 +156,32 @@ class Rds {
                 new aws.route53.Record(`${this.config.project}-rds-${rdsConfig.engine}-${rdsConfig.name}-writer-dns`, {
                     name: rdsConfig.domainRdsWriter,
                     type: "CNAME",
-                    zoneId: phz ? phz.zone.zoneId : publicZoneRoodId,
+                    zoneId: phz.zone.zoneId,
+                    ttl: 300,
+                    records: [x],
+                });
+            });
+        }
+
+        /**
+         * Public DNS Records
+         */
+        if (publicZoneRoodId && rdsConfig.domainPublicRdsWriter && rdsConfig.domainPublicRdsReader) {
+            instance.endpoint.apply(x => {
+                x = x.split(":")[0];
+
+                new aws.route53.Record(`${this.config.project}-rds-${rdsConfig.engine}-${rdsConfig.name}-reader-public-dns`, {
+                    name: rdsConfig.domainPublicRdsReader,
+                    type: "CNAME",
+                    zoneId: publicZoneRoodId,
+                    ttl: 300,
+                    records: [x],
+                });
+
+                new aws.route53.Record(`${this.config.project}-rds-${rdsConfig.engine}-${rdsConfig.name}-writer-public-dns`, {
+                    name: rdsConfig.domainPublicRdsWriter,
+                    type: "CNAME",
+                    zoneId: publicZoneRoodId,
                     ttl: 300,
                     records: [x],
                 });

@@ -29,6 +29,7 @@ class EcsService {
         vpc: pulumi.Output<VpcImportResult>,
         securityGroups: aws.ec2.SecurityGroup[],
         createLogGroup: boolean,
+        logGroupKmsKey: pulumi.Output<aws.kms.Key>,
         targetGroups?: pulumi.Output<aws.lb.TargetGroup>[],
         containerDefinitions?: any,
         cmDomain?: aws.servicediscovery.Service,
@@ -100,26 +101,15 @@ class EcsService {
          * LogGroup
          */
         let logGroup: aws.cloudwatch.LogGroup;
-        let logGroupServiceConnect: aws.cloudwatch.LogGroup;
 
         if (createLogGroup) {
             logGroup = new aws.cloudwatch.LogGroup(`${this.config.project}-${service.nameShort}-ecs-task-loggroup`, {
                 name: `/aws/ecs/task/${this.config.generalPrefix}-${service.name}`,
                 retentionInDays: this.config.cloudwatchRetentionLogs,
+                kmsKeyId: logGroupKmsKey.arn,
                 tags: {
                     ...this.config.generalTags,
                     Name: `/aws/ecs/task/${this.config.generalPrefix}-${service.name}`
-                }
-            });
-        }
-
-        if (createLogGroup && service.serviceConnect?.enabled) {
-            logGroupServiceConnect = new aws.cloudwatch.LogGroup(`${this.config.project}-${service.nameShort}-ecs-sc-loggroup`, {
-                name: `/aws/ecs/service-connect/${this.config.generalPrefix}-${service.name}`,
-                retentionInDays: this.config.cloudwatchRetentionLogs,
-                tags: {
-                    ...this.config.generalTags,
-                    Name: `/aws/ecs/service-connect/${this.config.generalPrefix}-${service.name}`
                 }
             });
         }
@@ -270,7 +260,7 @@ class EcsService {
                         logConfiguration: {
                             logDriver: "awslogs",
                             options: {
-                                "awslogs-group": logGroupServiceConnect.name,
+                                "awslogs-group": logGroup.name,
                                 "awslogs-region": aws.config.region,
                                 "awslogs-stream-prefix": "service-connect"
                             }

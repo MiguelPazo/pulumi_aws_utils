@@ -16,9 +16,12 @@ export type RdsConfig = {
     parameterGroupFamily: string;
     parameterGroupValues: { name: string; value: string; }[];
     skipFinalSnapshot: boolean;
-    publiclyAccessible: boolean;
-    domainRdsReader?: string;
-    domainRdsWriter?: string;
+    domainRdsReader: string;
+    domainRdsWriter: string;
+    publiclyAccessible?: boolean;
+    applyImmediately?: boolean;
+    domainPublicRdsReader?: pulumi.Output<string> | string;
+    domainPublicRdsWriter?: pulumi.Output<string> | string;
 };
 
 export type RdsResult = {
@@ -46,8 +49,8 @@ export type RdsAuroraConfig = {
     preferredMaintenanceWindow?: string;
     domainRdsReader: string;
     domainRdsWriter: string;
-    domainPublicRdsReader?: string;
-    domainPublicRdsWriter?: string;
+    domainPublicRdsReader?: pulumi.Output<string> | string;
+    domainPublicRdsWriter?: pulumi.Output<string> | string;
     enableCloudwatchLogsExports?: string[];
     enablePerformanceInsights?: boolean;
     publiclyAccessible?: boolean;

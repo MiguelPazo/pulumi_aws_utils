@@ -23,7 +23,10 @@ class Ssm {
         return this.__instance;
     }
 
-    async main(ec2Role: pulumi.Output<aws.iam.Role>): Promise<void> {
+    async main(
+        ec2Role: pulumi.Output<aws.iam.Role>,
+        logGroupKmsKey: pulumi.Output<aws.kms.Key>,
+    ): Promise<void> {
         /**
          * S3
          */
@@ -102,6 +105,7 @@ class Ssm {
         new aws.cloudwatch.LogGroup(`${this.config.project}-ssm-loggroup`, {
             name: logGroupName,
             retentionInDays: this.config.cloudwatchRetentionLogs,
+            kmsKeyId: logGroupKmsKey.arn,
             tags: {
                 ...this.config.generalTags,
                 Name: `${this.config.generalPrefix}-ssm-loggroup`,

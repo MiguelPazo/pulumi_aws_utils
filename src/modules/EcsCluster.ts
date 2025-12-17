@@ -4,6 +4,7 @@
 import * as aws from "@pulumi/aws";
 import {InitConfig} from "../types/module";
 import {getInit} from "../config";
+import * as pulumi from "@pulumi/pulumi";
 
 class EcsCluster {
     private static __instance: EcsCluster;
@@ -21,7 +22,11 @@ class EcsCluster {
         return this.__instance;
     }
 
-    async main(clusterName?: string, provider?: string): Promise<aws.ecs.Cluster> {
+    async main(
+        logGroupKmsKey: pulumi.Output<aws.kms.Key>,
+        clusterName?: string,
+        provider?: string,
+    ): Promise<aws.ecs.Cluster> {
         const generalPrefixObj = clusterName ? `${this.config.project}-${clusterName}` : this.config.project;
         const generalPrefix = clusterName ? `${this.config.generalPrefix}-${clusterName}` : this.config.generalPrefix;
 
@@ -33,6 +38,7 @@ class EcsCluster {
         const logGroup = new aws.cloudwatch.LogGroup(`${generalPrefixObj}-ecs-loggroup`, {
             name: `/aws/ecs/cluster/${generalPrefix}`,
             retentionInDays: this.config.cloudwatchRetentionLogs,
+            kmsKeyId: logGroupKmsKey.arn,
             tags: {
                 ...this.config.generalTags,
                 Name: `/aws/ecs/cluster/${generalPrefix}`

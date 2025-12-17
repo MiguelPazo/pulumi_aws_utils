@@ -34,6 +34,7 @@ class ApiGateway {
         certificates?: CertificatesResult[],
         logLevel?: string,
         enableLogs?: boolean,
+        logGroupKmsKey?: pulumi.Output<aws.kms.Key>,
         enableXRay?: boolean,
         privateVpcEndpointIds?: pulumi.Output<string>[],
         ignoreOpenApiChanges?: boolean,
@@ -107,6 +108,7 @@ class ApiGateway {
             logGroup = new aws.cloudwatch.LogGroup(`${this.config.project}-${name}-apirest-logs`, {
                 name: `/aws/apigateway/${this.config.generalPrefix}-${name}`,
                 retentionInDays: this.config.cloudwatchRetentionLogs,
+                kmsKeyId: logGroupKmsKey?.arn || undefined,
                 tags: {
                     ...this.config.generalTags,
                     Name: `${this.config.generalPrefix}-${name}-apirest-logs`,
