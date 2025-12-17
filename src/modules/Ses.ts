@@ -24,7 +24,8 @@ class Ses {
     async main(
         name: string,
         zone: aws.route53.Zone,
-        domain: string
+        domain: string,
+        configurationSetName?: string
     ): Promise<void> {
         const sesIdentity = new aws.ses.DomainIdentity(`${this.config.project}-${name}-ses-identity`, {
             domain,
@@ -57,6 +58,20 @@ class Ses {
                 })
             )
         );
+
+        /**
+         * Configuration Set
+         */
+        if (configurationSetName) {
+            new aws.ses.ConfigurationSet(`${this.config.project}-${name}-ses-config-set`, {
+                name: configurationSetName,
+                deliveryOptions: {
+                    tlsPolicy: "Require"
+                },
+                reputationMetricsEnabled: true,
+                sendingEnabled: true,
+            });
+        }
     }
 }
 
