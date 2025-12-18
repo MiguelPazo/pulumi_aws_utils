@@ -84,3 +84,26 @@ export type AlarmsResult = {
     lambdaNotificationsLogGroup?: aws.cloudwatch.LogGroup;
     lambdaNotificationsSnsSubscription?: aws.sns.TopicSubscription;
 };
+
+export type AlarmsAdminConfig = {
+    snsArn: pulumi.Input<string>;
+    kmsKey: pulumi.Output<aws.kms.Key>;
+    monitorVpcChanges?: boolean;
+    monitorRouteTableChanges?: boolean;
+    monitorSecurityGroupChanges?: boolean;
+    monitorNetworkAclChanges?: boolean;
+    monitorInternetGatewayChanges?: boolean;
+    monitorNetworkGatewayChanges?: boolean;
+    monitorAwsConfigChanges?: boolean;
+    monitorCloudTrailChanges?: boolean;
+    monitorKmsChanges?: boolean;
+    monitorS3Changes?: boolean;
+    monitorIamChanges?: boolean;
+};
+
+export type AlarmsAdminResult = {
+    logGroup: aws.cloudwatch.LogGroup;
+    logGroupPolicy: aws.cloudwatch.LogResourcePolicy;
+    eventRules: aws.cloudwatch.EventRule[];
+    eventTargets: aws.cloudwatch.EventTarget[];
+};

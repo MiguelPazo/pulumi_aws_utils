@@ -12,6 +12,7 @@ import {UtilsInfra} from './src/common/UtilsInfra';
  * Modules
  */
 import {Alarms} from './src/modules/Alarms';
+import {AlarmsAdmin} from './src/modules/AlarmsAdmin';
 import {Alb} from './src/modules/Alb';
 import {AlbListener} from './src/modules/AlbListener';
 import {ApiGateway} from './src/modules/ApiGateway';
@@ -60,6 +61,7 @@ export const AwsUtilsTools = {
 
 export const AwsUtilsModules = {
     Alarms,
+    AlarmsAdmin,
     Alb,
     AlbListener,
     ApiGateway,

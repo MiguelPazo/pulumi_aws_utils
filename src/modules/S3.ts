@@ -30,16 +30,18 @@ class S3 {
         enableReceiveLogs?: boolean,
         defaultPolicy?: boolean,
         fullName?: string,
-        enableObjectLock?: boolean
+        enableObjectLock?: boolean,
+        disableAcl?: boolean
     ): Promise<aws.s3.Bucket> {
         defaultPolicy = defaultPolicy == undefined ? true : defaultPolicy;
         enableObjectLock = enableObjectLock == undefined ? false : enableObjectLock;
+        disableAcl = disableAcl == undefined ? true : disableAcl;
 
         const bucketName = fullName || pulumi.interpolate`${this.config.generalPrefix}-${this.config.accountId}-${name}`;
 
         const bucket = new aws.s3.Bucket(`${this.config.project}-${name}-bucket`, {
             bucket: bucketName,
-            acl: "private",
+            acl: disableAcl ? undefined : "private",
             versioning: enableObjectLock ? {
                 enabled: true
             } : undefined,
@@ -61,7 +63,7 @@ class S3 {
         new aws.s3.BucketOwnershipControls(`${this.config.project}-${name}-bucket-ownership`, {
             bucket: bucket.id,
             rule: {
-                objectOwnership: "ObjectWriter",
+                objectOwnership: disableAcl ? "BucketOwnerEnforced" : "ObjectWriter",
             },
         });
 

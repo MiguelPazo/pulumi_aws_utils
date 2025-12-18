@@ -27,7 +27,8 @@ class Kms {
         name: string,
         keyConfig?: KmsKeyConfig,
         createAlias: boolean = true,
-        additionalStatements?: any[]
+        additionalStatements?: any[],
+        provider?: aws.Provider
     ): Promise<KmsKeyResult> {
         const keyName = `${this.config.project}-${name}-kms-key`;
         const keyDescription = keyConfig?.description || `KMS key for ${name}`;
@@ -66,7 +67,7 @@ class Kms {
                 Name: keyName,
                 ...keyConfig?.tags
             }
-        });
+        }, provider ? { provider } : undefined);
 
         let alias: aws.kms.Alias | undefined;
 
@@ -74,7 +75,7 @@ class Kms {
             alias = new aws.kms.Alias(`${this.config.project}-${name}-kms-alias`, {
                 name: `alias/${this.config.generalPrefix}-${name}-kms`,
                 targetKeyId: key.keyId,
-            });
+            }, provider ? { provider } : undefined);
         }
 
         return {
