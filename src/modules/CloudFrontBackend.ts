@@ -32,7 +32,7 @@ class CloudFrontBackend {
         vpcOriginPath: string,
         apigw: pulumi.Output<aws.apigateway.RestApi>,
         cfbase: pulumi.Output<CloudFrontBaseResult>,
-        s3Logs: pulumi.Output<aws.s3.Bucket>,
+        s3Logs: pulumi.Output<aws.s3.BucketV2>,
         certificate: CertificatesResult,
         waf: pulumi.Output<aws.wafv2.WebAcl>
     ): Promise<aws.cloudfront.Distribution> {

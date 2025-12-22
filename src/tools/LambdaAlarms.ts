@@ -32,6 +32,7 @@ class LambdaAlarms {
 
     async main(
         snsArn: pulumi.Input<string>,
+        snsKmsKey: pulumi.Input<aws.kms.Key>,
         accountId: string
     ): Promise<LambdaAlarmsResult> {
         const lambdaFullName = `${this.config.generalPrefixShort}-lambda-alarms`;
@@ -39,12 +40,16 @@ class LambdaAlarms {
         /**
          * Create Lambda Role with Policy
          */
-        const policyJson: pulumi.Output<string> | any = pulumi.all([snsArn]).apply(([arn]) => {
+        const policyJson: pulumi.Output<string> | any = pulumi.all([
+            pulumi.output(snsArn),
+            pulumi.output(snsKmsKey).apply(key => key.arn)
+        ]).apply(([arn, kmsArn]) => {
             let policyStr = fs.readFileSync(__dirname + '/../resources/lambdas/lambda_alarms/policy.json', 'utf8')
                 .replace(/rep_region/g, this.config.region)
                 .replace(/rep_accountid/g, accountId)
                 .replace(/rep_log_grup/g, lambdaFullName)
-                .replace(/rep_sns_arn/g, arn as string);
+                .replace(/rep_sns_arn/g, arn as string)
+                .replace(/rep_kms_key_arn/g, kmsArn as string);
 
             return Promise.resolve(JSON.parse(policyStr));
         });

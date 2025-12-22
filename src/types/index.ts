@@ -16,3 +16,4 @@ export * from './kms';
 export * from './dynamodb';
 export * from './lambdas';
 export * from './cloudmap';
+export * from './s3';

@@ -255,3 +255,5 @@ fabric.properties
 bin/
 /*.txt
 /*.sh
+/.claude
+

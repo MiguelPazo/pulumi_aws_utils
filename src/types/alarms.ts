@@ -66,6 +66,8 @@ export type ServiceAlarmConfig = {
 export type AlarmsModuleConfig = {
     alarmsList: ServiceAlarmConfig[];
     snsArn: pulumi.Input<string>;
+    snsKmsKey: pulumi.Input<aws.kms.Key>;
+    // snsKmsKey: aws.kms.Key;
     deployLambdaAlarms?: boolean;
     lambdaAlarmsArn?: pulumi.Input<string>;
     deployLambdaNotifications?: boolean;
@@ -88,6 +90,7 @@ export type AlarmsResult = {
 export type AlarmsAdminConfig = {
     snsArn: pulumi.Input<string>;
     kmsKey: pulumi.Output<aws.kms.Key>;
+    lambdaFunction: aws.lambda.Function;
     monitorVpcChanges?: boolean;
     monitorRouteTableChanges?: boolean;
     monitorSecurityGroupChanges?: boolean;
@@ -99,6 +102,9 @@ export type AlarmsAdminConfig = {
     monitorKmsChanges?: boolean;
     monitorS3Changes?: boolean;
     monitorIamChanges?: boolean;
+    monitorConsoleLoginFailures?: boolean;
+    monitorRootAccountAccess?: boolean;
+    monitorAccessWithoutMfa?: boolean;
 };
 
 export type AlarmsAdminResult = {

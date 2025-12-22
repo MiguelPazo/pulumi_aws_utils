@@ -66,83 +66,112 @@ class AlarmsAdmin {
             eventTargets: []
         };
 
-        const snsArn = alarmsAdminConfig.snsArn;
+        const lambdaFunction = alarmsAdminConfig.lambdaFunction;
+
+        // Create a single Lambda permission for all EventBridge rules using wildcard
+        new aws.lambda.Permission(`${this.config.project}-alarms-admin-lambda-permission`, {
+            action: "lambda:InvokeFunction",
+            function: lambdaFunction.name,
+            principal: "events.amazonaws.com",
+            sourceArn: pulumi.interpolate`arn:aws:events:${this.config.region}:${this.config.accountId}:rule/${this.config.generalPrefix}-alarm-*`
+        });
 
         // Create EventBridge rules for VPC changes
         if (alarmsAdminConfig.monitorVpcChanges !== false) {
-            const vpcRule = this.createVpcChangeRule(snsArn, logGroup);
+            const vpcRule = this.createVpcChangeRule(lambdaFunction, logGroup);
             result.eventRules.push(vpcRule.rule);
             result.eventTargets.push(...vpcRule.targets);
         }
 
         // Create EventBridge rules for Route Table changes
         if (alarmsAdminConfig.monitorRouteTableChanges !== false) {
-            const routeTableRule = this.createRouteTableChangeRule(snsArn, logGroup);
+            const routeTableRule = this.createRouteTableChangeRule(lambdaFunction, logGroup);
             result.eventRules.push(routeTableRule.rule);
             result.eventTargets.push(...routeTableRule.targets);
         }
 
         // Create EventBridge rules for Security Group changes
         if (alarmsAdminConfig.monitorSecurityGroupChanges !== false) {
-            const sgRule = this.createSecurityGroupChangeRule(snsArn, logGroup);
+            const sgRule = this.createSecurityGroupChangeRule(lambdaFunction, logGroup);
             result.eventRules.push(sgRule.rule);
             result.eventTargets.push(...sgRule.targets);
         }
 
         // Create EventBridge rules for Network ACL changes
         if (alarmsAdminConfig.monitorNetworkAclChanges !== false) {
-            const naclRule = this.createNetworkAclChangeRule(snsArn, logGroup);
+            const naclRule = this.createNetworkAclChangeRule(lambdaFunction, logGroup);
             result.eventRules.push(naclRule.rule);
             result.eventTargets.push(...naclRule.targets);
         }
 
         // Create EventBridge rules for Internet Gateway changes
         if (alarmsAdminConfig.monitorInternetGatewayChanges !== false) {
-            const igwRule = this.createInternetGatewayChangeRule(snsArn, logGroup);
+            const igwRule = this.createInternetGatewayChangeRule(lambdaFunction, logGroup);
             result.eventRules.push(igwRule.rule);
             result.eventTargets.push(...igwRule.targets);
         }
 
         // Create EventBridge rules for Network Gateway changes (NAT, VPN, etc)
         if (alarmsAdminConfig.monitorNetworkGatewayChanges !== false) {
-            const ngwRule = this.createNetworkGatewayChangeRule(snsArn, logGroup);
+            const ngwRule = this.createNetworkGatewayChangeRule(lambdaFunction, logGroup);
             result.eventRules.push(ngwRule.rule);
             result.eventTargets.push(...ngwRule.targets);
         }
 
         // Create EventBridge rules for AWS Config changes
         if (alarmsAdminConfig.monitorAwsConfigChanges !== false) {
-            const configRule = this.createAwsConfigChangeRule(snsArn, logGroup);
+            const configRule = this.createAwsConfigChangeRule(lambdaFunction, logGroup);
             result.eventRules.push(configRule.rule);
             result.eventTargets.push(...configRule.targets);
         }
 
         // Create EventBridge rules for CloudTrail changes
         if (alarmsAdminConfig.monitorCloudTrailChanges !== false) {
-            const cloudTrailRule = this.createCloudTrailChangeRule(snsArn, logGroup);
+            const cloudTrailRule = this.createCloudTrailChangeRule(lambdaFunction, logGroup);
             result.eventRules.push(cloudTrailRule.rule);
             result.eventTargets.push(...cloudTrailRule.targets);
         }
 
         // Create EventBridge rules for KMS changes
         if (alarmsAdminConfig.monitorKmsChanges !== false) {
-            const kmsRule = this.createKmsChangeRule(snsArn, logGroup);
+            const kmsRule = this.createKmsChangeRule(lambdaFunction, logGroup);
             result.eventRules.push(kmsRule.rule);
             result.eventTargets.push(...kmsRule.targets);
         }
 
         // Create EventBridge rules for S3 changes
         if (alarmsAdminConfig.monitorS3Changes !== false) {
-            const s3Rule = this.createS3ChangeRule(snsArn, logGroup);
+            const s3Rule = this.createS3ChangeRule(lambdaFunction, logGroup);
             result.eventRules.push(s3Rule.rule);
             result.eventTargets.push(...s3Rule.targets);
         }
 
         // Create EventBridge rules for IAM changes
         if (alarmsAdminConfig.monitorIamChanges !== false) {
-            const iamRule = this.createIamChangeRule(snsArn, logGroup);
+            const iamRule = this.createIamChangeRule(lambdaFunction, logGroup);
             result.eventRules.push(iamRule.rule);
             result.eventTargets.push(...iamRule.targets);
+        }
+
+        // Create EventBridge rules for Console Login Failures
+        if (alarmsAdminConfig.monitorConsoleLoginFailures !== false) {
+            const consoleLoginRule = this.createConsoleLoginFailureRule(lambdaFunction, logGroup);
+            result.eventRules.push(consoleLoginRule.rule);
+            result.eventTargets.push(...consoleLoginRule.targets);
+        }
+
+        // Create EventBridge rules for Root Account Access
+        if (alarmsAdminConfig.monitorRootAccountAccess !== false) {
+            const rootAccessRule = this.createRootAccountAccessRule(lambdaFunction, logGroup);
+            result.eventRules.push(rootAccessRule.rule);
+            result.eventTargets.push(...rootAccessRule.targets);
+        }
+
+        // Create EventBridge rules for Access Without MFA
+        if (alarmsAdminConfig.monitorAccessWithoutMfa !== false) {
+            const noMfaRule = this.createAccessWithoutMfaRule(lambdaFunction, logGroup);
+            result.eventRules.push(noMfaRule.rule);
+            result.eventTargets.push(...noMfaRule.targets);
         }
 
         return result;
@@ -151,9 +180,9 @@ class AlarmsAdmin {
     /**
      * Create EventBridge rule for VPC changes
      */
-    private createVpcChangeRule(snsArn: pulumi.Input<string>, logGroup: aws.cloudwatch.LogGroup): { rule: aws.cloudwatch.EventRule; targets: aws.cloudwatch.EventTarget[] } {
+    private createVpcChangeRule(lambdaFunction: aws.lambda.Function, logGroup: aws.cloudwatch.LogGroup): { rule: aws.cloudwatch.EventRule; targets: aws.cloudwatch.EventTarget[] } {
         const rule = new aws.cloudwatch.EventRule(`${this.config.project}-alarms-admin-vpc-changes`, {
-            name: `${this.config.generalPrefix}-vpc-changes`,
+            name: `${this.config.generalPrefix}-alarm-vpc-changes`,
             description: "Capture all VPC related changes",
             eventPattern: JSON.stringify({
                 source: ["aws.ec2"],
@@ -197,17 +226,18 @@ class AlarmsAdmin {
             }
         });
 
-        const snsTarget = new aws.cloudwatch.EventTarget(`${this.config.project}-alarms-admin-vpc-sns-target`, {
+        const lambdaTarget = new aws.cloudwatch.EventTarget(`${this.config.project}-alarms-admin-vpc-lambda-target`, {
             rule: rule.name,
-            arn: snsArn,
+            arn: lambdaFunction.arn,
             inputTransformer: {
                 inputPaths: {
                     eventName: "$.detail.eventName",
                     userName: "$.detail.userIdentity.principalId",
                     region: "$.region",
-                    time: "$.time"
+                    time: "$.time",
+                    accountId: "$.account"
                 },
-                inputTemplate: `"VPC Change Detected! Event: <eventName> | User: <userName> | Region: <region> | Time: <time>"`
+                inputTemplate: `{"type":"alarm-admin","title":"VPC Change","event":"<eventName>","user":"<userName>","account":"<accountId>","stack":"${this.config.stack}","region":"<region>","time":"<time>"}`
             }
         });
 
@@ -216,15 +246,15 @@ class AlarmsAdmin {
             arn: logGroup.arn
         });
 
-        return { rule, targets: [snsTarget, logTarget] };
+        return { rule, targets: [lambdaTarget, logTarget] };
     }
 
     /**
      * Create EventBridge rule for Route Table changes
      */
-    private createRouteTableChangeRule(snsArn: pulumi.Input<string>, logGroup: aws.cloudwatch.LogGroup): { rule: aws.cloudwatch.EventRule; targets: aws.cloudwatch.EventTarget[] } {
+    private createRouteTableChangeRule(lambdaFunction: aws.lambda.Function, logGroup: aws.cloudwatch.LogGroup): { rule: aws.cloudwatch.EventRule; targets: aws.cloudwatch.EventTarget[] } {
         const rule = new aws.cloudwatch.EventRule(`${this.config.project}-alarms-admin-rt-changes`, {
-            name: `${this.config.generalPrefix}-route-table-changes`,
+            name: `${this.config.generalPrefix}-alarm-route-table-changes`,
             description: "Capture Route Table configuration changes",
             eventPattern: JSON.stringify({
                 source: ["aws.ec2"],
@@ -249,17 +279,18 @@ class AlarmsAdmin {
             }
         });
 
-        const snsTarget = new aws.cloudwatch.EventTarget(`${this.config.project}-alarms-admin-rt-sns-target`, {
+        const lambdaTarget = new aws.cloudwatch.EventTarget(`${this.config.project}-alarms-admin-rt-lambda-target`, {
             rule: rule.name,
-            arn: snsArn,
+            arn: lambdaFunction.arn,
             inputTransformer: {
                 inputPaths: {
                     eventName: "$.detail.eventName",
                     userName: "$.detail.userIdentity.principalId",
                     region: "$.region",
-                    time: "$.time"
+                    time: "$.time",
+                    accountId: "$.account"
                 },
-                inputTemplate: `"Route Table Change Detected! Event: <eventName> | User: <userName> | Region: <region> | Time: <time>"`
+                inputTemplate: `{"type":"alarm-admin","title":"Route Table Change","event":"<eventName>","user":"<userName>","account":"<accountId>","stack":"${this.config.stack}","region":"<region>","time":"<time>"}`
             }
         });
 
@@ -268,15 +299,15 @@ class AlarmsAdmin {
             arn: logGroup.arn
         });
 
-        return { rule, targets: [snsTarget, logTarget] };
+        return { rule, targets: [lambdaTarget, logTarget] };
     }
 
     /**
      * Create EventBridge rule for Security Group changes
      */
-    private createSecurityGroupChangeRule(snsArn: pulumi.Input<string>, logGroup: aws.cloudwatch.LogGroup): { rule: aws.cloudwatch.EventRule; targets: aws.cloudwatch.EventTarget[] } {
+    private createSecurityGroupChangeRule(lambdaFunction: aws.lambda.Function, logGroup: aws.cloudwatch.LogGroup): { rule: aws.cloudwatch.EventRule; targets: aws.cloudwatch.EventTarget[] } {
         const rule = new aws.cloudwatch.EventRule(`${this.config.project}-alarms-admin-sg-changes`, {
-            name: `${this.config.generalPrefix}-security-group-changes`,
+            name: `${this.config.generalPrefix}-alarm-security-group-changes`,
             description: "Capture Security Group configuration changes",
             eventPattern: JSON.stringify({
                 source: ["aws.ec2"],
@@ -299,17 +330,18 @@ class AlarmsAdmin {
             }
         });
 
-        const snsTarget = new aws.cloudwatch.EventTarget(`${this.config.project}-alarms-admin-sg-sns-target`, {
+        const lambdaTarget = new aws.cloudwatch.EventTarget(`${this.config.project}-alarms-admin-sg-lambda-target`, {
             rule: rule.name,
-            arn: snsArn,
+            arn: lambdaFunction.arn,
             inputTransformer: {
                 inputPaths: {
                     eventName: "$.detail.eventName",
                     userName: "$.detail.userIdentity.principalId",
                     region: "$.region",
-                    time: "$.time"
+                    time: "$.time",
+                    accountId: "$.account"
                 },
-                inputTemplate: `"Security Group Change Detected! Event: <eventName> | User: <userName> | Region: <region> | Time: <time>"`
+                inputTemplate: `{"type":"alarm-admin","title":"Security Group Change","event":"<eventName>","user":"<userName>","account":"<accountId>","stack":"${this.config.stack}","region":"<region>","time":"<time>"}`
             }
         });
 
@@ -318,15 +350,15 @@ class AlarmsAdmin {
             arn: logGroup.arn
         });
 
-        return { rule, targets: [snsTarget, logTarget] };
+        return { rule, targets: [lambdaTarget, logTarget] };
     }
 
     /**
      * Create EventBridge rule for Network ACL changes
      */
-    private createNetworkAclChangeRule(snsArn: pulumi.Input<string>, logGroup: aws.cloudwatch.LogGroup): { rule: aws.cloudwatch.EventRule; targets: aws.cloudwatch.EventTarget[] } {
+    private createNetworkAclChangeRule(lambdaFunction: aws.lambda.Function, logGroup: aws.cloudwatch.LogGroup): { rule: aws.cloudwatch.EventRule; targets: aws.cloudwatch.EventTarget[] } {
         const rule = new aws.cloudwatch.EventRule(`${this.config.project}-alarms-admin-nacl-changes`, {
-            name: `${this.config.generalPrefix}-network-acl-changes`,
+            name: `${this.config.generalPrefix}-alarm-network-acl-changes`,
             description: "Capture Network ACL creation, modification and deletion",
             eventPattern: JSON.stringify({
                 source: ["aws.ec2"],
@@ -350,17 +382,18 @@ class AlarmsAdmin {
             }
         });
 
-        const snsTarget = new aws.cloudwatch.EventTarget(`${this.config.project}-alarms-admin-nacl-sns-target`, {
+        const lambdaTarget = new aws.cloudwatch.EventTarget(`${this.config.project}-alarms-admin-nacl-lambda-target`, {
             rule: rule.name,
-            arn: snsArn,
+            arn: lambdaFunction.arn,
             inputTransformer: {
                 inputPaths: {
                     eventName: "$.detail.eventName",
                     userName: "$.detail.userIdentity.principalId",
                     region: "$.region",
-                    time: "$.time"
+                    time: "$.time",
+                    accountId: "$.account"
                 },
-                inputTemplate: `"Network ACL Change Detected! Event: <eventName> | User: <userName> | Region: <region> | Time: <time>"`
+                inputTemplate: `{"type":"alarm-admin","title":"Network ACL Change","event":"<eventName>","user":"<userName>","account":"<accountId>","stack":"${this.config.stack}","region":"<region>","time":"<time>"}`
             }
         });
 
@@ -369,15 +402,15 @@ class AlarmsAdmin {
             arn: logGroup.arn
         });
 
-        return { rule, targets: [snsTarget, logTarget] };
+        return { rule, targets: [lambdaTarget, logTarget] };
     }
 
     /**
      * Create EventBridge rule for Internet Gateway changes
      */
-    private createInternetGatewayChangeRule(snsArn: pulumi.Input<string>, logGroup: aws.cloudwatch.LogGroup): { rule: aws.cloudwatch.EventRule; targets: aws.cloudwatch.EventTarget[] } {
+    private createInternetGatewayChangeRule(lambdaFunction: aws.lambda.Function, logGroup: aws.cloudwatch.LogGroup): { rule: aws.cloudwatch.EventRule; targets: aws.cloudwatch.EventTarget[] } {
         const rule = new aws.cloudwatch.EventRule(`${this.config.project}-alarms-admin-igw-changes`, {
-            name: `${this.config.generalPrefix}-internet-gateway-changes`,
+            name: `${this.config.generalPrefix}-alarm-internet-gateway-changes`,
             description: "Capture Internet Gateway configuration changes",
             eventPattern: JSON.stringify({
                 source: ["aws.ec2"],
@@ -398,17 +431,18 @@ class AlarmsAdmin {
             }
         });
 
-        const snsTarget = new aws.cloudwatch.EventTarget(`${this.config.project}-alarms-admin-igw-sns-target`, {
+        const lambdaTarget = new aws.cloudwatch.EventTarget(`${this.config.project}-alarms-admin-igw-lambda-target`, {
             rule: rule.name,
-            arn: snsArn,
+            arn: lambdaFunction.arn,
             inputTransformer: {
                 inputPaths: {
                     eventName: "$.detail.eventName",
                     userName: "$.detail.userIdentity.principalId",
                     region: "$.region",
-                    time: "$.time"
+                    time: "$.time",
+                    accountId: "$.account"
                 },
-                inputTemplate: `"Internet Gateway Change Detected! Event: <eventName> | User: <userName> | Region: <region> | Time: <time>"`
+                inputTemplate: `{"type":"alarm-admin","title":"Internet Gateway Change","event":"<eventName>","user":"<userName>","account":"<accountId>","stack":"${this.config.stack}","region":"<region>","time":"<time>"}`
             }
         });
 
@@ -417,15 +451,15 @@ class AlarmsAdmin {
             arn: logGroup.arn
         });
 
-        return { rule, targets: [snsTarget, logTarget] };
+        return { rule, targets: [lambdaTarget, logTarget] };
     }
 
     /**
      * Create EventBridge rule for Network Gateway changes (NAT, VPN, Customer Gateway, etc)
      */
-    private createNetworkGatewayChangeRule(snsArn: pulumi.Input<string>, logGroup: aws.cloudwatch.LogGroup): { rule: aws.cloudwatch.EventRule; targets: aws.cloudwatch.EventTarget[] } {
+    private createNetworkGatewayChangeRule(lambdaFunction: aws.lambda.Function, logGroup: aws.cloudwatch.LogGroup): { rule: aws.cloudwatch.EventRule; targets: aws.cloudwatch.EventTarget[] } {
         const rule = new aws.cloudwatch.EventRule(`${this.config.project}-alarms-admin-ngw-changes`, {
-            name: `${this.config.generalPrefix}-network-gateway-changes`,
+            name: `${this.config.generalPrefix}-alarm-network-gateway-changes`,
             description: "Capture Network Gateway (NAT, VPN, CGW) creation, modification and deletion",
             eventPattern: JSON.stringify({
                 source: ["aws.ec2"],
@@ -466,17 +500,18 @@ class AlarmsAdmin {
             }
         });
 
-        const snsTarget = new aws.cloudwatch.EventTarget(`${this.config.project}-alarms-admin-ngw-sns-target`, {
+        const lambdaTarget = new aws.cloudwatch.EventTarget(`${this.config.project}-alarms-admin-ngw-lambda-target`, {
             rule: rule.name,
-            arn: snsArn,
+            arn: lambdaFunction.arn,
             inputTransformer: {
                 inputPaths: {
                     eventName: "$.detail.eventName",
                     userName: "$.detail.userIdentity.principalId",
                     region: "$.region",
-                    time: "$.time"
+                    time: "$.time",
+                    accountId: "$.account"
                 },
-                inputTemplate: `"Network Gateway Change Detected! Event: <eventName> | User: <userName> | Region: <region> | Time: <time>"`
+                inputTemplate: `{"type":"alarm-admin","title":"Network Gateway Change","event":"<eventName>","user":"<userName>","account":"<accountId>","stack":"${this.config.stack}","region":"<region>","time":"<time>"}`
             }
         });
 
@@ -485,15 +520,15 @@ class AlarmsAdmin {
             arn: logGroup.arn
         });
 
-        return { rule, targets: [snsTarget, logTarget] };
+        return { rule, targets: [lambdaTarget, logTarget] };
     }
 
     /**
      * Create EventBridge rule for AWS Config changes
      */
-    private createAwsConfigChangeRule(snsArn: pulumi.Input<string>, logGroup: aws.cloudwatch.LogGroup): { rule: aws.cloudwatch.EventRule; targets: aws.cloudwatch.EventTarget[] } {
+    private createAwsConfigChangeRule(lambdaFunction: aws.lambda.Function, logGroup: aws.cloudwatch.LogGroup): { rule: aws.cloudwatch.EventRule; targets: aws.cloudwatch.EventTarget[] } {
         const rule = new aws.cloudwatch.EventRule(`${this.config.project}-alarms-admin-config-changes`, {
-            name: `${this.config.generalPrefix}-aws-config-changes`,
+            name: `${this.config.generalPrefix}-alarm-aws-config-changes`,
             description: "Capture critical AWS Config changes",
             eventPattern: JSON.stringify({
                 source: ["aws.config"],
@@ -515,17 +550,18 @@ class AlarmsAdmin {
             }
         });
 
-        const snsTarget = new aws.cloudwatch.EventTarget(`${this.config.project}-alarms-admin-config-sns-target`, {
+        const lambdaTarget = new aws.cloudwatch.EventTarget(`${this.config.project}-alarms-admin-config-lambda-target`, {
             rule: rule.name,
-            arn: snsArn,
+            arn: lambdaFunction.arn,
             inputTransformer: {
                 inputPaths: {
                     eventName: "$.detail.eventName",
                     userName: "$.detail.userIdentity.principalId",
                     region: "$.region",
-                    time: "$.time"
+                    time: "$.time",
+                    accountId: "$.account"
                 },
-                inputTemplate: `"AWS Config Change Detected! Event: <eventName> | User: <userName> | Region: <region> | Time: <time>"`
+                inputTemplate: `{"type":"alarm-admin","title":"AWS Config Change","event":"<eventName>","user":"<userName>","account":"<accountId>","stack":"${this.config.stack}","region":"<region>","time":"<time>"}`
             }
         });
 
@@ -534,15 +570,15 @@ class AlarmsAdmin {
             arn: logGroup.arn
         });
 
-        return { rule, targets: [snsTarget, logTarget] };
+        return { rule, targets: [lambdaTarget, logTarget] };
     }
 
     /**
      * Create EventBridge rule for CloudTrail changes
      */
-    private createCloudTrailChangeRule(snsArn: pulumi.Input<string>, logGroup: aws.cloudwatch.LogGroup): { rule: aws.cloudwatch.EventRule; targets: aws.cloudwatch.EventTarget[] } {
+    private createCloudTrailChangeRule(lambdaFunction: aws.lambda.Function, logGroup: aws.cloudwatch.LogGroup): { rule: aws.cloudwatch.EventRule; targets: aws.cloudwatch.EventTarget[] } {
         const rule = new aws.cloudwatch.EventRule(`${this.config.project}-alarms-admin-cloudtrail-changes`, {
-            name: `${this.config.generalPrefix}-cloudtrail-changes`,
+            name: `${this.config.generalPrefix}-alarm-cloudtrail-changes`,
             description: "Capture critical CloudTrail changes",
             eventPattern: JSON.stringify({
                 source: ["aws.cloudtrail"],
@@ -565,17 +601,18 @@ class AlarmsAdmin {
             }
         });
 
-        const snsTarget = new aws.cloudwatch.EventTarget(`${this.config.project}-alarms-admin-cloudtrail-sns-target`, {
+        const lambdaTarget = new aws.cloudwatch.EventTarget(`${this.config.project}-alarms-admin-cloudtrail-lambda-target`, {
             rule: rule.name,
-            arn: snsArn,
+            arn: lambdaFunction.arn,
             inputTransformer: {
                 inputPaths: {
                     eventName: "$.detail.eventName",
                     userName: "$.detail.userIdentity.principalId",
                     region: "$.region",
-                    time: "$.time"
+                    time: "$.time",
+                    accountId: "$.account"
                 },
-                inputTemplate: `"CloudTrail Change Detected! Event: <eventName> | User: <userName> | Region: <region> | Time: <time>"`
+                inputTemplate: `{"type":"alarm-admin","title":"CloudTrail Change","event":"<eventName>","user":"<userName>","account":"<accountId>","stack":"${this.config.stack}","region":"<region>","time":"<time>"}`
             }
         });
 
@@ -584,15 +621,15 @@ class AlarmsAdmin {
             arn: logGroup.arn
         });
 
-        return { rule, targets: [snsTarget, logTarget] };
+        return { rule, targets: [lambdaTarget, logTarget] };
     }
 
     /**
      * Create EventBridge rule for KMS changes
      */
-    private createKmsChangeRule(snsArn: pulumi.Input<string>, logGroup: aws.cloudwatch.LogGroup): { rule: aws.cloudwatch.EventRule; targets: aws.cloudwatch.EventTarget[] } {
+    private createKmsChangeRule(lambdaFunction: aws.lambda.Function, logGroup: aws.cloudwatch.LogGroup): { rule: aws.cloudwatch.EventRule; targets: aws.cloudwatch.EventTarget[] } {
         const rule = new aws.cloudwatch.EventRule(`${this.config.project}-alarms-admin-kms-changes`, {
-            name: `${this.config.generalPrefix}-kms-changes`,
+            name: `${this.config.generalPrefix}-alarm-kms-changes`,
             description: "Capture critical KMS key changes",
             eventPattern: JSON.stringify({
                 source: ["aws.kms"],
@@ -615,17 +652,18 @@ class AlarmsAdmin {
             }
         });
 
-        const snsTarget = new aws.cloudwatch.EventTarget(`${this.config.project}-alarms-admin-kms-sns-target`, {
+        const lambdaTarget = new aws.cloudwatch.EventTarget(`${this.config.project}-alarms-admin-kms-lambda-target`, {
             rule: rule.name,
-            arn: snsArn,
+            arn: lambdaFunction.arn,
             inputTransformer: {
                 inputPaths: {
                     eventName: "$.detail.eventName",
                     userName: "$.detail.userIdentity.principalId",
                     region: "$.region",
-                    time: "$.time"
+                    time: "$.time",
+                    accountId: "$.account"
                 },
-                inputTemplate: `"KMS Change Detected! Event: <eventName> | User: <userName> | Region: <region> | Time: <time>"`
+                inputTemplate: `{"type":"alarm-admin","title":"KMS Change","event":"<eventName>","user":"<userName>","account":"<accountId>","stack":"${this.config.stack}","region":"<region>","time":"<time>"}`
             }
         });
 
@@ -634,15 +672,15 @@ class AlarmsAdmin {
             arn: logGroup.arn
         });
 
-        return { rule, targets: [snsTarget, logTarget] };
+        return { rule, targets: [lambdaTarget, logTarget] };
     }
 
     /**
      * Create EventBridge rule for S3 changes
      */
-    private createS3ChangeRule(snsArn: pulumi.Input<string>, logGroup: aws.cloudwatch.LogGroup): { rule: aws.cloudwatch.EventRule; targets: aws.cloudwatch.EventTarget[] } {
+    private createS3ChangeRule(lambdaFunction: aws.lambda.Function, logGroup: aws.cloudwatch.LogGroup): { rule: aws.cloudwatch.EventRule; targets: aws.cloudwatch.EventTarget[] } {
         const rule = new aws.cloudwatch.EventRule(`${this.config.project}-alarms-admin-s3-changes`, {
-            name: `${this.config.generalPrefix}-s3-changes`,
+            name: `${this.config.generalPrefix}-alarm-s3-changes`,
             description: "Capture critical S3 bucket policy changes",
             eventPattern: JSON.stringify({
                 source: ["aws.s3"],
@@ -664,18 +702,19 @@ class AlarmsAdmin {
             }
         });
 
-        const snsTarget = new aws.cloudwatch.EventTarget(`${this.config.project}-alarms-admin-s3-sns-target`, {
+        const lambdaTarget = new aws.cloudwatch.EventTarget(`${this.config.project}-alarms-admin-s3-lambda-target`, {
             rule: rule.name,
-            arn: snsArn,
+            arn: lambdaFunction.arn,
             inputTransformer: {
                 inputPaths: {
                     eventName: "$.detail.eventName",
                     userName: "$.detail.userIdentity.principalId",
                     bucketName: "$.detail.requestParameters.bucketName",
                     region: "$.region",
-                    time: "$.time"
+                    time: "$.time",
+                    accountId: "$.account"
                 },
-                inputTemplate: `"S3 Change Detected! Event: <eventName> | Bucket: <bucketName> | User: <userName> | Region: <region> | Time: <time>"`
+                inputTemplate: `{"type":"alarm-admin","title":"S3 Change","event":"<eventName>","user":"<userName>","account":"<accountId>","stack":"${this.config.stack}","region":"<region>","time":"<time>","bucket":"<bucketName>"}`
             }
         });
 
@@ -684,15 +723,15 @@ class AlarmsAdmin {
             arn: logGroup.arn
         });
 
-        return { rule, targets: [snsTarget, logTarget] };
+        return { rule, targets: [lambdaTarget, logTarget] };
     }
 
     /**
      * Create EventBridge rule for IAM changes
      */
-    private createIamChangeRule(snsArn: pulumi.Input<string>, logGroup: aws.cloudwatch.LogGroup): { rule: aws.cloudwatch.EventRule; targets: aws.cloudwatch.EventTarget[] } {
+    private createIamChangeRule(lambdaFunction: aws.lambda.Function, logGroup: aws.cloudwatch.LogGroup): { rule: aws.cloudwatch.EventRule; targets: aws.cloudwatch.EventTarget[] } {
         const rule = new aws.cloudwatch.EventRule(`${this.config.project}-alarms-admin-iam-changes`, {
-            name: `${this.config.generalPrefix}-iam-changes`,
+            name: `${this.config.generalPrefix}-alarm-iam-changes`,
             description: "Capture critical IAM policy and permission changes",
             eventPattern: JSON.stringify({
                 source: ["aws.iam"],
@@ -723,17 +762,18 @@ class AlarmsAdmin {
             }
         });
 
-        const snsTarget = new aws.cloudwatch.EventTarget(`${this.config.project}-alarms-admin-iam-sns-target`, {
+        const lambdaTarget = new aws.cloudwatch.EventTarget(`${this.config.project}-alarms-admin-iam-lambda-target`, {
             rule: rule.name,
-            arn: snsArn,
+            arn: lambdaFunction.arn,
             inputTransformer: {
                 inputPaths: {
                     eventName: "$.detail.eventName",
                     userName: "$.detail.userIdentity.principalId",
                     region: "$.region",
-                    time: "$.time"
+                    time: "$.time",
+                    accountId: "$.account"
                 },
-                inputTemplate: `"IAM Change Detected! Event: <eventName> | User: <userName> | Region: <region> | Time: <time>"`
+                inputTemplate: `{"type":"alarm-admin","title":"IAM Change","event":"<eventName>","user":"<userName>","account":"<accountId>","stack":"${this.config.stack}","region":"<region>","time":"<time>"}`
             }
         });
 
@@ -742,7 +782,147 @@ class AlarmsAdmin {
             arn: logGroup.arn
         });
 
-        return { rule, targets: [snsTarget, logTarget] };
+        return { rule, targets: [lambdaTarget, logTarget] };
+    }
+
+    /**
+     * Create EventBridge rule for Console Login Failures
+     */
+    private createConsoleLoginFailureRule(lambdaFunction: aws.lambda.Function, logGroup: aws.cloudwatch.LogGroup): { rule: aws.cloudwatch.EventRule; targets: aws.cloudwatch.EventTarget[] } {
+        const rule = new aws.cloudwatch.EventRule(`${this.config.project}-alarms-admin-console-login-failures`, {
+            name: `${this.config.generalPrefix}-alarm-console-login-failures`,
+            description: "Capture failed AWS Console login attempts",
+            eventPattern: JSON.stringify({
+                source: ["aws.signin"],
+                "detail-type": ["AWS Console Sign In via CloudTrail"],
+                detail: {
+                    eventName: ["ConsoleLogin"],
+                    responseElements: {
+                        ConsoleLogin: ["Failure"]
+                    }
+                }
+            }),
+            tags: {
+                ...this.config.generalTags,
+                Name: `${this.config.generalPrefix}-console-login-failures`
+            }
+        });
+
+        const lambdaTarget = new aws.cloudwatch.EventTarget(`${this.config.project}-alarms-admin-login-fail-lambda-target`, {
+            rule: rule.name,
+            arn: lambdaFunction.arn,
+            inputTransformer: {
+                inputPaths: {
+                    userName: "$.detail.userIdentity.principalId",
+                    sourceIp: "$.detail.sourceIPAddress",
+                    userAgent: "$.detail.userAgent",
+                    region: "$.region",
+                    time: "$.time",
+                    accountId: "$.account"
+                },
+                inputTemplate: `{"type":"alarm-admin","title":"Console Login Failure","event":"ConsoleLogin","user":"<userName>","account":"<accountId>","stack":"${this.config.stack}","region":"<region>","time":"<time>","sourceIp":"<sourceIp>","userAgent":"<userAgent>"}`
+            }
+        });
+
+        const logTarget = new aws.cloudwatch.EventTarget(`${this.config.project}-alarms-admin-login-fail-log-target`, {
+            rule: rule.name,
+            arn: logGroup.arn
+        });
+
+        return { rule, targets: [lambdaTarget, logTarget] };
+    }
+
+    /**
+     * Create EventBridge rule for Root Account Access
+     */
+    private createRootAccountAccessRule(lambdaFunction: aws.lambda.Function, logGroup: aws.cloudwatch.LogGroup): { rule: aws.cloudwatch.EventRule; targets: aws.cloudwatch.EventTarget[] } {
+        const rule = new aws.cloudwatch.EventRule(`${this.config.project}-alarms-admin-root-account-access`, {
+            name: `${this.config.generalPrefix}-alarm-root-account-access`,
+            description: "Capture any activity with AWS root account",
+            eventPattern: JSON.stringify({
+                source: ["aws.signin"],
+                "detail-type": ["AWS Console Sign In via CloudTrail"],
+                detail: {
+                    userIdentity: {
+                        type: ["Root"]
+                    }
+                }
+            }),
+            tags: {
+                ...this.config.generalTags,
+                Name: `${this.config.generalPrefix}-root-account-access`
+            }
+        });
+
+        const lambdaTarget = new aws.cloudwatch.EventTarget(`${this.config.project}-alarms-admin-root-access-lambda-target`, {
+            rule: rule.name,
+            arn: lambdaFunction.arn,
+            inputTransformer: {
+                inputPaths: {
+                    eventName: "$.detail.eventName",
+                    sourceIp: "$.detail.sourceIPAddress",
+                    userAgent: "$.detail.userAgent",
+                    region: "$.region",
+                    time: "$.time",
+                    accountId: "$.account"
+                },
+                inputTemplate: `{"type":"alarm-admin","title":"Root Account Access","event":"<eventName>","user":"ROOT","account":"<accountId>","stack":"${this.config.stack}","region":"<region>","time":"<time>","sourceIp":"<sourceIp>","userAgent":"<userAgent>"}`
+            }
+        });
+
+        const logTarget = new aws.cloudwatch.EventTarget(`${this.config.project}-alarms-admin-root-access-log-target`, {
+            rule: rule.name,
+            arn: logGroup.arn
+        });
+
+        return { rule, targets: [lambdaTarget, logTarget] };
+    }
+
+    /**
+     * Create EventBridge rule for Access Without MFA
+     */
+    private createAccessWithoutMfaRule(lambdaFunction: aws.lambda.Function, logGroup: aws.cloudwatch.LogGroup): { rule: aws.cloudwatch.EventRule; targets: aws.cloudwatch.EventTarget[] } {
+        const rule = new aws.cloudwatch.EventRule(`${this.config.project}-alarms-admin-access-without-mfa`, {
+            name: `${this.config.generalPrefix}-alarm-access-without-mfa`,
+            description: "Capture console login attempts without MFA",
+            eventPattern: JSON.stringify({
+                source: ["aws.signin"],
+                "detail-type": ["AWS Console Sign In via CloudTrail"],
+                detail: {
+                    eventName: ["ConsoleLogin"],
+                    additionalEventData: {
+                        MFAUsed: ["No"]
+                    }
+                }
+            }),
+            tags: {
+                ...this.config.generalTags,
+                Name: `${this.config.generalPrefix}-access-without-mfa`
+            }
+        });
+
+        const lambdaTarget = new aws.cloudwatch.EventTarget(`${this.config.project}-alarms-admin-no-mfa-lambda-target`, {
+            rule: rule.name,
+            arn: lambdaFunction.arn,
+            inputTransformer: {
+                inputPaths: {
+                    userName: "$.detail.userIdentity.principalId",
+                    sourceIp: "$.detail.sourceIPAddress",
+                    userAgent: "$.detail.userAgent",
+                    region: "$.region",
+                    time: "$.time",
+                    accountId: "$.account"
+                },
+                inputTemplate: `{"type":"alarm-admin","title":"Login Without MFA","event":"ConsoleLogin","user":"<userName>","account":"<accountId>","stack":"${this.config.stack}","region":"<region>","time":"<time>","sourceIp":"<sourceIp>","userAgent":"<userAgent>"}`
+            }
+        });
+
+        const logTarget = new aws.cloudwatch.EventTarget(`${this.config.project}-alarms-admin-no-mfa-log-target`, {
+            rule: rule.name,
+            arn: logGroup.arn
+        });
+
+        return { rule, targets: [lambdaTarget, logTarget] };
     }
 }
 

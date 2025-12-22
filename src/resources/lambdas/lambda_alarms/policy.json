@@ -26,6 +26,14 @@
     {
       "Effect": "Allow",
       "Action": [
+        "kms:Decrypt",
+        "kms:GenerateDataKey"
+      ],
+      "Resource": "rep_kms_key_arn"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
         "cloudwatch:ListTagsForResource"
       ],
       "Resource": "*"

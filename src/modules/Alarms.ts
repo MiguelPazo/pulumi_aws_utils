@@ -36,7 +36,11 @@ class Alarms {
 
         // Deploy Lambda Alarms if requested
         if (alarmsConfig.deployLambdaAlarms) {
-            const lambdaResources = await LambdaAlarms.getInstance().main(alarmsConfig.snsArn, accountId);
+            const lambdaResources = await LambdaAlarms.getInstance().main(
+                alarmsConfig.snsArn,
+                alarmsConfig.snsKmsKey,
+                accountId
+            );
             result.lambdaFunction = lambdaResources.lambdaFunction;
             result.lambdaRole = lambdaResources.lambdaRole;
             result.lambdaLogGroup = lambdaResources.logGroup;

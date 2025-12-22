@@ -35,7 +35,11 @@ export const handler = async (event, context) => {
                     let emoji = '🔔';
                     let iconEmoji = ':bell:';
 
-                    if (subject.includes('ALARM')) {
+                    if (subject.includes('ALARM ADMIN')) {
+                        color = '#c6c600'; // yellow
+                        emoji = '🔔';
+                        iconEmoji = ':bell:';
+                    } else if (subject.includes('ALARM')) {
                         color = '#FF0000'; // red
                         emoji = '🚨';
                         iconEmoji = ':rotating_light:';

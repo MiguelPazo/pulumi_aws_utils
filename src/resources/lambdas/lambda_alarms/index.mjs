@@ -8,7 +8,7 @@ const cloudwatchClient = new CloudWatchClient({ region });
 
 /**
  * Main Lambda handler for processing CloudWatch alarm events
- * @param {Object} event - CloudWatch alarm event data
+ * @param {Object} event - CloudWatch alarm event data or EventBridge alarm-admin event
  * @param {Object} context - Lambda context object
  */
 export const handler = async (event, context) => {
@@ -16,12 +16,19 @@ export const handler = async (event, context) => {
 
     if (!topicArn) {
         console.log(JSON.stringify({
-            alarm: event.alarmData?.alarmName,
+            alarm: event.alarmData?.alarmName || event.type,
             message: 'SNS Topic not defined'
         }));
         return;
     }
 
+    // Check if this is an alarm-admin event from EventBridge
+    if (event.type === 'alarm-admin') {
+        await handleAlarmAdminEvent(event, topicArn);
+        return;
+    }
+
+    // Standard CloudWatch Alarm processing
     const alarmData = event.alarmData || {};
     const alarmName = alarmData.alarmName || '';
     const newState = alarmData.state?.value || '';
@@ -86,6 +93,78 @@ export const handler = async (event, context) => {
         }));
     }
 };
+
+/**
+ * Handle alarm-admin events from EventBridge
+ * @param {Object} event - Alarm admin event data
+ * @param {string} topicArn - SNS topic ARN
+ */
+async function handleAlarmAdminEvent(event, topicArn) {
+    const {
+        title = 'Unknown',
+        event: eventName = '',
+        user = '',
+        account = '',
+        stack = '',
+        region: eventRegion = '',
+        time = '',
+        bucket = '',
+        sourceIp = '',
+        userAgent = ''
+    } = event;
+
+    // Build subject
+    const subject = `ALARM ADMIN: AWS/${account}/${process.env.PROJECT || 'project'} - [${stack}][${title}][${eventRegion}]`;
+
+    // Build message parts
+    const messageParts = [
+        `${title} Detected!`,
+        '',
+        `Event: ${eventName}`,
+        `User: ${user}`,
+        `Account: ${account}`,
+        `Stack: ${stack}`,
+        `Region: ${eventRegion}`,
+        `Time: ${time}`
+    ];
+
+    // Add optional fields if present
+    if (bucket) {
+        messageParts.push(`Bucket: ${bucket}`);
+    }
+    if (sourceIp) {
+        messageParts.push(`Source IP: ${sourceIp}`);
+    }
+    if (userAgent) {
+        messageParts.push(`User Agent: ${userAgent}`);
+    }
+
+    // Prepare SNS publish parameters
+    const params = {
+        Message: messageParts.join('\n'),
+        Subject: subject,
+        TopicArn: topicArn
+    };
+
+    // Publish to SNS
+    try {
+        const command = new PublishCommand(params);
+        await snsClient.send(command);
+        console.log(JSON.stringify({
+            type: 'alarm-admin',
+            title,
+            event: eventName,
+            message: `Message sent to SNS: ${topicArn}`
+        }));
+    } catch (err) {
+        console.log(JSON.stringify({
+            type: 'alarm-admin',
+            title,
+            event: eventName,
+            message: `Error sending message to SNS: ${err.message}`
+        }));
+    }
+}
 
 /**
  * Retrieve tags for a CloudWatch alarm

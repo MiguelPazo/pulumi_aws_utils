@@ -4,6 +4,7 @@
 import * as pulumi from "@pulumi/pulumi";
 import * as aws from "@pulumi/aws";
 import {InitConfig} from "../types/module";
+import {S3Config} from "../types";
 import {getInit} from "../config";
 
 class S3 {
@@ -22,50 +23,70 @@ class S3 {
         return this.__instance;
     }
 
-    async main(
-        name: string,
-        kmsKey?: pulumi.Output<aws.kms.Key>,
-        enableCors?: boolean,
-        cdn?: pulumi.Output<aws.cloudfront.Distribution>,
-        enableReceiveLogs?: boolean,
-        defaultPolicy?: boolean,
-        fullName?: string,
-        enableObjectLock?: boolean,
-        disableAcl?: boolean
-    ): Promise<aws.s3.Bucket> {
-        defaultPolicy = defaultPolicy == undefined ? true : defaultPolicy;
-        enableObjectLock = enableObjectLock == undefined ? false : enableObjectLock;
-        disableAcl = disableAcl == undefined ? true : disableAcl;
+    async main(config: S3Config): Promise<aws.s3.BucketV2> {
+        const {
+            name,
+            kmsKey,
+            s3Logs,
+            enableCors,
+            enableReceiveLogs = false,
+            enableCloudfrontLogs = false,
+            cloudfront,
+            fullName,
+            enableObjectLock = false,
+            disableAcl = true,
+            disablePolicy = false,
+            provider,
+        } = config;
 
         const bucketName = fullName || pulumi.interpolate`${this.config.generalPrefix}-${this.config.accountId}-${name}`;
 
-        const bucket = new aws.s3.Bucket(`${this.config.project}-${name}-bucket`, {
+        const resourceOptions: pulumi.ResourceOptions = provider ? { provider } : {};
+
+        const bucket = new aws.s3.BucketV2(`${this.config.project}-${name}-bucket`, {
             bucket: bucketName,
-            acl: disableAcl ? undefined : "private",
-            versioning: enableObjectLock ? {
-                enabled: true
-            } : undefined,
-            objectLockConfiguration: enableObjectLock ? {
-                objectLockEnabled: "Enabled",
-                rule: {
-                    defaultRetention: {
-                        mode: "GOVERNANCE",
-                        days: 30
-                    }
-                }
-            } : undefined,
+            objectLockEnabled: enableObjectLock,
             tags: {
                 ...this.config.generalTags,
                 Name: bucketName,
             }
-        });
+        }, resourceOptions);
+
+        // Configure versioning (required for Object Lock)
+        if (enableObjectLock) {
+            new aws.s3.BucketVersioningV2(`${this.config.project}-${name}-bucket-versioning`, {
+                bucket: bucket.id,
+                versioningConfiguration: {
+                    status: "Enabled"
+                }
+            }, resourceOptions);
+
+            // Configure Object Lock default retention
+            new aws.s3.BucketObjectLockConfigurationV2(`${this.config.project}-${name}-bucket-object-lock`, {
+                bucket: bucket.id,
+                rule: {
+                    defaultRetention: {
+                        mode: "GOVERNANCE",
+                        days: 90
+                    }
+                }
+            }, resourceOptions);
+        }
 
         new aws.s3.BucketOwnershipControls(`${this.config.project}-${name}-bucket-ownership`, {
             bucket: bucket.id,
             rule: {
                 objectOwnership: disableAcl ? "BucketOwnerEnforced" : "ObjectWriter",
             },
-        });
+        }, resourceOptions);
+
+        // Configure ACL if not disabled
+        if (!disableAcl) {
+            new aws.s3.BucketAclV2(`${this.config.project}-${name}-bucket-acl`, {
+                bucket: bucket.id,
+                acl: "private"
+            }, resourceOptions);
+        }
 
         new aws.s3.BucketServerSideEncryptionConfigurationV2(`${this.config.project}-${name}-bucket-encrypt`, {
             bucket: bucket.id,
@@ -75,127 +96,124 @@ class S3 {
                     kmsMasterKeyId: kmsKey?.arn,
                 },
             }],
-        });
+        }, resourceOptions);
 
-        if (cdn) {
-            new aws.s3.BucketPolicy(`${this.config.project}-${name}-bucket-policy`, {
-                bucket: bucket.id,
-                policy: pulumi.all([bucket.arn, this.config.accountId, cdn.id]).apply(([bucketArn, accountId, cdnId]) => {
-                    return JSON.stringify({
-                        "Version": "2012-10-17",
-                        "Statement": [
-                            {
-                                "Effect": "Deny",
-                                "Principal": "*",
-                                "Action": "s3:*",
-                                "Resource": [
-                                    bucketArn,
-                                    `${bucketArn}/*`
-                                ],
-                                "Condition": {
-                                    "Bool": {
-                                        "aws:SecureTransport": "false"
-                                    }
-                                }
-                            },
-                            {
-                                "Effect": "Allow",
-                                "Principal": {
-                                    "Service": "cloudfront.amazonaws.com"
-                                },
-                                "Action": "s3:GetObject",
-                                "Resource": `${bucketArn}/*`,
-                                "Condition": {
-                                    "StringEquals": {
-                                        "AWS:SourceArn": `arn:aws:cloudfront::${accountId}:distribution/${cdnId}`
-                                    }
-                                }
-                            }
-                        ]
-                    })
-                })
-            });
-        } else if (enableReceiveLogs) {
-            const elbServiceAcc = aws.elb.getServiceAccount({});
+        // Build bucket policy with all required statements
+        if (!disablePolicy) {
+            const policyInputs: pulumi.Input<any>[] = [bucket.arn, this.config.accountId];
+            let elbServiceAccPromise: Promise<any> | null = null;
+
+            if (enableReceiveLogs) {
+                elbServiceAccPromise = aws.elb.getServiceAccount({});
+                policyInputs.push(elbServiceAccPromise);
+            }
+
+            if (cloudfront) {
+                policyInputs.push(cloudfront.id);
+            }
 
             new aws.s3.BucketPolicy(`${this.config.project}-${name}-bucket-policy`, {
                 bucket: bucket.id,
-                policy: pulumi.all([bucket.arn, elbServiceAcc]).apply(([bucketArn, elbServiceAcc]) => {
-                    return JSON.stringify({
-                        "Version": "2012-10-17",
-                        "Statement": [
-                            {
-                                "Effect": "Deny",
-                                "Principal": "*",
-                                "Action": "s3:*",
-                                "Resource": [
-                                    bucketArn,
-                                    `${bucketArn}/*`
-                                ],
-                                "Condition": {
-                                    "Bool": {
-                                        "aws:SecureTransport": "false"
-                                    }
-                                }
+                policy: pulumi.all(policyInputs).apply(values => {
+                    const bucketArn = values[0] as string;
+                    const accountId = values[1] as string;
+                    let valueIndex = 2;
+                    const elbServiceAcc = enableReceiveLogs ? values[valueIndex++] : null;
+                    const cdnId = cloudfront ? values[enableReceiveLogs ? valueIndex : valueIndex - 1] : null;
+
+                    const statements: any[] = [];
+
+                    // Always add secure transport policy
+                    statements.push({
+                        "Effect": "Deny",
+                        "Principal": "*",
+                        "Action": "s3:*",
+                        "Resource": [
+                            bucketArn,
+                            `${bucketArn}/*`
+                        ],
+                        "Condition": {
+                            "Bool": {
+                                "aws:SecureTransport": "false"
+                            }
+                        }
+                    });
+
+                    // Add receive logs policies if enabled
+                    if (enableReceiveLogs && elbServiceAcc) {
+                        statements.push({
+                            "Effect": "Allow",
+                            "Principal": {
+                                "AWS": elbServiceAcc.arn
                             },
-                            {
-                                "Effect": "Allow",
-                                "Principal": {
-                                    "AWS": elbServiceAcc.arn
-                                },
-                                "Action": "S3:PutObject",
-                                "Resource": `${bucketArn}/*`
+                            "Action": "s3:PutObject",
+                            "Resource": `${bucketArn}/*`
+                        });
+
+                        statements.push({
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": "delivery.logs.amazonaws.com"
                             },
-                            {
-                                "Effect": "Allow",
-                                "Principal": {
-                                    "Service": "delivery.logs.amazonaws.com"
-                                },
-                                "Action": "S3:PutObject",
-                                "Resource": `${bucketArn}/*`,
-                                "Condition": {
-                                    "StringEquals": {
-                                        "s3:x-amz-acl": "bucket-owner-full-control"
-                                    }
-                                }
-                            },
-                            {
-                                "Effect": "Allow",
-                                "Principal": {
-                                    "Service": "delivery.logs.amazonaws.com"
-                                },
-                                "Action": "S3:GetBucketAcl",
-                                "Resource": bucketArn
-                            },
-                        ]
-                    })
-                })
-            });
-        } else if (defaultPolicy) {
-            new aws.s3.BucketPolicy(`${this.config.project}-${name}-bucket-policy`, {
-                bucket: bucket.id,
-                policy: pulumi.output(bucket.arn).apply(bucketArn => {
-                    return JSON.stringify({
-                        "Version": "2012-10-17",
-                        "Statement": [
-                            {
-                                "Effect": "Deny",
-                                "Principal": "*",
-                                "Action": "s3:*",
-                                "Resource": [
-                                    bucketArn,
-                                    `${bucketArn}/*`
-                                ],
-                                "Condition": {
-                                    "Bool": {
-                                        "aws:SecureTransport": "false"
-                                    }
+                            "Action": "s3:PutObject",
+                            "Resource": `${bucketArn}/*`,
+                            "Condition": {
+                                "StringEquals": {
+                                    "s3:x-amz-acl": "bucket-owner-full-control"
                                 }
                             }
-                        ]
-                    })
+                        });
+
+                        statements.push({
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": "delivery.logs.amazonaws.com"
+                            },
+                            "Action": "s3:GetBucketAcl",
+                            "Resource": bucketArn
+                        });
+                    }
+
+                    // Add CloudFront logs policy if enabled
+                    if (enableCloudfrontLogs) {
+                        statements.push({
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": "cloudfront.amazonaws.com"
+                            },
+                            "Action": "s3:PutObject",
+                            "Resource": `${bucketArn}/*`,
+                            "Condition": {
+                                "StringEquals": {
+                                    "AWS:SourceArn": `arn:aws:cloudfront::${accountId}:distribution/*`
+                                }
+                            }
+                        });
+                    }
+
+                    // Add CloudFront GetObject policy if cloudfront distribution is defined
+                    if (cloudfront && cdnId) {
+                        statements.push({
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": "cloudfront.amazonaws.com"
+                            },
+                            "Action": "s3:GetObject",
+                            "Resource": `${bucketArn}/*`,
+                            "Condition": {
+                                "StringEquals": {
+                                    "AWS:SourceArn": `arn:aws:cloudfront::${accountId}:distribution/${cdnId}`
+                                }
+                            }
+                        });
+                    }
+
+                    return JSON.stringify({
+                        "Version": "2012-10-17",
+                        "Statement": statements
+                    });
                 })
-            });
+            }, resourceOptions);
         }
 
         if (enableCors) {
@@ -211,7 +229,37 @@ class S3 {
                         maxAgeSeconds: 0
                     }
                 ],
-            });
+            }, resourceOptions);
+        }
+
+        if (s3Logs) {
+            new aws.s3.BucketLoggingV2(`${this.config.project}-${name}-bucket-logging`, {
+                bucket: bucket.id,
+                targetBucket: s3Logs.id,
+                targetPrefix: pulumi.interpolate`${bucket.id}/`
+            }, resourceOptions);
+        }
+
+        if (enableObjectLock) {
+            new aws.s3.BucketLifecycleConfigurationV2(`${this.config.project}-${name}-bucket-lifecycle`, {
+                bucket: bucket.id,
+                rules: [
+                    {
+                        id: "expire-noncurrent-versions",
+                        status: "Enabled",
+                        noncurrentVersionExpiration: {
+                            noncurrentDays: 90
+                        }
+                    },
+                    {
+                        id: "delete-expired-object-delete-markers",
+                        status: "Enabled",
+                        expiration: {
+                            expiredObjectDeleteMarker: true
+                        }
+                    }
+                ]
+            }, resourceOptions);
         }
 
         return bucket

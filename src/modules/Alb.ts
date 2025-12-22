@@ -27,7 +27,7 @@ class Alb {
     async main(
         name: string,
         vpc: pulumi.Output<VpcImportResult>,
-        s3Logs?: pulumi.Output<aws.s3.Bucket>,
+        s3Logs?: pulumi.Output<aws.s3.BucketV2>,
         internal?: boolean,
         certificate?: CertificatesResult,
         domain?: string,
