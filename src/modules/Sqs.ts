@@ -87,7 +87,7 @@ class Sqs {
             ? `${this.config.generalPrefix}-sqs-${sqsConfig.name}-dlq.fifo`
             : `${this.config.generalPrefix}-sqs-${sqsConfig.name}-dlq`;
 
-        const dlq = new aws.sqs.Queue(`${this.config.project}-sqs-${sqsConfig.name}-dlq`, {
+        const dlqArgs: aws.sqs.QueueArgs = {
             name: dlqName,
             kmsDataKeyReusePeriodSeconds: sqsConfig.kmsDataKeyReusePeriodSeconds || 300,
             kmsMasterKeyId: kms.arn,
@@ -95,16 +95,27 @@ class Sqs {
             messageRetentionSeconds: sqsConfig.dlqMessageRetentionPeriod || 1209600,
             receiveWaitTimeSeconds: sqsConfig.dlqReceiveWaitTimeSeconds || 0,
             delaySeconds: sqsConfig.dlqDelaySeconds || 0,
-            fifoQueue: sqsConfig.fifoQueue || false,
-            contentBasedDeduplication: sqsConfig.fifoQueue ? (sqsConfig.contentBasedDeduplication || false) : false,
-            deduplicationScope: sqsConfig.fifoQueue && sqsConfig.deduplicationScope ? sqsConfig.deduplicationScope : undefined,
-            fifoThroughputLimit: sqsConfig.fifoQueue && sqsConfig.fifoThroughputLimit ? sqsConfig.fifoThroughputLimit : undefined,
             tags: {
                 ...this.config.generalTags,
                 Name: dlqName,
                 Type: "DLQ"
             }
-        });
+        };
+
+        // Only add FIFO-specific properties if this is a FIFO queue
+        if (sqsConfig.fifoQueue) {
+            dlqArgs.fifoQueue = true;
+            dlqArgs.contentBasedDeduplication = sqsConfig.contentBasedDeduplication || false;
+
+            if (sqsConfig.deduplicationScope) {
+                dlqArgs.deduplicationScope = sqsConfig.deduplicationScope;
+            }
+            if (sqsConfig.fifoThroughputLimit) {
+                dlqArgs.fifoThroughputLimit = sqsConfig.fifoThroughputLimit;
+            }
+        }
+
+        const dlq = new aws.sqs.Queue(`${this.config.project}-sqs-${sqsConfig.name}-dlq`, dlqArgs);
 
         /**
          * Main Queue
@@ -113,7 +124,7 @@ class Sqs {
             ? `${this.config.generalPrefix}-sqs-${sqsConfig.name}.fifo`
             : `${this.config.generalPrefix}-sqs-${sqsConfig.name}`;
 
-        const queue = new aws.sqs.Queue(`${this.config.project}-sqs-${sqsConfig.name}`, {
+        const queueArgs: aws.sqs.QueueArgs = {
             name: queueName,
             kmsDataKeyReusePeriodSeconds: sqsConfig.kmsDataKeyReusePeriodSeconds || 300,
             kmsMasterKeyId: kms.arn,
@@ -125,16 +136,27 @@ class Sqs {
                 "deadLetterTargetArn": "${dlq.arn}",
                 "maxReceiveCount": ${sqsConfig.maxReceiveCount || 3}
             }`,
-            fifoQueue: sqsConfig.fifoQueue || false,
-            contentBasedDeduplication: sqsConfig.fifoQueue ? (sqsConfig.contentBasedDeduplication || false) : false,
-            deduplicationScope: sqsConfig.fifoQueue && sqsConfig.deduplicationScope ? sqsConfig.deduplicationScope : undefined,
-            fifoThroughputLimit: sqsConfig.fifoQueue && sqsConfig.fifoThroughputLimit ? sqsConfig.fifoThroughputLimit : undefined,
             tags: {
                 ...this.config.generalTags,
                 Name: queueName,
                 Type: "Main"
             }
-        });
+        };
+
+        // Only add FIFO-specific properties if this is a FIFO queue
+        if (sqsConfig.fifoQueue) {
+            queueArgs.fifoQueue = true;
+            queueArgs.contentBasedDeduplication = sqsConfig.contentBasedDeduplication || false;
+
+            if (sqsConfig.deduplicationScope) {
+                queueArgs.deduplicationScope = sqsConfig.deduplicationScope;
+            }
+            if (sqsConfig.fifoThroughputLimit) {
+                queueArgs.fifoThroughputLimit = sqsConfig.fifoThroughputLimit;
+            }
+        }
+
+        const queue = new aws.sqs.Queue(`${this.config.project}-sqs-${sqsConfig.name}`, queueArgs);
 
         /**
          * Queue Policy (optional)

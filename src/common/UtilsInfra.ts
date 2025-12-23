@@ -61,7 +61,7 @@ class UtilsInfra {
             {
                 name: `${domain}.`,
                 zoneId: zoneId,
-                type: aws.route53.RecordTypes.A,
+                type: aws.route53.RecordType.A,
                 aliases: isAlias ? [
                     {
                         name: targetDnsName,

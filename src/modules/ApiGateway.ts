@@ -159,15 +159,28 @@ class ApiGateway {
          * DNS
          */
         certificates.forEach((cert, index) => {
-            const domainNameResource = new aws.apigateway.DomainName(`${this.config.project}-${name}-apirest-domain-${index}`, {
+            const domainNameArgs: aws.apigateway.DomainNameArgs = {
                 domainName: cert.domain,
-                regionalCertificateArn: !isPrivate ? cert.arn : undefined,
-                certificateArn: isPrivate ? cert.arn : undefined,
                 securityPolicy: "TLS_1_2",
                 endpointConfiguration: {
                     types: isPrivate ? "PRIVATE" : "REGIONAL",
                 },
-                policy: isPrivate && vpc ? pulumi.all([
+                tags: {
+                    ...this.config.generalTags,
+                    Name: `${this.config.generalPrefix}-${name}-apirest-domain-${index}`,
+                }
+            };
+
+            // Add certificate ARN based on type
+            if (isPrivate) {
+                domainNameArgs.certificateArn = cert.arn;
+            } else {
+                domainNameArgs.regionalCertificateArn = cert.arn;
+            }
+
+            // Add policy only if private and VPC is provided
+            if (isPrivate && vpc) {
+                domainNameArgs.policy = pulumi.all([
                     this.config.region,
                     this.config.accountId,
                     cert.domain,
@@ -194,12 +207,12 @@ class ApiGateway {
                             }
                         ],
                     })
-                }) : undefined,
-                tags: {
-                    ...this.config.generalTags,
-                    Name: `${this.config.generalPrefix}-${name}-apirest-domain-${index}`,
-                }
-            });
+                });
+            }
+
+            const domainNameResource = new aws.apigateway.DomainName(`${this.config.project}-${name}-apirest-domain-${index}`,
+                domainNameArgs
+            );
 
             if (isPrivate) {
                 pulumi.output(privateVpcEndpointIds).apply(endpoints => {

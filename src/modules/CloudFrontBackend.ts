@@ -32,10 +32,11 @@ class CloudFrontBackend {
         vpcOriginPath: string,
         apigw: pulumi.Output<aws.apigateway.RestApi>,
         cfbase: pulumi.Output<CloudFrontBaseResult>,
-        s3Logs: pulumi.Output<aws.s3.BucketV2>,
+        s3Logs: pulumi.Output<aws.s3.Bucket>,
         certificate: CertificatesResult,
         waf: pulumi.Output<aws.wafv2.WebAcl>
     ): Promise<aws.cloudfront.Distribution> {
+        // Create CloudFront distribution
         const cdn = new aws.cloudfront.Distribution(`${this.config.project}-${name}-cf`, {
             enabled: true,
             comment: `${this.config.generalPrefix}-${name}-cf`,
@@ -86,12 +87,6 @@ class CloudFrontBackend {
                 minimumProtocolVersion: "TLSv1.2_2021",
             },
 
-            loggingConfig: {
-                bucket: s3Logs.bucketDomainName,
-                includeCookies: false,
-                prefix: `${aliasDns}/`,
-            },
-
             tags: {
                 ...this.config.generalTags,
                 Name: `${this.config.generalPrefix}-${name}-cf`,
@@ -101,6 +96,37 @@ class CloudFrontBackend {
                 apigw
             ]
         });
+
+        /**
+         * Logging configuration
+         */
+        // const logDeliverySource = new aws.cloudwatch.LogDeliverySource(`${this.config.project}-${name}-cf-log-source`, {
+        //     region: this.config.providerVirginia.region,
+        //     name: `${this.config.generalPrefix}-${name}-cf-logs`,
+        //     logType: "ACCESS_LOGS",
+        //     resourceArn: cdn.arn
+        // });
+        //
+        // const logDeliveryDestination = new aws.cloudwatch.LogDeliveryDestination(`${this.config.project}-${name}-cf-log-destination`, {
+        //     region: this.config.providerVirginia.region,
+        //     name: `${this.config.generalPrefix}-${name}-cf-s3-destination`,
+        //     outputFormat: "parquet",
+        //     deliveryDestinationConfiguration: {
+        //         destinationResourceArn: pulumi.interpolate`${s3Logs.arn}/${aliasDns}`
+        //     }
+        // });
+        //
+        // new aws.cloudwatch.LogDelivery(`${this.config.project}-${name}-cf-log-delivery`, {
+        //     region: this.config.providerVirginia.region,
+        //     deliverySourceName: logDeliverySource.name,
+        //     deliveryDestinationArn: logDeliveryDestination.arn,
+        //     s3DeliveryConfigurations: [{
+        //         suffixPath: pulumi.all([this.config.accountId]).apply(([accountId]) =>
+        //             `/${accountId}/{DistributionId}/{yyyy}/{MM}/{dd}/{HH}`
+        //         ),
+        //         enableHiveCompatiblePath: false
+        //     }]
+        // });
 
         UtilsInfra.createAliasRecord(certificate, cdn.domainName, cdn.hostedZoneId, true);
 

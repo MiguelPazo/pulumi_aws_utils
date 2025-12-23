@@ -23,7 +23,7 @@ class S3 {
         return this.__instance;
     }
 
-    async main(config: S3Config): Promise<aws.s3.BucketV2> {
+    async main(config: S3Config): Promise<aws.s3.Bucket> {
         const {
             name,
             kmsKey,
@@ -41,9 +41,9 @@ class S3 {
 
         const bucketName = fullName || pulumi.interpolate`${this.config.generalPrefix}-${this.config.accountId}-${name}`;
 
-        const resourceOptions: pulumi.ResourceOptions = provider ? { provider } : {};
+        const resourceOptions: pulumi.ResourceOptions = provider ? {provider} : {};
 
-        const bucket = new aws.s3.BucketV2(`${this.config.project}-${name}-bucket`, {
+        const bucket = new aws.s3.Bucket(`${this.config.project}-${name}-bucket`, {
             bucket: bucketName,
             objectLockEnabled: enableObjectLock,
             tags: {
@@ -54,7 +54,7 @@ class S3 {
 
         // Configure versioning (required for Object Lock)
         if (enableObjectLock) {
-            new aws.s3.BucketVersioningV2(`${this.config.project}-${name}-bucket-versioning`, {
+            new aws.s3.BucketVersioning(`${this.config.project}-${name}-bucket-versioning`, {
                 bucket: bucket.id,
                 versioningConfiguration: {
                     status: "Enabled"
@@ -62,7 +62,7 @@ class S3 {
             }, resourceOptions);
 
             // Configure Object Lock default retention
-            new aws.s3.BucketObjectLockConfigurationV2(`${this.config.project}-${name}-bucket-object-lock`, {
+            new aws.s3.BucketObjectLockConfiguration(`${this.config.project}-${name}-bucket-object-lock`, {
                 bucket: bucket.id,
                 rule: {
                     defaultRetention: {
@@ -82,13 +82,13 @@ class S3 {
 
         // Configure ACL if not disabled
         if (!disableAcl) {
-            new aws.s3.BucketAclV2(`${this.config.project}-${name}-bucket-acl`, {
+            new aws.s3.BucketAcl(`${this.config.project}-${name}-bucket-acl`, {
                 bucket: bucket.id,
                 acl: "private"
             }, resourceOptions);
         }
 
-        new aws.s3.BucketServerSideEncryptionConfigurationV2(`${this.config.project}-${name}-bucket-encrypt`, {
+        new aws.s3.BucketServerSideEncryptionConfiguration(`${this.config.project}-${name}-bucket-encrypt`, {
             bucket: bucket.id,
             rules: [{
                 applyServerSideEncryptionByDefault: {
@@ -217,7 +217,7 @@ class S3 {
         }
 
         if (enableCors) {
-            new aws.s3.BucketCorsConfigurationV2(`${this.config.project}-${name}-bucket-cors`, {
+            new aws.s3.BucketCorsConfiguration(`${this.config.project}-${name}-bucket-cors`, {
                 bucket: bucket.id,
                 corsRules: [
                     {
@@ -233,7 +233,7 @@ class S3 {
         }
 
         if (s3Logs) {
-            new aws.s3.BucketLoggingV2(`${this.config.project}-${name}-bucket-logging`, {
+            new aws.s3.BucketLogging(`${this.config.project}-${name}-bucket-logging`, {
                 bucket: bucket.id,
                 targetBucket: s3Logs.id,
                 targetPrefix: pulumi.interpolate`${bucket.id}/`
@@ -241,7 +241,7 @@ class S3 {
         }
 
         if (enableObjectLock) {
-            new aws.s3.BucketLifecycleConfigurationV2(`${this.config.project}-${name}-bucket-lifecycle`, {
+            new aws.s3.BucketLifecycleConfiguration(`${this.config.project}-${name}-bucket-lifecycle`, {
                 bucket: bucket.id,
                 rules: [
                     {

@@ -25,8 +25,8 @@
     "js-yaml": "^4.1.0"
   },
   "peerDependencies": {
-    "@pulumi/aws": "^6.9.0",
-    "@pulumi/awsx": "^2.1.1",
-    "@pulumi/pulumi": "^3.113.0"
+    "@pulumi/aws": "^7.15.0",
+    "@pulumi/awsx": "^3.1.0",
+    "@pulumi/pulumi": "^3.213.0"
   }
 }
