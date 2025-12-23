@@ -117,10 +117,10 @@ class S3 {
                 policy: pulumi.all(policyInputs).apply(values => {
                     const bucketArn = values[0] as string;
                     const accountId = values[1] as string;
-                    let valueIndex = 2;
-                    const elbServiceAcc = enableReceiveLogs ? values[valueIndex++] : null;
-                    const cdnId = cloudfront ? values[enableReceiveLogs ? valueIndex : valueIndex - 1] : null;
 
+                    let valueIndex = 2;
+                    const elbServiceAcc = enableReceiveLogs ? values[valueIndex] : null;
+                    const cdnId = cloudfront ? values[enableReceiveLogs ? valueIndex + 2 : valueIndex] : null;
                     const statements: any[] = [];
 
                     // Always add secure transport policy
