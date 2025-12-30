@@ -32,9 +32,10 @@ class LambdaNotifications {
     }
 
     async main(
+        accountId: string,
         snsArn: pulumi.Input<string>,
         slackWebhookUrl: pulumi.Input<string>,
-        accountId: string
+        cwLogsKmsKey: pulumi.Input<aws.kms.Key>,
     ): Promise<LambdaNotificationsResult> {
         const lambdaFullName = `${this.config.generalPrefixShort}-lambda-notifications`;
 
@@ -62,6 +63,7 @@ class LambdaNotifications {
         const logGroup = new aws.cloudwatch.LogGroup(`${this.config.project}-lambda-notifications-loggroup`, {
             name: `/aws/lambda/${lambdaFullName}`,
             retentionInDays: this.config.cloudwatchRetentionLogs,
+            kmsKeyId: pulumi.output(cwLogsKmsKey).apply(key => key.arn),
             tags: {
                 ...this.config.generalTags,
                 Name: `${lambdaFullName}-log-group`,

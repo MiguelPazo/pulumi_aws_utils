@@ -1,4 +1,4 @@
-import { ECSClient, DescribeServicesCommand, UpdateServiceCommand } from '@aws-sdk/client-ecs';
+import {DescribeServicesCommand, ECSClient, UpdateServiceCommand} from '@aws-sdk/client-ecs';
 
 // Initialize ECS client
 const ecsClient = new ECSClient({});

@@ -37,9 +37,10 @@ class Alarms {
         // Deploy Lambda Alarms if requested
         if (alarmsConfig.deployLambdaAlarms) {
             const lambdaResources = await LambdaAlarms.getInstance().main(
+                accountId,
                 alarmsConfig.snsArn,
                 alarmsConfig.snsKmsKey,
-                accountId
+                alarmsConfig.cwLogsKmsKey,
             );
             result.lambdaFunction = lambdaResources.lambdaFunction;
             result.lambdaRole = lambdaResources.lambdaRole;
@@ -53,9 +54,10 @@ class Alarms {
             }
 
             const lambdaNotificationsResources = await LambdaNotifications.getInstance().main(
+                accountId,
                 alarmsConfig.snsArn,
                 alarmsConfig.slackWebhookUrl,
-                accountId
+                alarmsConfig.cwLogsKmsKey,
             );
             result.lambdaNotificationsFunction = lambdaNotificationsResources.lambdaFunction;
             result.lambdaNotificationsRole = lambdaNotificationsResources.lambdaRole;

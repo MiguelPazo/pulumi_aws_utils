@@ -30,6 +30,7 @@ class LambdaRestart {
         config: LambdaRestartConfig,
         vpc: pulumi.Output<VpcImportResult>,
         securityGroups: pulumi.Output<aws.ec2.SecurityGroup>[],
+        cwLogsKmsKey?: pulumi.Input<aws.kms.Key>,
     ): Promise<void> {
         const lambdaFullName = `${this.config.generalPrefix}-${config.lambdaName}-lambda`;
 
@@ -57,6 +58,7 @@ class LambdaRestart {
         new aws.cloudwatch.LogGroup(`${this.config.project}-${config.lambdaName}-loggroup`, {
             name: `/aws/lambda/${lambdaFullName}`,
             retentionInDays: this.config.cloudwatchRetentionLogs,
+            kmsKeyId: cwLogsKmsKey ? pulumi.output(cwLogsKmsKey).apply(key => key.arn) : undefined,
             tags: {
                 ...this.config.generalTags,
                 Name: `${this.config.generalPrefix}-${config.lambdaName}-loggroup`,

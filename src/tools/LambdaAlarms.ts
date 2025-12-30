@@ -31,9 +31,10 @@ class LambdaAlarms {
     }
 
     async main(
+        accountId: string,
         snsArn: pulumi.Input<string>,
         snsKmsKey: pulumi.Input<aws.kms.Key>,
-        accountId: string
+        cwLogsKmsKey: pulumi.Input<aws.kms.Key>,
     ): Promise<LambdaAlarmsResult> {
         const lambdaFullName = `${this.config.generalPrefixShort}-lambda-alarms`;
 
@@ -66,6 +67,7 @@ class LambdaAlarms {
         const logGroup = new aws.cloudwatch.LogGroup(`${this.config.project}-lambda-alarms-loggroup`, {
             name: `/aws/lambda/${lambdaFullName}`,
             retentionInDays: this.config.cloudwatchRetentionLogs,
+            kmsKeyId: pulumi.output(cwLogsKmsKey).apply(key => key.arn),
             tags: {
                 ...this.config.generalTags,
                 Name: `${lambdaFullName}-log-group`,

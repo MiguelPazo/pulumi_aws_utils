@@ -180,7 +180,10 @@ class AlarmsAdmin {
     /**
      * Create EventBridge rule for VPC changes
      */
-    private createVpcChangeRule(lambdaFunction: aws.lambda.Function, logGroup: aws.cloudwatch.LogGroup): { rule: aws.cloudwatch.EventRule; targets: aws.cloudwatch.EventTarget[] } {
+    private createVpcChangeRule(lambdaFunction: aws.lambda.Function, logGroup: aws.cloudwatch.LogGroup): {
+        rule: aws.cloudwatch.EventRule;
+        targets: aws.cloudwatch.EventTarget[]
+    } {
         const rule = new aws.cloudwatch.EventRule(`${this.config.project}-alarms-admin-vpc-changes`, {
             name: `${this.config.generalPrefix}-alarm-vpc-changes`,
             description: "Capture all VPC related changes",
@@ -246,13 +249,16 @@ class AlarmsAdmin {
             arn: logGroup.arn
         });
 
-        return { rule, targets: [lambdaTarget, logTarget] };
+        return {rule, targets: [lambdaTarget, logTarget]};
     }
 
     /**
      * Create EventBridge rule for Route Table changes
      */
-    private createRouteTableChangeRule(lambdaFunction: aws.lambda.Function, logGroup: aws.cloudwatch.LogGroup): { rule: aws.cloudwatch.EventRule; targets: aws.cloudwatch.EventTarget[] } {
+    private createRouteTableChangeRule(lambdaFunction: aws.lambda.Function, logGroup: aws.cloudwatch.LogGroup): {
+        rule: aws.cloudwatch.EventRule;
+        targets: aws.cloudwatch.EventTarget[]
+    } {
         const rule = new aws.cloudwatch.EventRule(`${this.config.project}-alarms-admin-rt-changes`, {
             name: `${this.config.generalPrefix}-alarm-route-table-changes`,
             description: "Capture Route Table configuration changes",
@@ -299,13 +305,16 @@ class AlarmsAdmin {
             arn: logGroup.arn
         });
 
-        return { rule, targets: [lambdaTarget, logTarget] };
+        return {rule, targets: [lambdaTarget, logTarget]};
     }
 
     /**
      * Create EventBridge rule for Security Group changes
      */
-    private createSecurityGroupChangeRule(lambdaFunction: aws.lambda.Function, logGroup: aws.cloudwatch.LogGroup): { rule: aws.cloudwatch.EventRule; targets: aws.cloudwatch.EventTarget[] } {
+    private createSecurityGroupChangeRule(lambdaFunction: aws.lambda.Function, logGroup: aws.cloudwatch.LogGroup): {
+        rule: aws.cloudwatch.EventRule;
+        targets: aws.cloudwatch.EventTarget[]
+    } {
         const rule = new aws.cloudwatch.EventRule(`${this.config.project}-alarms-admin-sg-changes`, {
             name: `${this.config.generalPrefix}-alarm-security-group-changes`,
             description: "Capture Security Group configuration changes",
@@ -350,13 +359,16 @@ class AlarmsAdmin {
             arn: logGroup.arn
         });
 
-        return { rule, targets: [lambdaTarget, logTarget] };
+        return {rule, targets: [lambdaTarget, logTarget]};
     }
 
     /**
      * Create EventBridge rule for Network ACL changes
      */
-    private createNetworkAclChangeRule(lambdaFunction: aws.lambda.Function, logGroup: aws.cloudwatch.LogGroup): { rule: aws.cloudwatch.EventRule; targets: aws.cloudwatch.EventTarget[] } {
+    private createNetworkAclChangeRule(lambdaFunction: aws.lambda.Function, logGroup: aws.cloudwatch.LogGroup): {
+        rule: aws.cloudwatch.EventRule;
+        targets: aws.cloudwatch.EventTarget[]
+    } {
         const rule = new aws.cloudwatch.EventRule(`${this.config.project}-alarms-admin-nacl-changes`, {
             name: `${this.config.generalPrefix}-alarm-network-acl-changes`,
             description: "Capture Network ACL creation, modification and deletion",
@@ -402,13 +414,16 @@ class AlarmsAdmin {
             arn: logGroup.arn
         });
 
-        return { rule, targets: [lambdaTarget, logTarget] };
+        return {rule, targets: [lambdaTarget, logTarget]};
     }
 
     /**
      * Create EventBridge rule for Internet Gateway changes
      */
-    private createInternetGatewayChangeRule(lambdaFunction: aws.lambda.Function, logGroup: aws.cloudwatch.LogGroup): { rule: aws.cloudwatch.EventRule; targets: aws.cloudwatch.EventTarget[] } {
+    private createInternetGatewayChangeRule(lambdaFunction: aws.lambda.Function, logGroup: aws.cloudwatch.LogGroup): {
+        rule: aws.cloudwatch.EventRule;
+        targets: aws.cloudwatch.EventTarget[]
+    } {
         const rule = new aws.cloudwatch.EventRule(`${this.config.project}-alarms-admin-igw-changes`, {
             name: `${this.config.generalPrefix}-alarm-internet-gateway-changes`,
             description: "Capture Internet Gateway configuration changes",
@@ -451,13 +466,16 @@ class AlarmsAdmin {
             arn: logGroup.arn
         });
 
-        return { rule, targets: [lambdaTarget, logTarget] };
+        return {rule, targets: [lambdaTarget, logTarget]};
     }
 
     /**
      * Create EventBridge rule for Network Gateway changes (NAT, VPN, Customer Gateway, etc)
      */
-    private createNetworkGatewayChangeRule(lambdaFunction: aws.lambda.Function, logGroup: aws.cloudwatch.LogGroup): { rule: aws.cloudwatch.EventRule; targets: aws.cloudwatch.EventTarget[] } {
+    private createNetworkGatewayChangeRule(lambdaFunction: aws.lambda.Function, logGroup: aws.cloudwatch.LogGroup): {
+        rule: aws.cloudwatch.EventRule;
+        targets: aws.cloudwatch.EventTarget[]
+    } {
         const rule = new aws.cloudwatch.EventRule(`${this.config.project}-alarms-admin-ngw-changes`, {
             name: `${this.config.generalPrefix}-alarm-network-gateway-changes`,
             description: "Capture Network Gateway (NAT, VPN, CGW) creation, modification and deletion",
@@ -520,13 +538,16 @@ class AlarmsAdmin {
             arn: logGroup.arn
         });
 
-        return { rule, targets: [lambdaTarget, logTarget] };
+        return {rule, targets: [lambdaTarget, logTarget]};
     }
 
     /**
      * Create EventBridge rule for AWS Config changes
      */
-    private createAwsConfigChangeRule(lambdaFunction: aws.lambda.Function, logGroup: aws.cloudwatch.LogGroup): { rule: aws.cloudwatch.EventRule; targets: aws.cloudwatch.EventTarget[] } {
+    private createAwsConfigChangeRule(lambdaFunction: aws.lambda.Function, logGroup: aws.cloudwatch.LogGroup): {
+        rule: aws.cloudwatch.EventRule;
+        targets: aws.cloudwatch.EventTarget[]
+    } {
         const rule = new aws.cloudwatch.EventRule(`${this.config.project}-alarms-admin-config-changes`, {
             name: `${this.config.generalPrefix}-alarm-aws-config-changes`,
             description: "Capture critical AWS Config changes",
@@ -570,13 +591,16 @@ class AlarmsAdmin {
             arn: logGroup.arn
         });
 
-        return { rule, targets: [lambdaTarget, logTarget] };
+        return {rule, targets: [lambdaTarget, logTarget]};
     }
 
     /**
      * Create EventBridge rule for CloudTrail changes
      */
-    private createCloudTrailChangeRule(lambdaFunction: aws.lambda.Function, logGroup: aws.cloudwatch.LogGroup): { rule: aws.cloudwatch.EventRule; targets: aws.cloudwatch.EventTarget[] } {
+    private createCloudTrailChangeRule(lambdaFunction: aws.lambda.Function, logGroup: aws.cloudwatch.LogGroup): {
+        rule: aws.cloudwatch.EventRule;
+        targets: aws.cloudwatch.EventTarget[]
+    } {
         const rule = new aws.cloudwatch.EventRule(`${this.config.project}-alarms-admin-cloudtrail-changes`, {
             name: `${this.config.generalPrefix}-alarm-cloudtrail-changes`,
             description: "Capture critical CloudTrail changes",
@@ -621,13 +645,16 @@ class AlarmsAdmin {
             arn: logGroup.arn
         });
 
-        return { rule, targets: [lambdaTarget, logTarget] };
+        return {rule, targets: [lambdaTarget, logTarget]};
     }
 
     /**
      * Create EventBridge rule for KMS changes
      */
-    private createKmsChangeRule(lambdaFunction: aws.lambda.Function, logGroup: aws.cloudwatch.LogGroup): { rule: aws.cloudwatch.EventRule; targets: aws.cloudwatch.EventTarget[] } {
+    private createKmsChangeRule(lambdaFunction: aws.lambda.Function, logGroup: aws.cloudwatch.LogGroup): {
+        rule: aws.cloudwatch.EventRule;
+        targets: aws.cloudwatch.EventTarget[]
+    } {
         const rule = new aws.cloudwatch.EventRule(`${this.config.project}-alarms-admin-kms-changes`, {
             name: `${this.config.generalPrefix}-alarm-kms-changes`,
             description: "Capture critical KMS key changes",
@@ -672,13 +699,16 @@ class AlarmsAdmin {
             arn: logGroup.arn
         });
 
-        return { rule, targets: [lambdaTarget, logTarget] };
+        return {rule, targets: [lambdaTarget, logTarget]};
     }
 
     /**
      * Create EventBridge rule for S3 changes
      */
-    private createS3ChangeRule(lambdaFunction: aws.lambda.Function, logGroup: aws.cloudwatch.LogGroup): { rule: aws.cloudwatch.EventRule; targets: aws.cloudwatch.EventTarget[] } {
+    private createS3ChangeRule(lambdaFunction: aws.lambda.Function, logGroup: aws.cloudwatch.LogGroup): {
+        rule: aws.cloudwatch.EventRule;
+        targets: aws.cloudwatch.EventTarget[]
+    } {
         const rule = new aws.cloudwatch.EventRule(`${this.config.project}-alarms-admin-s3-changes`, {
             name: `${this.config.generalPrefix}-alarm-s3-changes`,
             description: "Capture critical S3 bucket policy changes",
@@ -723,13 +753,16 @@ class AlarmsAdmin {
             arn: logGroup.arn
         });
 
-        return { rule, targets: [lambdaTarget, logTarget] };
+        return {rule, targets: [lambdaTarget, logTarget]};
     }
 
     /**
      * Create EventBridge rule for IAM changes
      */
-    private createIamChangeRule(lambdaFunction: aws.lambda.Function, logGroup: aws.cloudwatch.LogGroup): { rule: aws.cloudwatch.EventRule; targets: aws.cloudwatch.EventTarget[] } {
+    private createIamChangeRule(lambdaFunction: aws.lambda.Function, logGroup: aws.cloudwatch.LogGroup): {
+        rule: aws.cloudwatch.EventRule;
+        targets: aws.cloudwatch.EventTarget[]
+    } {
         const rule = new aws.cloudwatch.EventRule(`${this.config.project}-alarms-admin-iam-changes`, {
             name: `${this.config.generalPrefix}-alarm-iam-changes`,
             description: "Capture critical IAM policy and permission changes",
@@ -782,13 +815,16 @@ class AlarmsAdmin {
             arn: logGroup.arn
         });
 
-        return { rule, targets: [lambdaTarget, logTarget] };
+        return {rule, targets: [lambdaTarget, logTarget]};
     }
 
     /**
      * Create EventBridge rule for Console Login Failures
      */
-    private createConsoleLoginFailureRule(lambdaFunction: aws.lambda.Function, logGroup: aws.cloudwatch.LogGroup): { rule: aws.cloudwatch.EventRule; targets: aws.cloudwatch.EventTarget[] } {
+    private createConsoleLoginFailureRule(lambdaFunction: aws.lambda.Function, logGroup: aws.cloudwatch.LogGroup): {
+        rule: aws.cloudwatch.EventRule;
+        targets: aws.cloudwatch.EventTarget[]
+    } {
         const rule = new aws.cloudwatch.EventRule(`${this.config.project}-alarms-admin-console-login-failures`, {
             name: `${this.config.generalPrefix}-alarm-console-login-failures`,
             description: "Capture failed AWS Console login attempts",
@@ -829,13 +865,16 @@ class AlarmsAdmin {
             arn: logGroup.arn
         });
 
-        return { rule, targets: [lambdaTarget, logTarget] };
+        return {rule, targets: [lambdaTarget, logTarget]};
     }
 
     /**
      * Create EventBridge rule for Root Account Access
      */
-    private createRootAccountAccessRule(lambdaFunction: aws.lambda.Function, logGroup: aws.cloudwatch.LogGroup): { rule: aws.cloudwatch.EventRule; targets: aws.cloudwatch.EventTarget[] } {
+    private createRootAccountAccessRule(lambdaFunction: aws.lambda.Function, logGroup: aws.cloudwatch.LogGroup): {
+        rule: aws.cloudwatch.EventRule;
+        targets: aws.cloudwatch.EventTarget[]
+    } {
         const rule = new aws.cloudwatch.EventRule(`${this.config.project}-alarms-admin-root-account-access`, {
             name: `${this.config.generalPrefix}-alarm-root-account-access`,
             description: "Capture any activity with AWS root account",
@@ -875,13 +914,16 @@ class AlarmsAdmin {
             arn: logGroup.arn
         });
 
-        return { rule, targets: [lambdaTarget, logTarget] };
+        return {rule, targets: [lambdaTarget, logTarget]};
     }
 
     /**
      * Create EventBridge rule for Access Without MFA
      */
-    private createAccessWithoutMfaRule(lambdaFunction: aws.lambda.Function, logGroup: aws.cloudwatch.LogGroup): { rule: aws.cloudwatch.EventRule; targets: aws.cloudwatch.EventTarget[] } {
+    private createAccessWithoutMfaRule(lambdaFunction: aws.lambda.Function, logGroup: aws.cloudwatch.LogGroup): {
+        rule: aws.cloudwatch.EventRule;
+        targets: aws.cloudwatch.EventTarget[]
+    } {
         const rule = new aws.cloudwatch.EventRule(`${this.config.project}-alarms-admin-access-without-mfa`, {
             name: `${this.config.generalPrefix}-alarm-access-without-mfa`,
             description: "Capture console login attempts without MFA",
@@ -922,7 +964,7 @@ class AlarmsAdmin {
             arn: logGroup.arn
         });
 
-        return { rule, targets: [lambdaTarget, logTarget] };
+        return {rule, targets: [lambdaTarget, logTarget]};
     }
 }
 

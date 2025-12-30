@@ -1,10 +1,10 @@
-import { SNSClient, PublishCommand } from '@aws-sdk/client-sns';
-import { CloudWatchClient, ListTagsForResourceCommand } from '@aws-sdk/client-cloudwatch';
+import {PublishCommand, SNSClient} from '@aws-sdk/client-sns';
+import {CloudWatchClient, ListTagsForResourceCommand} from '@aws-sdk/client-cloudwatch';
 
 // Initialize clients
 const region = process.env.REGION;
-const snsClient = new SNSClient({ region });
-const cloudwatchClient = new CloudWatchClient({ region });
+const snsClient = new SNSClient({region});
+const cloudwatchClient = new CloudWatchClient({region});
 
 /**
  * Main Lambda handler for processing CloudWatch alarm events

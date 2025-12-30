@@ -13,10 +13,16 @@ export interface EcsServicesConfig {
     [serviceName: string]: EcsServiceConfig;
 }
 
+export type LambdaFunctionConfig = {
+    name?: string;
+    nameFull?: string;
+};
+
 export type LambdaConfig = {
     name: string;
     policy?: string;
     assume?: boolean;
+    functions?: LambdaFunctionConfig[];
 };
 
 export type Cidr = {
