@@ -105,12 +105,14 @@ class Sqs {
         // Only add FIFO-specific properties if this is a FIFO queue
         if (sqsConfig.fifoQueue) {
             dlqArgs.fifoQueue = true;
-            dlqArgs.contentBasedDeduplication = sqsConfig.contentBasedDeduplication || false;
+            dlqArgs.contentBasedDeduplication = sqsConfig.contentBasedDeduplication !== undefined
+                ? sqsConfig.contentBasedDeduplication
+                : false;
 
-            if (sqsConfig.deduplicationScope) {
+            if (sqsConfig.deduplicationScope !== undefined) {
                 dlqArgs.deduplicationScope = sqsConfig.deduplicationScope;
             }
-            if (sqsConfig.fifoThroughputLimit) {
+            if (sqsConfig.fifoThroughputLimit !== undefined) {
                 dlqArgs.fifoThroughputLimit = sqsConfig.fifoThroughputLimit;
             }
         }
@@ -146,12 +148,14 @@ class Sqs {
         // Only add FIFO-specific properties if this is a FIFO queue
         if (sqsConfig.fifoQueue) {
             queueArgs.fifoQueue = true;
-            queueArgs.contentBasedDeduplication = sqsConfig.contentBasedDeduplication || false;
+            queueArgs.contentBasedDeduplication = sqsConfig.contentBasedDeduplication !== undefined
+                ? sqsConfig.contentBasedDeduplication
+                : false;
 
-            if (sqsConfig.deduplicationScope) {
+            if (sqsConfig.deduplicationScope !== undefined) {
                 queueArgs.deduplicationScope = sqsConfig.deduplicationScope;
             }
-            if (sqsConfig.fifoThroughputLimit) {
+            if (sqsConfig.fifoThroughputLimit !== undefined) {
                 queueArgs.fifoThroughputLimit = sqsConfig.fifoThroughputLimit;
             }
         }
