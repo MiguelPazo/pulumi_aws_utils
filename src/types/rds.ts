@@ -3,6 +3,8 @@
  */
 import * as pulumi from "@pulumi/pulumi";
 import * as aws from "@pulumi/aws";
+import {PhzResult} from "./base";
+import {VpcImportResult} from "./vpc";
 
 export type RdsConfig = {
     name: string;
@@ -94,4 +96,32 @@ export type RdsProxyResult = {
     securityGroup: aws.ec2.SecurityGroup;
     iamRole: aws.iam.Role;
     secretsPolicy: aws.iam.RolePolicy;
+};
+
+export type RdsModuleConfig = {
+    rdsConfig: RdsConfig;
+    vpc: pulumi.Output<VpcImportResult>;
+    subnetIds: pulumi.Output<string[]>;
+    kmsKey?: pulumi.Output<aws.kms.Key>;
+    phz?: pulumi.Output<PhzResult>;
+    publicZoneRoodId?: pulumi.Output<string>;
+};
+
+export type RdsAuroraModuleConfig = {
+    auroraConfig: RdsAuroraConfig;
+    vpc: pulumi.Output<VpcImportResult>;
+    subnetIds: pulumi.Output<string[]>;
+    phz: pulumi.Output<PhzResult>;
+    kmsKey?: pulumi.Output<aws.kms.Key>;
+    publicZoneRoodId?: pulumi.Output<string>;
+};
+
+export type RdsProxyModuleConfig = {
+    proxyConfig: RdsProxyConfig;
+    vpc: pulumi.Output<VpcImportResult>;
+    subnetIds: pulumi.Output<string[]>;
+    targetClusterIdentifier: pulumi.Output<string>;
+    iamRole: pulumi.Output<aws.iam.Role> | aws.iam.Role;
+    phz?: pulumi.Output<PhzResult>;
+    publicZoneRootId?: pulumi.Output<string>;
 };

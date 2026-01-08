@@ -4,6 +4,7 @@
 import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
 import {LBConfig} from "./alb";
+import {VpcImportResult} from "./vpc";
 
 export type ServiceConnectConfig = {
     enabled: boolean;
@@ -39,6 +40,31 @@ export type EcsServiceConfig = {
     nlb?: LBConfig;
     alb?: LBConfig;
     serviceConnect?: ServiceConnectConfig;
+};
+
+export type EcsClusterModuleConfig = {
+    logGroupKmsKey: pulumi.Output<aws.kms.Key>;
+    clusterName?: string;
+    provider?: string;
+};
+
+export type EcsServiceModuleConfig = {
+    service: EcsServiceConfig;
+    ecsCluster: pulumi.Output<aws.ecs.Cluster>;
+    vpc: pulumi.Output<VpcImportResult>;
+    securityGroups: aws.ec2.SecurityGroup[];
+    createLogGroup: boolean;
+    logGroupKmsKey: pulumi.Output<aws.kms.Key>;
+    targetGroups?: pulumi.Output<aws.lb.TargetGroup>[];
+    containerDefinitions?: any;
+    cmDomain?: aws.servicediscovery.Service;
+    efs?: pulumi.Output<aws.efs.FileSystem>;
+    efsAccessPoint?: pulumi.Output<aws.efs.AccessPoint>;
+    efsDirectory?: string;
+    provider?: string;
+    ecrImage?: pulumi.Output<string>;
+    envTask?: { name: string; value: string }[];
+    createService?: boolean;
 };
 
 export type EcsServiceResult = {

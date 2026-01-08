@@ -5,7 +5,7 @@ import * as aws from "@pulumi/aws";
 import {getInit} from "../config";
 import * as pulumi from "@pulumi/pulumi";
 import {InitConfig} from "../types/module";
-import {ElastiCacheConfig, ElastiCacheResult, PhzResult, VpcImportResult} from "../types";
+import {ElastiCacheModuleConfig, ElastiCacheResult} from "../types";
 
 class ElastiCache {
     private static __instance: ElastiCache;
@@ -23,13 +23,15 @@ class ElastiCache {
         return this.__instance;
     }
 
-    async main(
-        elastiCacheConfig: ElastiCacheConfig,
-        vpc: pulumi.Output<VpcImportResult>,
-        subnetIds: pulumi.Output<string[]>,
-        phz: pulumi.Output<PhzResult>,
-        kmsKey?: pulumi.Output<aws.kms.Key>
-    ): Promise<ElastiCacheResult> {
+    async main(config: ElastiCacheModuleConfig): Promise<ElastiCacheResult> {
+        const {
+            elastiCacheConfig,
+            vpc,
+            subnetIds,
+            phz,
+            kmsKey
+        } = config;
+
         /**
          * KMS
          */

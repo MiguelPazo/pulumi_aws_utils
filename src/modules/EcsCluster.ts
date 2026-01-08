@@ -3,6 +3,7 @@
  */
 import * as aws from "@pulumi/aws";
 import {InitConfig} from "../types/module";
+import {EcsClusterModuleConfig} from "../types";
 import {getInit} from "../config";
 import * as pulumi from "@pulumi/pulumi";
 
@@ -22,15 +23,11 @@ class EcsCluster {
         return this.__instance;
     }
 
-    async main(
-        logGroupKmsKey: pulumi.Output<aws.kms.Key>,
-        clusterName?: string,
-        provider?: string,
-    ): Promise<aws.ecs.Cluster> {
+    async main(config: EcsClusterModuleConfig): Promise<aws.ecs.Cluster> {
+        const {logGroupKmsKey, clusterName, provider = "FARGATE"} = config;
+
         const generalPrefixObj = clusterName ? `${this.config.project}-${clusterName}` : this.config.project;
         const generalPrefix = clusterName ? `${this.config.generalPrefix}-${clusterName}` : this.config.generalPrefix;
-
-        provider = provider || "FARGATE";
 
         /**
          * LogGroup

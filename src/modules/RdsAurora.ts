@@ -5,7 +5,7 @@ import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
 import {getInit} from "../config";
 import {InitConfig} from "../types/module";
-import {PhzResult, RdsAuroraConfig, RdsAuroraResult, VpcImportResult} from "../types";
+import {RdsAuroraModuleConfig, RdsAuroraResult} from "../types";
 
 class RdsAurora {
     private static __instance: RdsAurora;
@@ -23,14 +23,16 @@ class RdsAurora {
         return this.__instance;
     }
 
-    async main(
-        auroraConfig: RdsAuroraConfig,
-        vpc: pulumi.Output<VpcImportResult>,
-        subnetIds: pulumi.Output<string[]>,
-        phz: pulumi.Output<PhzResult>,
-        kmsKey?: pulumi.Output<aws.kms.Key>,
-        publicZoneRoodId?: pulumi.Output<string>,
-    ): Promise<RdsAuroraResult> {
+    async main(config: RdsAuroraModuleConfig): Promise<RdsAuroraResult> {
+        const {
+            auroraConfig,
+            vpc,
+            subnetIds,
+            phz,
+            kmsKey,
+            publicZoneRoodId
+        } = config;
+
         /**
          * KMS
          */

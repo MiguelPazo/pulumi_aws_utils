@@ -5,7 +5,7 @@ import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
 import {getInit} from "../config";
 import {InitConfig} from "../types/module";
-import {PhzResult, RdsProxyConfig, RdsProxyResult, VpcImportResult} from "../types";
+import {RdsProxyModuleConfig, RdsProxyResult} from "../types";
 
 class RdsProxy {
     private static __instance: RdsProxy;
@@ -23,15 +23,17 @@ class RdsProxy {
         return this.__instance;
     }
 
-    async main(
-        proxyConfig: RdsProxyConfig,
-        vpc: pulumi.Output<VpcImportResult>,
-        subnetIds: pulumi.Output<string[]>,
-        targetClusterIdentifier: pulumi.Output<string>,
-        iamRole: pulumi.Output<aws.iam.Role> | aws.iam.Role,
-        phz?: pulumi.Output<PhzResult>,
-        publicZoneRootId?: pulumi.Output<string>,
-    ): Promise<RdsProxyResult> {
+    async main(config: RdsProxyModuleConfig): Promise<RdsProxyResult> {
+        const {
+            proxyConfig,
+            vpc,
+            subnetIds,
+            targetClusterIdentifier,
+            iamRole,
+            phz,
+            publicZoneRootId
+        } = config;
+
         /**
          * Security Group
          */

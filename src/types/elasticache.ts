@@ -3,6 +3,8 @@
  */
 import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
+import {PhzResult} from "./base";
+import {VpcImportResult} from "./vpc";
 
 export type ElastiCacheConfig = {
     name: string;
@@ -22,6 +24,14 @@ export type ElastiCacheConfig = {
     clusterMode?: boolean;
     domainReader: string;
     domainWriter: string;
+};
+
+export type ElastiCacheModuleConfig = {
+    elastiCacheConfig: ElastiCacheConfig;
+    vpc: pulumi.Output<VpcImportResult>;
+    subnetIds: pulumi.Output<string[]>;
+    phz: pulumi.Output<PhzResult>;
+    kmsKey?: pulumi.Output<aws.kms.Key>;
 };
 
 export type ElastiCacheResult = {

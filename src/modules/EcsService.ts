@@ -3,7 +3,7 @@
  */
 import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
-import {EcsServiceConfig, EcsServiceResult, VpcImportResult} from "../types";
+import {EcsServiceModuleConfig, EcsServiceResult} from "../types";
 import {InitConfig} from "../types/module";
 import {getInit} from "../config";
 
@@ -23,26 +23,25 @@ class EcsService {
         return this.__instance;
     }
 
-    async main(
-        service: EcsServiceConfig,
-        ecsCluster: pulumi.Output<aws.ecs.Cluster>,
-        vpc: pulumi.Output<VpcImportResult>,
-        securityGroups: aws.ec2.SecurityGroup[],
-        createLogGroup: boolean,
-        logGroupKmsKey: pulumi.Output<aws.kms.Key>,
-        targetGroups?: pulumi.Output<aws.lb.TargetGroup>[],
-        containerDefinitions?: any,
-        cmDomain?: aws.servicediscovery.Service,
-        efs?: pulumi.Output<aws.efs.FileSystem>,
-        efsAccessPoint?: pulumi.Output<aws.efs.AccessPoint>,
-        efsDirectory?: string,
-        provider?: string,
-        ecrImage?: pulumi.Output<string>,
-        envTask?: { name: string; value: string }[],
-        createService?: boolean,
-    ): Promise<EcsServiceResult> {
-        provider = provider == undefined ? "FARGATE" : provider;
-        createService = createService == undefined ? true : createService;
+    async main(config: EcsServiceModuleConfig): Promise<EcsServiceResult> {
+        const {
+            service,
+            ecsCluster,
+            vpc,
+            securityGroups,
+            createLogGroup,
+            logGroupKmsKey,
+            targetGroups,
+            containerDefinitions,
+            cmDomain,
+            efs,
+            efsAccessPoint,
+            efsDirectory,
+            provider = "FARGATE",
+            ecrImage,
+            envTask,
+            createService = true
+        } = config;
 
         /**
          * Task Execute Role
