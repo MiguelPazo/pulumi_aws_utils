@@ -14,6 +14,15 @@ export type KmsKeyConfig = {
     tags?: Record<string, string>;
 };
 
+export type KmsModuleConfig = {
+    name: string;
+    keyConfig?: KmsKeyConfig;
+    createAlias?: boolean;
+    additionalStatements?: any[];
+    provider?: aws.Provider;
+    providersReplicas?: aws.Provider[];
+};
+
 export type KmsAliasConfig = {
     name: string;
     targetKeyId: string;
@@ -22,4 +31,6 @@ export type KmsAliasConfig = {
 export type KmsKeyResult = {
     key: aws.kms.Key;
     alias?: aws.kms.Alias;
+    replicas?: aws.kms.ReplicaKey[];
+    replicaAliases?: aws.kms.Alias[];
 };

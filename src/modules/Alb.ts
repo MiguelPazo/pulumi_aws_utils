@@ -4,7 +4,7 @@
 import {UtilsInfra} from "../common/UtilsInfra";
 import * as pulumi from "@pulumi/pulumi";
 import * as aws from "@pulumi/aws";
-import {AlbResult, CertificatesResult, PhzResult, VpcImportResult} from "../types";
+import {AlbModuleConfig, AlbResult} from "../types";
 import {getInit} from "../config";
 import {InitConfig} from "../types/module";
 
@@ -24,20 +24,18 @@ class Alb {
         return this.__instance;
     }
 
-    async main(
-        name: string,
-        vpc: pulumi.Output<VpcImportResult>,
-        s3Logs?: pulumi.Output<aws.s3.Bucket>,
-        internal?: boolean,
-        certificate?: CertificatesResult,
-        domain?: string,
-        createRoute53Record?: boolean,
-        phz?: pulumi.Output<PhzResult>,
-        createDefaultListener?: boolean,
-    ): Promise<AlbResult> {
-        createDefaultListener = createDefaultListener == undefined ? false : createDefaultListener;
-        internal = internal == undefined ? true : internal;
-        createRoute53Record = createRoute53Record == undefined ? true : createRoute53Record;
+    async main(albConfig: AlbModuleConfig): Promise<AlbResult> {
+        const {
+            name,
+            vpc,
+            s3Logs,
+            internal = true,
+            certificate,
+            domain,
+            createRoute53Record = true,
+            phz,
+            createDefaultListener = false,
+        } = albConfig;
 
         const securityGroup = new aws.ec2.SecurityGroup(`${this.config.project}-${name}-alb-sg`, {
             name: `${this.config.generalPrefixShort}-${name}-alb-sg`,

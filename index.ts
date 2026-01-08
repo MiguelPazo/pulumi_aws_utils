@@ -16,6 +16,7 @@ import {AlarmsAdmin} from './src/modules/AlarmsAdmin';
 import {Alb} from './src/modules/Alb';
 import {AlbListener} from './src/modules/AlbListener';
 import {ApiGateway} from './src/modules/ApiGateway';
+import {Backup} from './src/modules/Backup';
 import {CloudFrontBackend} from './src/modules/CloudFrontBackend';
 import {CloudFrontFrontend} from './src/modules/CloudFrontFrontend';
 import {CloudMap} from './src/modules/CloudMap';
@@ -65,6 +66,7 @@ export const AwsUtilsModules = {
     Alb,
     AlbListener,
     ApiGateway,
+    Backup,
     CloudFrontBackend,
     CloudFrontFrontend,
     CloudMap,

@@ -2,7 +2,7 @@
  * Created by Miguel Pazo (https://miguelpazo.com)
  */
 import * as aws from "@pulumi/aws";
-import {AlbResult, CertificatesResult, LBConfig} from "../types";
+import {AlbListenerModuleConfig} from "../types";
 import {InitConfig} from "../types/module";
 import {getInit} from "../config";
 import {UtilsInfra} from "../common/UtilsInfra";
@@ -23,17 +23,18 @@ class AlbListener {
         return this.__instance;
     }
 
-    async main(
-        name: string,
-        alb: AlbResult,
-        certificate: CertificatesResult,
-        lbConfig: LBConfig,
-        hostHeaderRules?: { host: string; priority: number }[],
-        createRoute53Record?: boolean,
-        targetIps?: string[],
-    ): Promise<aws.lb.TargetGroup> {
+    async main(albListenerConfig: AlbListenerModuleConfig): Promise<aws.lb.TargetGroup> {
+        const {
+            name,
+            alb,
+            certificate,
+            lbConfig,
+            hostHeaderRules,
+            createRoute53Record = false,
+            targetIps,
+        } = albListenerConfig;
+
         lbConfig.tgStickinessEnabled = lbConfig.tgStickinessEnabled == undefined ? false : lbConfig.tgStickinessEnabled;
-        createRoute53Record = createRoute53Record == undefined ? false : createRoute53Record;
 
         let tgName = `${this.config.generalPrefixShort}-${name}-tg`;
         tgName = tgName.length > 32 ? `${this.config.generalPrefixShort2}-${name}-tg` : tgName;
