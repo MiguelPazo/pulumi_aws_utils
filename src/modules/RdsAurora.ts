@@ -30,7 +30,8 @@ class RdsAurora {
             subnetIds,
             phz,
             kmsKey,
-            publicZoneRoodId
+            publicZoneRoodId,
+            tags
         } = config;
 
         /**
@@ -170,6 +171,7 @@ class RdsAurora {
             applyImmediately: auroraConfig.applyImmediately ?? false,
             tags: {
                 ...this.config.generalTags,
+                ...tags,
                 Name: `${this.config.generalPrefix}-${auroraConfig.engine}-${auroraConfig.name}`,
             }
         });
@@ -191,6 +193,7 @@ class RdsAurora {
                 applyImmediately: auroraConfig.applyImmediately ?? false,
                 tags: {
                     ...this.config.generalTags,
+                    ...tags,
                     Name: `${this.config.generalPrefix}-${auroraConfig.engine}-${auroraConfig.name}-instance-${i}`,
                 }
             });

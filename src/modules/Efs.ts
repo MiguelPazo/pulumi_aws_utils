@@ -5,7 +5,7 @@ import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
 import {getInit} from "../config";
 import {InitConfig} from "../types/module";
-import {EfsConfig, EfsResult, VpcImportResult} from "../types";
+import {EfsModuleConfig, EfsResult} from "../types";
 
 class Efs {
     private static __instance: Efs;
@@ -23,12 +23,14 @@ class Efs {
         return this.__instance;
     }
 
-    async main(
-        efsConfig: EfsConfig,
-        vpc: pulumi.Output<VpcImportResult>,
-        subnetIds: pulumi.Output<string[]>,
-        kmsKey?: pulumi.Output<aws.kms.Key>
-    ): Promise<EfsResult> {
+    async main(config: EfsModuleConfig): Promise<EfsResult> {
+        const {
+            efsConfig,
+            vpc,
+            subnetIds,
+            kmsKey,
+            tags
+        } = config;
         /**
          * KMS
          */
@@ -120,6 +122,7 @@ class Efs {
             }] : undefined,
             tags: {
                 ...this.config.generalTags,
+                ...tags,
                 Name: `${this.config.generalPrefix}-efs-${efsConfig.name}`,
             }
         });

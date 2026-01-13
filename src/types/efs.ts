@@ -3,6 +3,7 @@
  */
 import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
+import {VpcImportResult} from "./vpc";
 
 export type EfsAccessPointCreationInfo = {
     ownerGid: number;
@@ -42,4 +43,12 @@ export type EfsResult = {
     securityGroup: aws.ec2.SecurityGroup;
     mountTargets: pulumi.Output<aws.efs.MountTarget[]>;
     accessPoints?: pulumi.Output<aws.efs.AccessPoint[]>;
+};
+
+export type EfsModuleConfig = {
+    efsConfig: EfsConfig;
+    vpc: pulumi.Output<VpcImportResult>;
+    subnetIds: pulumi.Output<string[]>;
+    kmsKey?: pulumi.Output<aws.kms.Key>;
+    tags?: Record<string, string>;
 };

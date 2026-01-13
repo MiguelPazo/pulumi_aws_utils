@@ -30,6 +30,8 @@ export type BackupResult = {
     vaultsCopy?: aws.backup.Vault[];
     planDynamoDb: aws.backup.Plan;
     planRds: aws.backup.Plan;
+    planEfs: aws.backup.Plan;
     selectionDynamoDb: aws.backup.Selection;
     selectionRds: aws.backup.Selection;
+    selectionEfs: aws.backup.Selection;
 };

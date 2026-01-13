@@ -105,6 +105,7 @@ export type RdsModuleConfig = {
     kmsKey?: pulumi.Output<aws.kms.Key>;
     phz?: pulumi.Output<PhzResult>;
     publicZoneRoodId?: pulumi.Output<string>;
+    tags?: Record<string, string>;
 };
 
 export type RdsAuroraModuleConfig = {
@@ -114,6 +115,7 @@ export type RdsAuroraModuleConfig = {
     phz: pulumi.Output<PhzResult>;
     kmsKey?: pulumi.Output<aws.kms.Key>;
     publicZoneRoodId?: pulumi.Output<string>;
+    tags?: Record<string, string>;
 };
 
 export type RdsProxyModuleConfig = {

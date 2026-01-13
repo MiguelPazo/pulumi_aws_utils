@@ -182,14 +182,40 @@ class Backup {
             ]
         });
 
+        // Create backup plan for EFS
+        const efsPlan = new aws.backup.Plan(`${this.config.project}-${name}-efs-plan`, {
+            name: `${this.config.generalPrefix}-${name}-efs-plan`,
+            rules: backupRules,
+            tags: {
+                ...this.config.generalTags,
+                Name: `${this.config.generalPrefix}-${name}-efs-plan`
+            }
+        });
+
+        // Create backup selection for EFS
+        const efsSelection = new aws.backup.Selection(`${this.config.project}-${name}-efs-selection`, {
+            name: `${this.config.generalPrefix}-${name}-efs-selection`,
+            planId: efsPlan.id,
+            iamRoleArn: backupRole.arn,
+            selectionTags: [
+                {
+                    type: "STRINGEQUALS",
+                    key: "backup",
+                    value: "efs"
+                }
+            ]
+        });
+
         return {
             role: backupRole,
             vault,
             vaultsCopy,
             planDynamoDb: dynamoDbPlan,
             planRds: rdsPlan,
+            planEfs: efsPlan,
             selectionDynamoDb: dynamoDbSelection,
-            selectionRds: rdsSelection
+            selectionRds: rdsSelection,
+            selectionEfs: efsSelection
         };
     }
 }

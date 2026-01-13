@@ -3,6 +3,7 @@
  */
 import * as aws from "@pulumi/aws";
 import {InitConfig} from "../types/module";
+import {SesModuleConfig, SesResult} from "../types";
 import {getInit} from "../config";
 
 class Ses {
@@ -21,12 +22,14 @@ class Ses {
         return this.__instance;
     }
 
-    async main(
-        name: string,
-        zone: aws.route53.Zone,
-        domain: string,
-        configurationSetName?: string
-    ): Promise<void> {
+    async main(config: SesModuleConfig): Promise<SesResult> {
+        const {
+            name,
+            zone,
+            domain,
+            configurationSetName,
+            dmarcPolicy
+        } = config;
         const sesIdentity = new aws.ses.DomainIdentity(`${this.config.project}-${name}-ses-identity`, {
             domain,
         });
@@ -60,10 +63,52 @@ class Ses {
         );
 
         /**
+         * SPF Configuration
+         * Authorizes Amazon SES to send emails on behalf of the domain
+         */
+        new aws.route53.Record(`${this.config.project}-${name}-ses-spf-record`, {
+            name: domain,
+            records: ["v=spf1 include:amazonses.com ~all"],
+            ttl: 600,
+            type: "TXT",
+            zoneId: zone.zoneId
+        });
+
+        /**
+         * DMARC Configuration
+         * AWS recommends starting with "v=DMARC1; p=none;" to monitor email traffic
+         */
+        const policy = dmarcPolicy?.policy || "none";
+        const percentage = dmarcPolicy?.percentage || 100;
+        const dkimAlignment = dmarcPolicy?.dkimAlignment || "r";
+        const spfAlignment = dmarcPolicy?.spfAlignment || "r";
+
+        let dmarcRecord = `v=DMARC1; p=${policy}`;
+
+        // Only add optional parameters if not using default minimal policy
+        if (dmarcPolicy) {
+            dmarcRecord += `; pct=${percentage}; adkim=${dkimAlignment}; aspf=${spfAlignment}`;
+
+            if (dmarcPolicy.reportEmail) {
+                dmarcRecord += `; rua=mailto:${dmarcPolicy.reportEmail}`;
+            }
+        }
+
+        new aws.route53.Record(`${this.config.project}-${name}-ses-dmarc-record`, {
+            name: `_dmarc.${domain}`,
+            records: [dmarcRecord],
+            ttl: 600,
+            type: "TXT",
+            zoneId: zone.zoneId
+        });
+
+        /**
          * Configuration Set
          */
+        let configSet: aws.ses.ConfigurationSet | undefined;
+
         if (configurationSetName) {
-            new aws.ses.ConfigurationSet(`${this.config.project}-${name}-ses-config-set`, {
+            configSet = new aws.ses.ConfigurationSet(`${this.config.project}-${name}-ses-config-set`, {
                 name: configurationSetName,
                 deliveryOptions: {
                     tlsPolicy: "Require"
@@ -72,6 +117,12 @@ class Ses {
                 sendingEnabled: true,
             });
         }
+
+        return {
+            domainIdentity: sesIdentity,
+            domainDkim: dkim,
+            configurationSet: configSet,
+        } as SesResult;
     }
 }
 

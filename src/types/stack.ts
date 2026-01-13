@@ -22,6 +22,7 @@ export type LambdaConfig = {
     name: string;
     policy?: string;
     assume?: boolean;
+    createSecret?: boolean;
     functions?: LambdaFunctionConfig[];
 };
 

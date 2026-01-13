@@ -30,7 +30,8 @@ class Rds {
             subnetIds,
             kmsKey,
             phz,
-            publicZoneRoodId
+            publicZoneRoodId,
+            tags
         } = config;
 
         /**
@@ -137,7 +138,12 @@ class Rds {
             parameterGroupName: paramGroup.name,
             vpcSecurityGroupIds: [securityGroup.id],
             skipFinalSnapshot: rdsConfig.skipFinalSnapshot,
-            publiclyAccessible: rdsConfig.publiclyAccessible
+            publiclyAccessible: rdsConfig.publiclyAccessible,
+            tags: {
+                ...this.config.generalTags,
+                ...tags,
+                Name: `${this.config.generalPrefix}-rds-${rdsConfig.engine}-${rdsConfig.name}`
+            },
         });
 
         /**
