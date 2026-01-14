@@ -19,3 +19,4 @@ export * from './cloudmap';
 export * from './s3';
 export * from './backup';
 export * from './ses';
+export * from './cloudwatch';

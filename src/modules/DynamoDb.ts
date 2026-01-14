@@ -33,7 +33,7 @@ class DynamoDb {
         tableConfigs.forEach(config => {
             // Convert table name to camelCase for object key
             const tableName = config.name.replace(/-/g, '_');
-            const tableKey = `table${tableName.charAt(0).toUpperCase() + tableName.slice(1).replace(/_([a-z])/g, (match, letter) => letter.toUpperCase())}`;
+            const tableKey = `${tableName.replace(/_([a-z])/g, (match, letter) => letter.toUpperCase())}`;
 
             // Create DynamoDB table
             const table = new aws.dynamodb.Table(`${this.config.project}-dynamodb-${config.name}`, {
@@ -107,8 +107,6 @@ class DynamoDb {
     }
 
     private configureTableAutoScaling(config: DynamoDbTableConfig, table: aws.dynamodb.Table): void {
-        const tableName = `${this.config.generalPrefix}-table-${config.name}`;
-
         // Read Auto Scaling
         if (config.autoScaling?.read?.enabled) {
             const readTarget = new aws.appautoscaling.Target(

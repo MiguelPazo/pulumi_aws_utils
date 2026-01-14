@@ -61,18 +61,30 @@ class LambdaRole {
          */
         const lambdaRole = new aws.iam.Role(`${this.config.project}-${lambda.name}-lambda-role`, {
             name: `${this.config.generalPrefixShort}-${lambda.name}-lambda-role`,
-            assumeRolePolicy: {
-                Version: "2012-10-17",
-                Statement: [
-                    {
-                        Effect: "Allow",
-                        Principal: {
-                            Service: isEdge ? ["edgelambda.amazonaws.com", "lambda.amazonaws.com"] : "lambda.amazonaws.com"
-                        },
-                        Action: "sts:AssumeRole"
-                    }
-                ]
-            },
+            assumeRolePolicy: pulumi.all([this.config.accountId]).apply(([accountId]) => {
+                const region = isEdge ? "us-east-1" : aws.config.region;
+
+                return JSON.stringify({
+                    Version: "2012-10-17",
+                    Statement: [
+                        {
+                            Effect: "Allow",
+                            Principal: {
+                                Service: isEdge ? ["edgelambda.amazonaws.com", "lambda.amazonaws.com"] : "lambda.amazonaws.com"
+                            },
+                            Action: "sts:AssumeRole",
+                            Condition: {
+                                StringEquals: {
+                                    "aws:SourceAccount": accountId
+                                },
+                                ArnLike: {
+                                    "aws:SourceArn": `arn:aws:lambda:${region}:${accountId}:function:${this.config.generalPrefix}-${lambda.name}*`
+                                }
+                            }
+                        }
+                    ]
+                });
+            }),
             tags: {
                 ...this.config.generalTags,
                 Name: `${this.config.generalPrefixShort}-${lambda.name}-lambda-role`,

@@ -13,6 +13,7 @@ import {UtilsInfra} from './src/common/UtilsInfra';
  */
 import {Alarms} from './src/modules/Alarms';
 import {AlarmsAdmin} from './src/modules/AlarmsAdmin';
+import {AlarmsAdminEB} from './src/modules/AlarmsAdminEB';
 import {Alb} from './src/modules/Alb';
 import {AlbListener} from './src/modules/AlbListener';
 import {ApiGateway} from './src/modules/ApiGateway';
@@ -20,6 +21,7 @@ import {Backup} from './src/modules/Backup';
 import {CloudFrontBackend} from './src/modules/CloudFrontBackend';
 import {CloudFrontFrontend} from './src/modules/CloudFrontFrontend';
 import {CloudMap} from './src/modules/CloudMap';
+import {CloudWatch} from './src/modules/CloudWatch';
 import {Ecr} from './src/modules/Ecr';
 import {EcsCluster} from './src/modules/EcsCluster';
 import {EcsService} from './src/modules/EcsService';
@@ -63,6 +65,7 @@ export const AwsUtilsTools = {
 export const AwsUtilsModules = {
     Alarms,
     AlarmsAdmin,
+    AlarmsAdminEB,
     Alb,
     AlbListener,
     ApiGateway,
@@ -70,6 +73,7 @@ export const AwsUtilsModules = {
     CloudFrontBackend,
     CloudFrontFrontend,
     CloudMap,
+    CloudWatch,
     DynamoDb,
     Ecr,
     EcsCluster,

@@ -40,7 +40,8 @@ class EcsService {
             provider = "FARGATE",
             ecrImage,
             envTask,
-            createService = true
+            createService = true,
+            cwConfig
         } = config;
 
         /**
@@ -48,18 +49,28 @@ class EcsService {
          */
         const taskExecRole = new aws.iam.Role(`${this.config.project}-${service.nameShort}-ecs-task-exec-role`, {
             name: `${this.config.generalPrefixShort}-${service.name}-ecs-task-exec-role`,
-            assumeRolePolicy: {
-                Version: "2012-10-17",
-                Statement: [
-                    {
-                        Effect: "Allow",
-                        Principal: {
-                            Service: "ecs-tasks.amazonaws.com"
-                        },
-                        Action: "sts:AssumeRole"
-                    }
-                ]
-            },
+            assumeRolePolicy: pulumi.output(this.config.accountId).apply(accountId => {
+                return JSON.stringify({
+                    Version: "2012-10-17",
+                    Statement: [
+                        {
+                            Effect: "Allow",
+                            Principal: {
+                                Service: "ecs-tasks.amazonaws.com"
+                            },
+                            Action: "sts:AssumeRole",
+                            Condition: {
+                                StringEquals: {
+                                    "aws:SourceAccount": accountId
+                                },
+                                ArnLike: {
+                                    "aws:SourceArn": `arn:aws:ecs:${aws.config.region}:${accountId}:service/${this.config.generalPrefixShort}-${service.name}-*`
+                                }
+                            }
+                        }
+                    ]
+                })
+            }),
             tags: {
                 ...this.config.generalTags,
                 Name: `${this.config.generalPrefixShort}-task-execute-role`,
@@ -71,7 +82,7 @@ class EcsService {
          */
         const taskRole = new aws.iam.Role(`${this.config.project}-${service.nameShort}-ecs-task-role`, {
             name: `${this.config.generalPrefixShort}-${service.name}-ecs-task-role`,
-            assumeRolePolicy: pulumi.output(this.config.accountId).apply(x => {
+            assumeRolePolicy: pulumi.output(this.config.accountId).apply(accountId => {
                 return JSON.stringify({
                     Version: "2012-10-17",
                     Statement: [
@@ -82,8 +93,11 @@ class EcsService {
                             },
                             Action: "sts:AssumeRole",
                             Condition: {
+                                StringEquals: {
+                                    "aws:SourceAccount": accountId
+                                },
                                 ArnLike: {
-                                    "aws:SourceArn": `arn:aws:ecs:${aws.config.region}:${x}:*`
+                                    "aws:SourceArn": `arn:aws:ecs:${aws.config.region}:${accountId}:service/${this.config.generalPrefixShort}-${service.name}-*`
                                 }
                             }
                         }
@@ -111,6 +125,18 @@ class EcsService {
                     Name: `/aws/ecs/task/${this.config.generalPrefix}-${service.name}`
                 }
             });
+
+            /**
+             * CloudWatch Data Protection Policy
+             */
+            if (cwConfig) {
+                new aws.cloudwatch.LogDataProtectionPolicy(`${this.config.project}-${service.nameShort}-ecs-task-loggroup-data-protection`, {
+                    logGroupName: logGroup.id,
+                    policyDocument: cwConfig.policyDocument
+                }, {
+                    dependsOn: [logGroup]
+                });
+            }
         }
 
         /**

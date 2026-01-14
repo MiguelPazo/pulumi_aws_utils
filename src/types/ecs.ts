@@ -5,6 +5,7 @@ import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
 import {LBConfig} from "./alb";
 import {VpcImportResult} from "./vpc";
+import {CloudWatchDataProtectionResult} from "./cloudwatch";
 
 export type ServiceConnectConfig = {
     enabled: boolean;
@@ -65,6 +66,7 @@ export type EcsServiceModuleConfig = {
     ecrImage?: pulumi.Output<string>;
     envTask?: { name: string; value: string }[];
     createService?: boolean;
+    cwConfig?: pulumi.Output<CloudWatchDataProtectionResult>;
 };
 
 export type EcsServiceResult = {

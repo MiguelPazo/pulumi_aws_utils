@@ -23,948 +23,915 @@ class AlarmsAdmin {
         return this.__instance;
     }
 
-    async main(alarmsAdminConfig: AlarmsAdminConfig): Promise<AlarmsAdminResult> {
-        // Create CloudWatch Log Group for debugging events
-        const logGroup = new aws.cloudwatch.LogGroup(`${this.config.project}-alarms-admin-events-log`, {
-            name: `/aws/alarms/admin-events/`,
-            retentionInDays: this.config.cloudwatchRetentionLogs,
-            kmsKeyId: alarmsAdminConfig.kmsKey.arn,
-            tags: {
-                ...this.config.generalTags,
-                Name: `/aws/alarms/admin-events/`
-            }
-        });
+    async main(cisConfig: AlarmsAdminConfig): Promise<AlarmsAdminResult> {
+        const metricFilters: aws.cloudwatch.LogMetricFilter[] = [];
+        const alarms: aws.cloudwatch.MetricAlarm[] = [];
+        const namespace = cisConfig.alarmNamespace || "CISBenchmark";
 
-        // Create resource policy to allow EventBridge to write to CloudWatch Logs
-        const logGroupPolicy = new aws.cloudwatch.LogResourcePolicy(`${this.config.project}-alarms-admin-events-log-policy`, {
-            policyName: `${this.config.generalPrefix}-alarms-admin-events-log-policy`,
-            policyDocument: pulumi.all([logGroup.arn]).apply(([logGroupArn]) => JSON.stringify({
-                Version: "2012-10-17",
-                Statement: [
-                    {
-                        Effect: "Allow",
-                        Principal: {
-                            Service: [
-                                "events.amazonaws.com",
-                                "delivery.logs.amazonaws.com"
-                            ]
-                        },
-                        Action: [
-                            "logs:CreateLogStream",
-                            "logs:PutLogEvents"
-                        ],
-                        Resource: `${logGroupArn}:*`
-                    }
-                ]
-            }))
-        });
-
-        const result: AlarmsAdminResult = {
-            logGroup,
-            logGroupPolicy,
-            eventRules: [],
-            eventTargets: []
+        // Set default values to true for all boolean flags
+        const config = {
+            enableUnauthorizedApiCalls: cisConfig.enableUnauthorizedApiCalls !== false,
+            enableConsoleSignInWithoutMfa: cisConfig.enableConsoleSignInWithoutMfa !== false,
+            enableRootAccountUsage: cisConfig.enableRootAccountUsage !== false,
+            enableIamPolicyChanges: cisConfig.enableIamPolicyChanges !== false,
+            enableCloudTrailChanges: cisConfig.enableCloudTrailChanges !== false,
+            enableConsoleAuthenticationFailures: cisConfig.enableConsoleAuthenticationFailures !== false,
+            enableDisableOrDeleteKms: cisConfig.enableDisableOrDeleteKms !== false,
+            enableS3BucketPolicyChanges: cisConfig.enableS3BucketPolicyChanges !== false,
+            enableAwsConfigChanges: cisConfig.enableAwsConfigChanges !== false,
+            enableSecurityGroupChanges: cisConfig.enableSecurityGroupChanges !== false,
+            enableNetworkAclChanges: cisConfig.enableNetworkAclChanges !== false,
+            enableNetworkGatewayChanges: cisConfig.enableNetworkGatewayChanges !== false,
+            enableRouteTableChanges: cisConfig.enableRouteTableChanges !== false,
+            enableVpcChanges: cisConfig.enableVpcChanges !== false
         };
 
-        const lambdaFunction = alarmsAdminConfig.lambdaFunction;
-
-        // Create a single Lambda permission for all EventBridge rules using wildcard
-        new aws.lambda.Permission(`${this.config.project}-alarms-admin-lambda-permission`, {
-            action: "lambda:InvokeFunction",
-            function: lambdaFunction.name,
-            principal: "events.amazonaws.com",
-            sourceArn: pulumi.interpolate`arn:aws:events:${this.config.region}:${this.config.accountId}:rule/${this.config.generalPrefix}-alarm-*`
-        });
-
-        // Create EventBridge rules for VPC changes
-        if (alarmsAdminConfig.monitorVpcChanges !== false) {
-            const vpcRule = this.createVpcChangeRule(lambdaFunction, logGroup);
-            result.eventRules.push(vpcRule.rule);
-            result.eventTargets.push(...vpcRule.targets);
+        // CIS 3.1 - Unauthorized API Calls
+        if (config.enableUnauthorizedApiCalls) {
+            const {metricFilter, alarm} = this.createUnauthorizedApiCallsMetric(
+                cisConfig.cloudTrailLogGroupName,
+                cisConfig.snsTopicArn,
+                namespace
+            );
+            metricFilters.push(metricFilter);
+            alarms.push(alarm);
         }
 
-        // Create EventBridge rules for Route Table changes
-        if (alarmsAdminConfig.monitorRouteTableChanges !== false) {
-            const routeTableRule = this.createRouteTableChangeRule(lambdaFunction, logGroup);
-            result.eventRules.push(routeTableRule.rule);
-            result.eventTargets.push(...routeTableRule.targets);
+        // CIS 3.2 - Console Sign-in Without MFA
+        if (config.enableConsoleSignInWithoutMfa) {
+            const {metricFilter, alarm} = this.createConsoleSignInWithoutMfaMetric(
+                cisConfig.cloudTrailLogGroupName,
+                cisConfig.snsTopicArn,
+                namespace
+            );
+            metricFilters.push(metricFilter);
+            alarms.push(alarm);
         }
 
-        // Create EventBridge rules for Security Group changes
-        if (alarmsAdminConfig.monitorSecurityGroupChanges !== false) {
-            const sgRule = this.createSecurityGroupChangeRule(lambdaFunction, logGroup);
-            result.eventRules.push(sgRule.rule);
-            result.eventTargets.push(...sgRule.targets);
+        // CIS 3.3 - Root Account Usage
+        if (config.enableRootAccountUsage) {
+            const {metricFilter, alarm} = this.createRootAccountUsageMetric(
+                cisConfig.cloudTrailLogGroupName,
+                cisConfig.snsTopicArn,
+                namespace
+            );
+            metricFilters.push(metricFilter);
+            alarms.push(alarm);
         }
 
-        // Create EventBridge rules for Network ACL changes
-        if (alarmsAdminConfig.monitorNetworkAclChanges !== false) {
-            const naclRule = this.createNetworkAclChangeRule(lambdaFunction, logGroup);
-            result.eventRules.push(naclRule.rule);
-            result.eventTargets.push(...naclRule.targets);
+        // CIS 3.4 - IAM Policy Changes
+        if (config.enableIamPolicyChanges) {
+            const {metricFilter, alarm} = this.createIamPolicyChangesMetric(
+                cisConfig.cloudTrailLogGroupName,
+                cisConfig.snsTopicArn,
+                namespace
+            );
+            metricFilters.push(metricFilter);
+            alarms.push(alarm);
         }
 
-        // Create EventBridge rules for Internet Gateway changes
-        if (alarmsAdminConfig.monitorInternetGatewayChanges !== false) {
-            const igwRule = this.createInternetGatewayChangeRule(lambdaFunction, logGroup);
-            result.eventRules.push(igwRule.rule);
-            result.eventTargets.push(...igwRule.targets);
+        // CIS 3.5 - CloudTrail Configuration Changes
+        if (config.enableCloudTrailChanges) {
+            const {metricFilter, alarm} = this.createCloudTrailChangesMetric(
+                cisConfig.cloudTrailLogGroupName,
+                cisConfig.snsTopicArn,
+                namespace
+            );
+            metricFilters.push(metricFilter);
+            alarms.push(alarm);
         }
 
-        // Create EventBridge rules for Network Gateway changes (NAT, VPN, etc)
-        if (alarmsAdminConfig.monitorNetworkGatewayChanges !== false) {
-            const ngwRule = this.createNetworkGatewayChangeRule(lambdaFunction, logGroup);
-            result.eventRules.push(ngwRule.rule);
-            result.eventTargets.push(...ngwRule.targets);
+        // CIS 3.6 - Console Authentication Failures
+        if (config.enableConsoleAuthenticationFailures) {
+            const {metricFilter, alarm} = this.createConsoleAuthenticationFailuresMetric(
+                cisConfig.cloudTrailLogGroupName,
+                cisConfig.snsTopicArn,
+                namespace
+            );
+            metricFilters.push(metricFilter);
+            alarms.push(alarm);
         }
 
-        // Create EventBridge rules for AWS Config changes
-        if (alarmsAdminConfig.monitorAwsConfigChanges !== false) {
-            const configRule = this.createAwsConfigChangeRule(lambdaFunction, logGroup);
-            result.eventRules.push(configRule.rule);
-            result.eventTargets.push(...configRule.targets);
+        // CIS 3.7 - Disable or Delete KMS Keys
+        if (config.enableDisableOrDeleteKms) {
+            const {metricFilter, alarm} = this.createDisableOrDeleteKmsMetric(
+                cisConfig.cloudTrailLogGroupName,
+                cisConfig.snsTopicArn,
+                namespace
+            );
+            metricFilters.push(metricFilter);
+            alarms.push(alarm);
         }
 
-        // Create EventBridge rules for CloudTrail changes
-        if (alarmsAdminConfig.monitorCloudTrailChanges !== false) {
-            const cloudTrailRule = this.createCloudTrailChangeRule(lambdaFunction, logGroup);
-            result.eventRules.push(cloudTrailRule.rule);
-            result.eventTargets.push(...cloudTrailRule.targets);
+        // CIS 3.8 - S3 Bucket Policy Changes
+        if (config.enableS3BucketPolicyChanges) {
+            const {metricFilter, alarm} = this.createS3BucketPolicyChangesMetric(
+                cisConfig.cloudTrailLogGroupName,
+                cisConfig.snsTopicArn,
+                namespace
+            );
+            metricFilters.push(metricFilter);
+            alarms.push(alarm);
         }
 
-        // Create EventBridge rules for KMS changes
-        if (alarmsAdminConfig.monitorKmsChanges !== false) {
-            const kmsRule = this.createKmsChangeRule(lambdaFunction, logGroup);
-            result.eventRules.push(kmsRule.rule);
-            result.eventTargets.push(...kmsRule.targets);
+        // CIS 3.9 - AWS Config Configuration Changes
+        if (config.enableAwsConfigChanges) {
+            const {metricFilter, alarm} = this.createAwsConfigChangesMetric(
+                cisConfig.cloudTrailLogGroupName,
+                cisConfig.snsTopicArn,
+                namespace
+            );
+            metricFilters.push(metricFilter);
+            alarms.push(alarm);
         }
 
-        // Create EventBridge rules for S3 changes
-        if (alarmsAdminConfig.monitorS3Changes !== false) {
-            const s3Rule = this.createS3ChangeRule(lambdaFunction, logGroup);
-            result.eventRules.push(s3Rule.rule);
-            result.eventTargets.push(...s3Rule.targets);
+        // CIS 3.10 - Security Group Changes
+        if (config.enableSecurityGroupChanges) {
+            const {metricFilter, alarm} = this.createSecurityGroupChangesMetric(
+                cisConfig.cloudTrailLogGroupName,
+                cisConfig.snsTopicArn,
+                namespace
+            );
+            metricFilters.push(metricFilter);
+            alarms.push(alarm);
         }
 
-        // Create EventBridge rules for IAM changes
-        if (alarmsAdminConfig.monitorIamChanges !== false) {
-            const iamRule = this.createIamChangeRule(lambdaFunction, logGroup);
-            result.eventRules.push(iamRule.rule);
-            result.eventTargets.push(...iamRule.targets);
+        // CIS 3.11 - Network ACL Changes
+        if (config.enableNetworkAclChanges) {
+            const {metricFilter, alarm} = this.createNetworkAclChangesMetric(
+                cisConfig.cloudTrailLogGroupName,
+                cisConfig.snsTopicArn,
+                namespace
+            );
+            metricFilters.push(metricFilter);
+            alarms.push(alarm);
         }
 
-        // Create EventBridge rules for Console Login Failures
-        if (alarmsAdminConfig.monitorConsoleLoginFailures !== false) {
-            const consoleLoginRule = this.createConsoleLoginFailureRule(lambdaFunction, logGroup);
-            result.eventRules.push(consoleLoginRule.rule);
-            result.eventTargets.push(...consoleLoginRule.targets);
+        // CIS 3.12 - Network Gateway Changes
+        if (config.enableNetworkGatewayChanges) {
+            const {metricFilter, alarm} = this.createNetworkGatewayChangesMetric(
+                cisConfig.cloudTrailLogGroupName,
+                cisConfig.snsTopicArn,
+                namespace
+            );
+            metricFilters.push(metricFilter);
+            alarms.push(alarm);
         }
 
-        // Create EventBridge rules for Root Account Access
-        if (alarmsAdminConfig.monitorRootAccountAccess !== false) {
-            const rootAccessRule = this.createRootAccountAccessRule(lambdaFunction, logGroup);
-            result.eventRules.push(rootAccessRule.rule);
-            result.eventTargets.push(...rootAccessRule.targets);
+        // CIS 3.13 - Route Table Changes
+        if (config.enableRouteTableChanges) {
+            const {metricFilter, alarm} = this.createRouteTableChangesMetric(
+                cisConfig.cloudTrailLogGroupName,
+                cisConfig.snsTopicArn,
+                namespace
+            );
+            metricFilters.push(metricFilter);
+            alarms.push(alarm);
         }
 
-        // Create EventBridge rules for Access Without MFA
-        if (alarmsAdminConfig.monitorAccessWithoutMfa !== false) {
-            const noMfaRule = this.createAccessWithoutMfaRule(lambdaFunction, logGroup);
-            result.eventRules.push(noMfaRule.rule);
-            result.eventTargets.push(...noMfaRule.targets);
+        // CIS 3.14 - VPC Changes
+        if (config.enableVpcChanges) {
+            const {metricFilter, alarm} = this.createVpcChangesMetric(
+                cisConfig.cloudTrailLogGroupName,
+                cisConfig.snsTopicArn,
+                namespace
+            );
+            metricFilters.push(metricFilter);
+            alarms.push(alarm);
         }
 
-        return result;
+        return {
+            metricFilters,
+            alarms
+        };
     }
 
     /**
-     * Create EventBridge rule for VPC changes
+     * CIS 3.1 - Monitor unauthorized API calls
      */
-    private createVpcChangeRule(lambdaFunction: aws.lambda.Function, logGroup: aws.cloudwatch.LogGroup): {
-        rule: aws.cloudwatch.EventRule;
-        targets: aws.cloudwatch.EventTarget[]
-    } {
-        const rule = new aws.cloudwatch.EventRule(`${this.config.project}-alarms-admin-vpc-changes`, {
-            name: `${this.config.generalPrefix}-alarm-vpc-changes`,
-            description: "Capture all VPC related changes",
-            eventPattern: JSON.stringify({
-                source: ["aws.ec2"],
-                "detail-type": ["AWS API Call via CloudTrail"],
-                detail: {
-                    eventSource: ["ec2.amazonaws.com"],
-                    eventName: [
-                        // VPC operations
-                        "CreateVpc",
-                        "DeleteVpc",
-                        "ModifyVpcAttribute",
-                        "AssociateVpcCidrBlock",
-                        "DisassociateVpcCidrBlock",
-                        "EnableVpcClassicLink",
-                        "DisableVpcClassicLink",
-                        "EnableVpcClassicLinkDnsSupport",
-                        "DisableVpcClassicLinkDnsSupport",
-                        // VPC Peering
-                        "CreateVpcPeeringConnection",
-                        "DeleteVpcPeeringConnection",
-                        "AcceptVpcPeeringConnection",
-                        "RejectVpcPeeringConnection",
-                        "ModifyVpcPeeringConnectionOptions",
-                        // VPC Endpoints
-                        "CreateVpcEndpoint",
-                        "DeleteVpcEndpoints",
-                        "ModifyVpcEndpoint",
-                        "CreateVpcEndpointServiceConfiguration",
-                        "DeleteVpcEndpointServiceConfigurations",
-                        "ModifyVpcEndpointServiceConfiguration",
-                        // DHCP Options
-                        "CreateDhcpOptions",
-                        "DeleteDhcpOptions",
-                        "AssociateDhcpOptions"
-                    ]
+    private createUnauthorizedApiCallsMetric(
+        logGroupName: pulumi.Input<string>,
+        snsTopicArn: pulumi.Input<string>,
+        namespace: string
+    ): { metricFilter: aws.cloudwatch.LogMetricFilter; alarm: aws.cloudwatch.MetricAlarm } {
+        const metricName = "UnauthorizedAPICalls";
+
+        const metricFilter = new aws.cloudwatch.LogMetricFilter(
+            `${this.config.project}-cis-unauthorized-api-calls-filter`,
+            {
+                name: `${this.config.generalPrefix}-UnauthorizedAPICalls`,
+                logGroupName: logGroupName,
+                pattern: '{ ($.errorCode = "*UnauthorizedOperation") || ($.errorCode = "AccessDenied*") }',
+                metricTransformation: {
+                    name: metricName,
+                    namespace: namespace,
+                    value: "1",
+                    defaultValue: "0"
                 }
-            }),
-            tags: {
-                ...this.config.generalTags,
-                Name: `${this.config.generalPrefix}-vpc-changes`
             }
-        });
+        );
 
-        const lambdaTarget = new aws.cloudwatch.EventTarget(`${this.config.project}-alarms-admin-vpc-lambda-target`, {
-            rule: rule.name,
-            arn: lambdaFunction.arn,
-            inputTransformer: {
-                inputPaths: {
-                    eventName: "$.detail.eventName",
-                    userName: "$.detail.userIdentity.principalId",
-                    region: "$.region",
-                    time: "$.time",
-                    accountId: "$.account"
-                },
-                inputTemplate: `{"type":"alarm-admin","title":"VPC Change","event":"<eventName>","user":"<userName>","account":"<accountId>","stack":"${this.config.stack}","region":"<region>","time":"<time>"}`
-            }
-        });
+        const alarm = new aws.cloudwatch.MetricAlarm(
+            `${this.config.project}-cis-unauthorized-api-calls-alarm`,
+            {
+                name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/UnauthorizedAPICalls`),
+                comparisonOperator: "GreaterThanOrEqualToThreshold",
+                evaluationPeriods: 1,
+                metricName: metricName,
+                namespace: namespace,
+                period: 300,
+                statistic: "Sum",
+                threshold: 1,
+                alarmDescription: "CIS 3.1 - Monitors unauthorized API calls",
+                alarmActions: [snsTopicArn],
+                treatMissingData: "notBreaching",
+                tags: {
+                    ...this.config.generalTags,
+                    CIS: "3.1",
+                    service_name: "alarm-admin",
+                    Name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/UnauthorizedAPICalls`)
+                }
+            },
+            {dependsOn: [metricFilter]}
+        );
 
-        const logTarget = new aws.cloudwatch.EventTarget(`${this.config.project}-alarms-admin-vpc-log-target`, {
-            rule: rule.name,
-            arn: logGroup.arn
-        });
-
-        return {rule, targets: [lambdaTarget, logTarget]};
+        return {metricFilter, alarm};
     }
 
     /**
-     * Create EventBridge rule for Route Table changes
+     * CIS 3.2 - Monitor console sign-in without MFA
      */
-    private createRouteTableChangeRule(lambdaFunction: aws.lambda.Function, logGroup: aws.cloudwatch.LogGroup): {
-        rule: aws.cloudwatch.EventRule;
-        targets: aws.cloudwatch.EventTarget[]
-    } {
-        const rule = new aws.cloudwatch.EventRule(`${this.config.project}-alarms-admin-rt-changes`, {
-            name: `${this.config.generalPrefix}-alarm-route-table-changes`,
-            description: "Capture Route Table configuration changes",
-            eventPattern: JSON.stringify({
-                source: ["aws.ec2"],
-                "detail-type": ["AWS API Call via CloudTrail"],
-                detail: {
-                    eventSource: ["ec2.amazonaws.com"],
-                    eventName: [
-                        "CreateRoute",
-                        "CreateRouteTable",
-                        "ReplaceRoute",
-                        "ReplaceRouteTableAssociation",
-                        "DeleteRoute",
-                        "DeleteRouteTable",
-                        "DisassociateRouteTable",
-                        "AssociateRouteTable"
-                    ]
+    private createConsoleSignInWithoutMfaMetric(
+        logGroupName: pulumi.Input<string>,
+        snsTopicArn: pulumi.Input<string>,
+        namespace: string
+    ): { metricFilter: aws.cloudwatch.LogMetricFilter; alarm: aws.cloudwatch.MetricAlarm } {
+        const metricName = "ConsoleSignInWithoutMFA";
+
+        const metricFilter = new aws.cloudwatch.LogMetricFilter(
+            `${this.config.project}-cis-console-signin-without-mfa-filter`,
+            {
+                name: `${this.config.generalPrefix}-ConsoleSignInWithoutMFA`,
+                logGroupName: logGroupName,
+                pattern: '{ ($.eventName = "ConsoleLogin") && ($.additionalEventData.MFAUsed != "Yes") && ($.userIdentity.type = "IAMUser") && ($.responseElements.ConsoleLogin = "Success") }',
+                metricTransformation: {
+                    name: metricName,
+                    namespace: namespace,
+                    value: "1",
+                    defaultValue: "0"
                 }
-            }),
-            tags: {
-                ...this.config.generalTags,
-                Name: `${this.config.generalPrefix}-route-table-changes`
             }
-        });
+        );
 
-        const lambdaTarget = new aws.cloudwatch.EventTarget(`${this.config.project}-alarms-admin-rt-lambda-target`, {
-            rule: rule.name,
-            arn: lambdaFunction.arn,
-            inputTransformer: {
-                inputPaths: {
-                    eventName: "$.detail.eventName",
-                    userName: "$.detail.userIdentity.principalId",
-                    region: "$.region",
-                    time: "$.time",
-                    accountId: "$.account"
-                },
-                inputTemplate: `{"type":"alarm-admin","title":"Route Table Change","event":"<eventName>","user":"<userName>","account":"<accountId>","stack":"${this.config.stack}","region":"<region>","time":"<time>"}`
-            }
-        });
+        const alarm = new aws.cloudwatch.MetricAlarm(
+            `${this.config.project}-cis-console-signin-without-mfa-alarm`,
+            {
+                name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/ConsoleSignInWithoutMFA`),
+                comparisonOperator: "GreaterThanOrEqualToThreshold",
+                evaluationPeriods: 1,
+                metricName: metricName,
+                namespace: namespace,
+                period: 300,
+                statistic: "Sum",
+                threshold: 1,
+                alarmDescription: "CIS 3.2 - Monitors console sign-in without MFA",
+                alarmActions: [snsTopicArn],
+                treatMissingData: "notBreaching",
+                tags: {
+                    ...this.config.generalTags,
+                    CIS: "3.2",
+                    service_name: "alarm-admin",
+                    Name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/ConsoleSignInWithoutMFA`)
+                }
+            },
+            {dependsOn: [metricFilter]}
+        );
 
-        const logTarget = new aws.cloudwatch.EventTarget(`${this.config.project}-alarms-admin-rt-log-target`, {
-            rule: rule.name,
-            arn: logGroup.arn
-        });
-
-        return {rule, targets: [lambdaTarget, logTarget]};
+        return {metricFilter, alarm};
     }
 
     /**
-     * Create EventBridge rule for Security Group changes
+     * CIS 3.3 - Monitor root account usage
      */
-    private createSecurityGroupChangeRule(lambdaFunction: aws.lambda.Function, logGroup: aws.cloudwatch.LogGroup): {
-        rule: aws.cloudwatch.EventRule;
-        targets: aws.cloudwatch.EventTarget[]
-    } {
-        const rule = new aws.cloudwatch.EventRule(`${this.config.project}-alarms-admin-sg-changes`, {
-            name: `${this.config.generalPrefix}-alarm-security-group-changes`,
-            description: "Capture Security Group configuration changes",
-            eventPattern: JSON.stringify({
-                source: ["aws.ec2"],
-                "detail-type": ["AWS API Call via CloudTrail"],
-                detail: {
-                    eventSource: ["ec2.amazonaws.com"],
-                    eventName: [
-                        "AuthorizeSecurityGroupIngress",
-                        "AuthorizeSecurityGroupEgress",
-                        "RevokeSecurityGroupIngress",
-                        "RevokeSecurityGroupEgress",
-                        "CreateSecurityGroup",
-                        "DeleteSecurityGroup"
-                    ]
+    private createRootAccountUsageMetric(
+        logGroupName: pulumi.Input<string>,
+        snsTopicArn: pulumi.Input<string>,
+        namespace: string
+    ): { metricFilter: aws.cloudwatch.LogMetricFilter; alarm: aws.cloudwatch.MetricAlarm } {
+        const metricName = "RootAccountUsage";
+
+        const metricFilter = new aws.cloudwatch.LogMetricFilter(
+            `${this.config.project}-cis-root-account-usage-filter`,
+            {
+                name: `${this.config.generalPrefix}-RootAccountUsage`,
+                logGroupName: logGroupName,
+                pattern: '{ $.userIdentity.type = "Root" && $.userIdentity.invokedBy NOT EXISTS && $.eventType != "AwsServiceEvent" }',
+                metricTransformation: {
+                    name: metricName,
+                    namespace: namespace,
+                    value: "1",
+                    defaultValue: "0"
                 }
-            }),
-            tags: {
-                ...this.config.generalTags,
-                Name: `${this.config.generalPrefix}-security-group-changes`
             }
-        });
+        );
 
-        const lambdaTarget = new aws.cloudwatch.EventTarget(`${this.config.project}-alarms-admin-sg-lambda-target`, {
-            rule: rule.name,
-            arn: lambdaFunction.arn,
-            inputTransformer: {
-                inputPaths: {
-                    eventName: "$.detail.eventName",
-                    userName: "$.detail.userIdentity.principalId",
-                    region: "$.region",
-                    time: "$.time",
-                    accountId: "$.account"
-                },
-                inputTemplate: `{"type":"alarm-admin","title":"Security Group Change","event":"<eventName>","user":"<userName>","account":"<accountId>","stack":"${this.config.stack}","region":"<region>","time":"<time>"}`
-            }
-        });
+        const alarm = new aws.cloudwatch.MetricAlarm(
+            `${this.config.project}-cis-root-account-usage-alarm`,
+            {
+                name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/RootAccountUsage`),
+                comparisonOperator: "GreaterThanOrEqualToThreshold",
+                evaluationPeriods: 1,
+                metricName: metricName,
+                namespace: namespace,
+                period: 300,
+                statistic: "Sum",
+                threshold: 1,
+                alarmDescription: "CIS 3.3 - Monitors root account usage",
+                alarmActions: [snsTopicArn],
+                treatMissingData: "notBreaching",
+                tags: {
+                    ...this.config.generalTags,
+                    CIS: "3.3",
+                    service_name: "alarm-admin",
+                    Name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/RootAccountUsage`)
+                }
+            },
+            {dependsOn: [metricFilter]}
+        );
 
-        const logTarget = new aws.cloudwatch.EventTarget(`${this.config.project}-alarms-admin-sg-log-target`, {
-            rule: rule.name,
-            arn: logGroup.arn
-        });
-
-        return {rule, targets: [lambdaTarget, logTarget]};
+        return {metricFilter, alarm};
     }
 
     /**
-     * Create EventBridge rule for Network ACL changes
+     * CIS 3.4 - Monitor IAM policy changes
      */
-    private createNetworkAclChangeRule(lambdaFunction: aws.lambda.Function, logGroup: aws.cloudwatch.LogGroup): {
-        rule: aws.cloudwatch.EventRule;
-        targets: aws.cloudwatch.EventTarget[]
-    } {
-        const rule = new aws.cloudwatch.EventRule(`${this.config.project}-alarms-admin-nacl-changes`, {
-            name: `${this.config.generalPrefix}-alarm-network-acl-changes`,
-            description: "Capture Network ACL creation, modification and deletion",
-            eventPattern: JSON.stringify({
-                source: ["aws.ec2"],
-                "detail-type": ["AWS API Call via CloudTrail"],
-                detail: {
-                    eventSource: ["ec2.amazonaws.com"],
-                    eventName: [
-                        "CreateNetworkAcl",
-                        "CreateNetworkAclEntry",
-                        "DeleteNetworkAcl",
-                        "DeleteNetworkAclEntry",
-                        "ReplaceNetworkAclEntry",
-                        "ReplaceNetworkAclAssociation",
-                        "ModifyNetworkAclAttribute"
-                    ]
+    private createIamPolicyChangesMetric(
+        logGroupName: pulumi.Input<string>,
+        snsTopicArn: pulumi.Input<string>,
+        namespace: string
+    ): { metricFilter: aws.cloudwatch.LogMetricFilter; alarm: aws.cloudwatch.MetricAlarm } {
+        const metricName = "IAMPolicyChanges";
+
+        const metricFilter = new aws.cloudwatch.LogMetricFilter(
+            `${this.config.project}-cis-iam-policy-changes-filter`,
+            {
+                name: `${this.config.generalPrefix}-IAMPolicyChanges`,
+                logGroupName: logGroupName,
+                pattern: '{($.eventName=DeleteGroupPolicy)||($.eventName=DeleteRolePolicy)||($.eventName=DeleteUserPolicy)||($.eventName=PutGroupPolicy)||($.eventName=PutRolePolicy)||($.eventName=PutUserPolicy)||($.eventName=CreatePolicy)||($.eventName=DeletePolicy)||($.eventName=CreatePolicyVersion)||($.eventName=DeletePolicyVersion)||($.eventName=AttachRolePolicy)||($.eventName=DetachRolePolicy)||($.eventName=AttachUserPolicy)||($.eventName=DetachUserPolicy)||($.eventName=AttachGroupPolicy)||($.eventName=DetachGroupPolicy)}',
+                metricTransformation: {
+                    name: metricName,
+                    namespace: namespace,
+                    value: "1",
+                    defaultValue: "0"
                 }
-            }),
-            tags: {
-                ...this.config.generalTags,
-                Name: `${this.config.generalPrefix}-network-acl-changes`
             }
-        });
+        );
 
-        const lambdaTarget = new aws.cloudwatch.EventTarget(`${this.config.project}-alarms-admin-nacl-lambda-target`, {
-            rule: rule.name,
-            arn: lambdaFunction.arn,
-            inputTransformer: {
-                inputPaths: {
-                    eventName: "$.detail.eventName",
-                    userName: "$.detail.userIdentity.principalId",
-                    region: "$.region",
-                    time: "$.time",
-                    accountId: "$.account"
-                },
-                inputTemplate: `{"type":"alarm-admin","title":"Network ACL Change","event":"<eventName>","user":"<userName>","account":"<accountId>","stack":"${this.config.stack}","region":"<region>","time":"<time>"}`
-            }
-        });
+        const alarm = new aws.cloudwatch.MetricAlarm(
+            `${this.config.project}-cis-iam-policy-changes-alarm`,
+            {
+                name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/IAMPolicyChanges`),
+                comparisonOperator: "GreaterThanOrEqualToThreshold",
+                evaluationPeriods: 1,
+                metricName: metricName,
+                namespace: namespace,
+                period: 300,
+                statistic: "Sum",
+                threshold: 1,
+                alarmDescription: "CIS 3.4 - Monitors IAM policy changes",
+                alarmActions: [snsTopicArn],
+                treatMissingData: "notBreaching",
+                tags: {
+                    ...this.config.generalTags,
+                    CIS: "3.4",
+                    service_name: "alarm-admin",
+                    Name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/IAMPolicyChanges`)
+                }
+            },
+            {dependsOn: [metricFilter]}
+        );
 
-        const logTarget = new aws.cloudwatch.EventTarget(`${this.config.project}-alarms-admin-nacl-log-target`, {
-            rule: rule.name,
-            arn: logGroup.arn
-        });
-
-        return {rule, targets: [lambdaTarget, logTarget]};
+        return {metricFilter, alarm};
     }
 
     /**
-     * Create EventBridge rule for Internet Gateway changes
+     * CIS 3.5 - Monitor CloudTrail configuration changes
      */
-    private createInternetGatewayChangeRule(lambdaFunction: aws.lambda.Function, logGroup: aws.cloudwatch.LogGroup): {
-        rule: aws.cloudwatch.EventRule;
-        targets: aws.cloudwatch.EventTarget[]
-    } {
-        const rule = new aws.cloudwatch.EventRule(`${this.config.project}-alarms-admin-igw-changes`, {
-            name: `${this.config.generalPrefix}-alarm-internet-gateway-changes`,
-            description: "Capture Internet Gateway configuration changes",
-            eventPattern: JSON.stringify({
-                source: ["aws.ec2"],
-                "detail-type": ["AWS API Call via CloudTrail"],
-                detail: {
-                    eventSource: ["ec2.amazonaws.com"],
-                    eventName: [
-                        "CreateInternetGateway",
-                        "DeleteInternetGateway",
-                        "AttachInternetGateway",
-                        "DetachInternetGateway"
-                    ]
+    private createCloudTrailChangesMetric(
+        logGroupName: pulumi.Input<string>,
+        snsTopicArn: pulumi.Input<string>,
+        namespace: string
+    ): { metricFilter: aws.cloudwatch.LogMetricFilter; alarm: aws.cloudwatch.MetricAlarm } {
+        const metricName = "CloudTrailConfigChanges";
+
+        const metricFilter = new aws.cloudwatch.LogMetricFilter(
+            `${this.config.project}-cis-cloudtrail-changes-filter`,
+            {
+                name: `${this.config.generalPrefix}-CloudTrailConfigChanges`,
+                logGroupName: logGroupName,
+                pattern: '{ ($.eventName = CreateTrail) || ($.eventName = UpdateTrail) || ($.eventName = DeleteTrail) || ($.eventName = StartLogging) || ($.eventName = StopLogging) }',
+                metricTransformation: {
+                    name: metricName,
+                    namespace: namespace,
+                    value: "1",
+                    defaultValue: "0"
                 }
-            }),
-            tags: {
-                ...this.config.generalTags,
-                Name: `${this.config.generalPrefix}-internet-gateway-changes`
             }
-        });
+        );
 
-        const lambdaTarget = new aws.cloudwatch.EventTarget(`${this.config.project}-alarms-admin-igw-lambda-target`, {
-            rule: rule.name,
-            arn: lambdaFunction.arn,
-            inputTransformer: {
-                inputPaths: {
-                    eventName: "$.detail.eventName",
-                    userName: "$.detail.userIdentity.principalId",
-                    region: "$.region",
-                    time: "$.time",
-                    accountId: "$.account"
-                },
-                inputTemplate: `{"type":"alarm-admin","title":"Internet Gateway Change","event":"<eventName>","user":"<userName>","account":"<accountId>","stack":"${this.config.stack}","region":"<region>","time":"<time>"}`
-            }
-        });
+        const alarm = new aws.cloudwatch.MetricAlarm(
+            `${this.config.project}-cis-cloudtrail-changes-alarm`,
+            {
+                name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/CloudTrailConfigChanges`),
+                comparisonOperator: "GreaterThanOrEqualToThreshold",
+                evaluationPeriods: 1,
+                metricName: metricName,
+                namespace: namespace,
+                period: 300,
+                statistic: "Sum",
+                threshold: 1,
+                alarmDescription: "CIS 3.5 - Monitors CloudTrail configuration changes",
+                alarmActions: [snsTopicArn],
+                treatMissingData: "notBreaching",
+                tags: {
+                    ...this.config.generalTags,
+                    CIS: "3.5",
+                    service_name: "alarm-admin",
+                    Name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/CloudTrailConfigChanges`)
+                }
+            },
+            {dependsOn: [metricFilter]}
+        );
 
-        const logTarget = new aws.cloudwatch.EventTarget(`${this.config.project}-alarms-admin-igw-log-target`, {
-            rule: rule.name,
-            arn: logGroup.arn
-        });
-
-        return {rule, targets: [lambdaTarget, logTarget]};
+        return {metricFilter, alarm};
     }
 
     /**
-     * Create EventBridge rule for Network Gateway changes (NAT, VPN, Customer Gateway, etc)
+     * CIS 3.6 - Monitor console authentication failures
      */
-    private createNetworkGatewayChangeRule(lambdaFunction: aws.lambda.Function, logGroup: aws.cloudwatch.LogGroup): {
-        rule: aws.cloudwatch.EventRule;
-        targets: aws.cloudwatch.EventTarget[]
-    } {
-        const rule = new aws.cloudwatch.EventRule(`${this.config.project}-alarms-admin-ngw-changes`, {
-            name: `${this.config.generalPrefix}-alarm-network-gateway-changes`,
-            description: "Capture Network Gateway (NAT, VPN, CGW) creation, modification and deletion",
-            eventPattern: JSON.stringify({
-                source: ["aws.ec2"],
-                "detail-type": ["AWS API Call via CloudTrail"],
-                detail: {
-                    eventSource: ["ec2.amazonaws.com"],
-                    eventName: [
-                        // NAT Gateway
-                        "CreateNatGateway",
-                        "DeleteNatGateway",
-                        // VPN Gateway
-                        "CreateVpnGateway",
-                        "DeleteVpnGateway",
-                        "AttachVpnGateway",
-                        "DetachVpnGateway",
-                        // Customer Gateway
-                        "CreateCustomerGateway",
-                        "DeleteCustomerGateway",
-                        // VPN Connection
-                        "CreateVpnConnection",
-                        "DeleteVpnConnection",
-                        "ModifyVpnConnection",
-                        "ModifyVpnConnectionOptions",
-                        "ModifyVpnTunnelOptions",
-                        // Transit Gateway
-                        "CreateTransitGateway",
-                        "DeleteTransitGateway",
-                        "ModifyTransitGateway",
-                        "CreateTransitGatewayVpcAttachment",
-                        "DeleteTransitGatewayVpcAttachment",
-                        "ModifyTransitGatewayVpcAttachment"
-                    ]
+    private createConsoleAuthenticationFailuresMetric(
+        logGroupName: pulumi.Input<string>,
+        snsTopicArn: pulumi.Input<string>,
+        namespace: string
+    ): { metricFilter: aws.cloudwatch.LogMetricFilter; alarm: aws.cloudwatch.MetricAlarm } {
+        const metricName = "ConsoleAuthenticationFailures";
+
+        const metricFilter = new aws.cloudwatch.LogMetricFilter(
+            `${this.config.project}-cis-console-auth-failures-filter`,
+            {
+                name: `${this.config.generalPrefix}-ConsoleAuthenticationFailures`,
+                logGroupName: logGroupName,
+                pattern: '{ ($.eventName = ConsoleLogin) && ($.errorMessage = "Failed authentication") }',
+                metricTransformation: {
+                    name: metricName,
+                    namespace: namespace,
+                    value: "1",
+                    defaultValue: "0"
                 }
-            }),
-            tags: {
-                ...this.config.generalTags,
-                Name: `${this.config.generalPrefix}-network-gateway-changes`
             }
-        });
+        );
 
-        const lambdaTarget = new aws.cloudwatch.EventTarget(`${this.config.project}-alarms-admin-ngw-lambda-target`, {
-            rule: rule.name,
-            arn: lambdaFunction.arn,
-            inputTransformer: {
-                inputPaths: {
-                    eventName: "$.detail.eventName",
-                    userName: "$.detail.userIdentity.principalId",
-                    region: "$.region",
-                    time: "$.time",
-                    accountId: "$.account"
-                },
-                inputTemplate: `{"type":"alarm-admin","title":"Network Gateway Change","event":"<eventName>","user":"<userName>","account":"<accountId>","stack":"${this.config.stack}","region":"<region>","time":"<time>"}`
-            }
-        });
+        const alarm = new aws.cloudwatch.MetricAlarm(
+            `${this.config.project}-cis-console-auth-failures-alarm`,
+            {
+                name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/ConsoleAuthenticationFailures`),
+                comparisonOperator: "GreaterThanOrEqualToThreshold",
+                evaluationPeriods: 1,
+                metricName: metricName,
+                namespace: namespace,
+                period: 300,
+                statistic: "Sum",
+                threshold: 3,
+                alarmDescription: "CIS 3.6 - Monitors console authentication failures",
+                alarmActions: [snsTopicArn],
+                treatMissingData: "notBreaching",
+                tags: {
+                    ...this.config.generalTags,
+                    CIS: "3.6",
+                    service_name: "alarm-admin",
+                    Name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/ConsoleAuthenticationFailures`)
+                }
+            },
+            {dependsOn: [metricFilter]}
+        );
 
-        const logTarget = new aws.cloudwatch.EventTarget(`${this.config.project}-alarms-admin-ngw-log-target`, {
-            rule: rule.name,
-            arn: logGroup.arn
-        });
-
-        return {rule, targets: [lambdaTarget, logTarget]};
+        return {metricFilter, alarm};
     }
 
     /**
-     * Create EventBridge rule for AWS Config changes
+     * CIS 3.7 - Monitor disabling or scheduled deletion of KMS keys
      */
-    private createAwsConfigChangeRule(lambdaFunction: aws.lambda.Function, logGroup: aws.cloudwatch.LogGroup): {
-        rule: aws.cloudwatch.EventRule;
-        targets: aws.cloudwatch.EventTarget[]
-    } {
-        const rule = new aws.cloudwatch.EventRule(`${this.config.project}-alarms-admin-config-changes`, {
-            name: `${this.config.generalPrefix}-alarm-aws-config-changes`,
-            description: "Capture critical AWS Config changes",
-            eventPattern: JSON.stringify({
-                source: ["aws.config"],
-                "detail-type": ["AWS API Call via CloudTrail"],
-                detail: {
-                    eventSource: ["config.amazonaws.com"],
-                    eventName: [
-                        "StopConfigurationRecorder",
-                        "DeleteDeliveryChannel",
-                        "PutConfigurationRecorder",
-                        "PutDeliveryChannel",
-                        "DeleteConfigurationRecorder"
-                    ]
+    private createDisableOrDeleteKmsMetric(
+        logGroupName: pulumi.Input<string>,
+        snsTopicArn: pulumi.Input<string>,
+        namespace: string
+    ): { metricFilter: aws.cloudwatch.LogMetricFilter; alarm: aws.cloudwatch.MetricAlarm } {
+        const metricName = "DisableOrDeleteKMSKeys";
+
+        const metricFilter = new aws.cloudwatch.LogMetricFilter(
+            `${this.config.project}-cis-disable-delete-kms-filter`,
+            {
+                name: `${this.config.generalPrefix}-DisableOrDeleteKMSKeys`,
+                logGroupName: logGroupName,
+                pattern: '{ ($.eventSource = kms.amazonaws.com) && (($.eventName = DisableKey) || ($.eventName = ScheduleKeyDeletion)) }',
+                metricTransformation: {
+                    name: metricName,
+                    namespace: namespace,
+                    value: "1",
+                    defaultValue: "0"
                 }
-            }),
-            tags: {
-                ...this.config.generalTags,
-                Name: `${this.config.generalPrefix}-aws-config-changes`
             }
-        });
+        );
 
-        const lambdaTarget = new aws.cloudwatch.EventTarget(`${this.config.project}-alarms-admin-config-lambda-target`, {
-            rule: rule.name,
-            arn: lambdaFunction.arn,
-            inputTransformer: {
-                inputPaths: {
-                    eventName: "$.detail.eventName",
-                    userName: "$.detail.userIdentity.principalId",
-                    region: "$.region",
-                    time: "$.time",
-                    accountId: "$.account"
-                },
-                inputTemplate: `{"type":"alarm-admin","title":"AWS Config Change","event":"<eventName>","user":"<userName>","account":"<accountId>","stack":"${this.config.stack}","region":"<region>","time":"<time>"}`
-            }
-        });
+        const alarm = new aws.cloudwatch.MetricAlarm(
+            `${this.config.project}-cis-disable-delete-kms-alarm`,
+            {
+                name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/DisableOrDeleteKMSKeys`),
+                comparisonOperator: "GreaterThanOrEqualToThreshold",
+                evaluationPeriods: 1,
+                metricName: metricName,
+                namespace: namespace,
+                period: 300,
+                statistic: "Sum",
+                threshold: 1,
+                alarmDescription: "CIS 3.7 - Monitors disabling or deletion of KMS keys",
+                alarmActions: [snsTopicArn],
+                treatMissingData: "notBreaching",
+                tags: {
+                    ...this.config.generalTags,
+                    CIS: "3.7",
+                    service_name: "alarm-admin",
+                    Name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/DisableOrDeleteKMSKeys`)
+                }
+            },
+            {dependsOn: [metricFilter]}
+        );
 
-        const logTarget = new aws.cloudwatch.EventTarget(`${this.config.project}-alarms-admin-config-log-target`, {
-            rule: rule.name,
-            arn: logGroup.arn
-        });
-
-        return {rule, targets: [lambdaTarget, logTarget]};
+        return {metricFilter, alarm};
     }
 
     /**
-     * Create EventBridge rule for CloudTrail changes
+     * CIS 3.8 - Monitor S3 bucket policy changes
      */
-    private createCloudTrailChangeRule(lambdaFunction: aws.lambda.Function, logGroup: aws.cloudwatch.LogGroup): {
-        rule: aws.cloudwatch.EventRule;
-        targets: aws.cloudwatch.EventTarget[]
-    } {
-        const rule = new aws.cloudwatch.EventRule(`${this.config.project}-alarms-admin-cloudtrail-changes`, {
-            name: `${this.config.generalPrefix}-alarm-cloudtrail-changes`,
-            description: "Capture critical CloudTrail changes",
-            eventPattern: JSON.stringify({
-                source: ["aws.cloudtrail"],
-                "detail-type": ["AWS API Call via CloudTrail"],
-                detail: {
-                    eventSource: ["cloudtrail.amazonaws.com"],
-                    eventName: [
-                        "StopLogging",
-                        "DeleteTrail",
-                        "UpdateTrail",
-                        "PutEventSelectors",
-                        "RemoveTags",
-                        "AddTags"
-                    ]
+    private createS3BucketPolicyChangesMetric(
+        logGroupName: pulumi.Input<string>,
+        snsTopicArn: pulumi.Input<string>,
+        namespace: string
+    ): { metricFilter: aws.cloudwatch.LogMetricFilter; alarm: aws.cloudwatch.MetricAlarm } {
+        const metricName = "S3BucketPolicyChanges";
+
+        const metricFilter = new aws.cloudwatch.LogMetricFilter(
+            `${this.config.project}-cis-s3-bucket-policy-changes-filter`,
+            {
+                name: `${this.config.generalPrefix}-S3BucketPolicyChanges`,
+                logGroupName: logGroupName,
+                pattern: '{ ($.eventSource = s3.amazonaws.com) && (($.eventName = PutBucketAcl) || ($.eventName = PutBucketPolicy) || ($.eventName = PutBucketCors) || ($.eventName = PutBucketLifecycle) || ($.eventName = PutBucketReplication) || ($.eventName = DeleteBucketPolicy) || ($.eventName = DeleteBucketCors) || ($.eventName = DeleteBucketLifecycle) || ($.eventName = DeleteBucketReplication)) }',
+                metricTransformation: {
+                    name: metricName,
+                    namespace: namespace,
+                    value: "1",
+                    defaultValue: "0"
                 }
-            }),
-            tags: {
-                ...this.config.generalTags,
-                Name: `${this.config.generalPrefix}-cloudtrail-changes`
             }
-        });
+        );
 
-        const lambdaTarget = new aws.cloudwatch.EventTarget(`${this.config.project}-alarms-admin-cloudtrail-lambda-target`, {
-            rule: rule.name,
-            arn: lambdaFunction.arn,
-            inputTransformer: {
-                inputPaths: {
-                    eventName: "$.detail.eventName",
-                    userName: "$.detail.userIdentity.principalId",
-                    region: "$.region",
-                    time: "$.time",
-                    accountId: "$.account"
-                },
-                inputTemplate: `{"type":"alarm-admin","title":"CloudTrail Change","event":"<eventName>","user":"<userName>","account":"<accountId>","stack":"${this.config.stack}","region":"<region>","time":"<time>"}`
-            }
-        });
+        const alarm = new aws.cloudwatch.MetricAlarm(
+            `${this.config.project}-cis-s3-bucket-policy-changes-alarm`,
+            {
+                name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/S3BucketPolicyChanges`),
+                comparisonOperator: "GreaterThanOrEqualToThreshold",
+                evaluationPeriods: 1,
+                metricName: metricName,
+                namespace: namespace,
+                period: 300,
+                statistic: "Sum",
+                threshold: 1,
+                alarmDescription: "CIS 3.8 - Monitors S3 bucket policy changes",
+                alarmActions: [snsTopicArn],
+                treatMissingData: "notBreaching",
+                tags: {
+                    ...this.config.generalTags,
+                    CIS: "3.8",
+                    service_name: "alarm-admin",
+                    Name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/S3BucketPolicyChanges`)
+                }
+            },
+            {dependsOn: [metricFilter]}
+        );
 
-        const logTarget = new aws.cloudwatch.EventTarget(`${this.config.project}-alarms-admin-cloudtrail-log-target`, {
-            rule: rule.name,
-            arn: logGroup.arn
-        });
-
-        return {rule, targets: [lambdaTarget, logTarget]};
+        return {metricFilter, alarm};
     }
 
     /**
-     * Create EventBridge rule for KMS changes
+     * CIS 3.9 - Monitor AWS Config configuration changes
      */
-    private createKmsChangeRule(lambdaFunction: aws.lambda.Function, logGroup: aws.cloudwatch.LogGroup): {
-        rule: aws.cloudwatch.EventRule;
-        targets: aws.cloudwatch.EventTarget[]
-    } {
-        const rule = new aws.cloudwatch.EventRule(`${this.config.project}-alarms-admin-kms-changes`, {
-            name: `${this.config.generalPrefix}-alarm-kms-changes`,
-            description: "Capture critical KMS key changes",
-            eventPattern: JSON.stringify({
-                source: ["aws.kms"],
-                "detail-type": ["AWS API Call via CloudTrail"],
-                detail: {
-                    eventSource: ["kms.amazonaws.com"],
-                    eventName: [
-                        "DisableKey",
-                        "ScheduleKeyDeletion",
-                        "CancelKeyDeletion",
-                        "DeleteAlias",
-                        "DeleteImportedKeyMaterial",
-                        "PutKeyPolicy"
-                    ]
+    private createAwsConfigChangesMetric(
+        logGroupName: pulumi.Input<string>,
+        snsTopicArn: pulumi.Input<string>,
+        namespace: string
+    ): { metricFilter: aws.cloudwatch.LogMetricFilter; alarm: aws.cloudwatch.MetricAlarm } {
+        const metricName = "AWSConfigChanges";
+
+        const metricFilter = new aws.cloudwatch.LogMetricFilter(
+            `${this.config.project}-cis-aws-config-changes-filter`,
+            {
+                name: `${this.config.generalPrefix}-AWSConfigChanges`,
+                logGroupName: logGroupName,
+                pattern: '{ ($.eventSource = config.amazonaws.com) && (($.eventName = StopConfigurationRecorder) || ($.eventName = DeleteDeliveryChannel) || ($.eventName = PutDeliveryChannel) || ($.eventName = PutConfigurationRecorder)) }',
+                metricTransformation: {
+                    name: metricName,
+                    namespace: namespace,
+                    value: "1",
+                    defaultValue: "0"
                 }
-            }),
-            tags: {
-                ...this.config.generalTags,
-                Name: `${this.config.generalPrefix}-kms-changes`
             }
-        });
+        );
 
-        const lambdaTarget = new aws.cloudwatch.EventTarget(`${this.config.project}-alarms-admin-kms-lambda-target`, {
-            rule: rule.name,
-            arn: lambdaFunction.arn,
-            inputTransformer: {
-                inputPaths: {
-                    eventName: "$.detail.eventName",
-                    userName: "$.detail.userIdentity.principalId",
-                    region: "$.region",
-                    time: "$.time",
-                    accountId: "$.account"
-                },
-                inputTemplate: `{"type":"alarm-admin","title":"KMS Change","event":"<eventName>","user":"<userName>","account":"<accountId>","stack":"${this.config.stack}","region":"<region>","time":"<time>"}`
-            }
-        });
+        const alarm = new aws.cloudwatch.MetricAlarm(
+            `${this.config.project}-cis-aws-config-changes-alarm`,
+            {
+                name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/AWSConfigChanges`),
+                comparisonOperator: "GreaterThanOrEqualToThreshold",
+                evaluationPeriods: 1,
+                metricName: metricName,
+                namespace: namespace,
+                period: 300,
+                statistic: "Sum",
+                threshold: 1,
+                alarmDescription: "CIS 3.9 - Monitors AWS Config configuration changes",
+                alarmActions: [snsTopicArn],
+                treatMissingData: "notBreaching",
+                tags: {
+                    ...this.config.generalTags,
+                    CIS: "3.9",
+                    service_name: "alarm-admin",
+                    Name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/AWSConfigChanges`)
+                }
+            },
+            {dependsOn: [metricFilter]}
+        );
 
-        const logTarget = new aws.cloudwatch.EventTarget(`${this.config.project}-alarms-admin-kms-log-target`, {
-            rule: rule.name,
-            arn: logGroup.arn
-        });
-
-        return {rule, targets: [lambdaTarget, logTarget]};
+        return {metricFilter, alarm};
     }
 
     /**
-     * Create EventBridge rule for S3 changes
+     * CIS 3.10 - Monitor security group changes
      */
-    private createS3ChangeRule(lambdaFunction: aws.lambda.Function, logGroup: aws.cloudwatch.LogGroup): {
-        rule: aws.cloudwatch.EventRule;
-        targets: aws.cloudwatch.EventTarget[]
-    } {
-        const rule = new aws.cloudwatch.EventRule(`${this.config.project}-alarms-admin-s3-changes`, {
-            name: `${this.config.generalPrefix}-alarm-s3-changes`,
-            description: "Capture critical S3 bucket policy changes",
-            eventPattern: JSON.stringify({
-                source: ["aws.s3"],
-                "detail-type": ["AWS API Call via CloudTrail"],
-                detail: {
-                    eventSource: ["s3.amazonaws.com"],
-                    eventName: [
-                        "PutBucketPolicy",
-                        "DeleteBucketPolicy",
-                        "PutBucketAcl",
-                        "PutBucketPublicAccessBlock",
-                        "DeleteBucketPublicAccessBlock"
-                    ]
+    private createSecurityGroupChangesMetric(
+        logGroupName: pulumi.Input<string>,
+        snsTopicArn: pulumi.Input<string>,
+        namespace: string
+    ): { metricFilter: aws.cloudwatch.LogMetricFilter; alarm: aws.cloudwatch.MetricAlarm } {
+        const metricName = "SecurityGroupChanges";
+
+        const metricFilter = new aws.cloudwatch.LogMetricFilter(
+            `${this.config.project}-cis-security-group-changes-filter`,
+            {
+                name: `${this.config.generalPrefix}-SecurityGroupChanges`,
+                logGroupName: logGroupName,
+                pattern: '{ ($.eventName = AuthorizeSecurityGroupIngress) || ($.eventName = AuthorizeSecurityGroupEgress) || ($.eventName = RevokeSecurityGroupIngress) || ($.eventName = RevokeSecurityGroupEgress) || ($.eventName = CreateSecurityGroup) || ($.eventName = DeleteSecurityGroup) }',
+                metricTransformation: {
+                    name: metricName,
+                    namespace: namespace,
+                    value: "1",
+                    defaultValue: "0"
                 }
-            }),
-            tags: {
-                ...this.config.generalTags,
-                Name: `${this.config.generalPrefix}-s3-changes`
             }
-        });
+        );
 
-        const lambdaTarget = new aws.cloudwatch.EventTarget(`${this.config.project}-alarms-admin-s3-lambda-target`, {
-            rule: rule.name,
-            arn: lambdaFunction.arn,
-            inputTransformer: {
-                inputPaths: {
-                    eventName: "$.detail.eventName",
-                    userName: "$.detail.userIdentity.principalId",
-                    bucketName: "$.detail.requestParameters.bucketName",
-                    region: "$.region",
-                    time: "$.time",
-                    accountId: "$.account"
-                },
-                inputTemplate: `{"type":"alarm-admin","title":"S3 Change","event":"<eventName>","user":"<userName>","account":"<accountId>","stack":"${this.config.stack}","region":"<region>","time":"<time>","bucket":"<bucketName>"}`
-            }
-        });
+        const alarm = new aws.cloudwatch.MetricAlarm(
+            `${this.config.project}-cis-security-group-changes-alarm`,
+            {
+                name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/SecurityGroupChanges`),
+                comparisonOperator: "GreaterThanOrEqualToThreshold",
+                evaluationPeriods: 1,
+                metricName: metricName,
+                namespace: namespace,
+                period: 300,
+                statistic: "Sum",
+                threshold: 1,
+                alarmDescription: "CIS 3.10 - Monitors security group changes",
+                alarmActions: [snsTopicArn],
+                treatMissingData: "notBreaching",
+                tags: {
+                    ...this.config.generalTags,
+                    CIS: "3.10",
+                    service_name: "alarm-admin",
+                    Name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/SecurityGroupChanges`)
+                }
+            },
+            {dependsOn: [metricFilter]}
+        );
 
-        const logTarget = new aws.cloudwatch.EventTarget(`${this.config.project}-alarms-admin-s3-log-target`, {
-            rule: rule.name,
-            arn: logGroup.arn
-        });
-
-        return {rule, targets: [lambdaTarget, logTarget]};
+        return {metricFilter, alarm};
     }
 
     /**
-     * Create EventBridge rule for IAM changes
+     * CIS 3.11 - Monitor Network ACL changes
      */
-    private createIamChangeRule(lambdaFunction: aws.lambda.Function, logGroup: aws.cloudwatch.LogGroup): {
-        rule: aws.cloudwatch.EventRule;
-        targets: aws.cloudwatch.EventTarget[]
-    } {
-        const rule = new aws.cloudwatch.EventRule(`${this.config.project}-alarms-admin-iam-changes`, {
-            name: `${this.config.generalPrefix}-alarm-iam-changes`,
-            description: "Capture critical IAM policy and permission changes",
-            eventPattern: JSON.stringify({
-                source: ["aws.iam"],
-                "detail-type": ["AWS API Call via CloudTrail"],
-                detail: {
-                    eventSource: ["iam.amazonaws.com"],
-                    eventName: [
-                        "CreatePolicy",
-                        "DeletePolicy",
-                        "CreatePolicyVersion",
-                        "DeletePolicyVersion",
-                        "SetDefaultPolicyVersion",
-                        "AttachRolePolicy",
-                        "DetachRolePolicy",
-                        "AttachUserPolicy",
-                        "DetachUserPolicy",
-                        "AttachGroupPolicy",
-                        "DetachGroupPolicy",
-                        "PutRolePolicy",
-                        "PutUserPolicy",
-                        "PutGroupPolicy"
-                    ]
+    private createNetworkAclChangesMetric(
+        logGroupName: pulumi.Input<string>,
+        snsTopicArn: pulumi.Input<string>,
+        namespace: string
+    ): { metricFilter: aws.cloudwatch.LogMetricFilter; alarm: aws.cloudwatch.MetricAlarm } {
+        const metricName = "NetworkACLChanges";
+
+        const metricFilter = new aws.cloudwatch.LogMetricFilter(
+            `${this.config.project}-cis-network-acl-changes-filter`,
+            {
+                name: `${this.config.generalPrefix}-NetworkACLChanges`,
+                logGroupName: logGroupName,
+                pattern: '{ ($.eventName = CreateNetworkAcl) || ($.eventName = CreateNetworkAclEntry) || ($.eventName = DeleteNetworkAcl) || ($.eventName = DeleteNetworkAclEntry) || ($.eventName = ReplaceNetworkAclEntry) || ($.eventName = ReplaceNetworkAclAssociation) }',
+                metricTransformation: {
+                    name: metricName,
+                    namespace: namespace,
+                    value: "1",
+                    defaultValue: "0"
                 }
-            }),
-            tags: {
-                ...this.config.generalTags,
-                Name: `${this.config.generalPrefix}-iam-changes`
             }
-        });
+        );
 
-        const lambdaTarget = new aws.cloudwatch.EventTarget(`${this.config.project}-alarms-admin-iam-lambda-target`, {
-            rule: rule.name,
-            arn: lambdaFunction.arn,
-            inputTransformer: {
-                inputPaths: {
-                    eventName: "$.detail.eventName",
-                    userName: "$.detail.userIdentity.principalId",
-                    region: "$.region",
-                    time: "$.time",
-                    accountId: "$.account"
-                },
-                inputTemplate: `{"type":"alarm-admin","title":"IAM Change","event":"<eventName>","user":"<userName>","account":"<accountId>","stack":"${this.config.stack}","region":"<region>","time":"<time>"}`
-            }
-        });
+        const alarm = new aws.cloudwatch.MetricAlarm(
+            `${this.config.project}-cis-network-acl-changes-alarm`,
+            {
+                name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/NetworkACLChanges`),
+                comparisonOperator: "GreaterThanOrEqualToThreshold",
+                evaluationPeriods: 1,
+                metricName: metricName,
+                namespace: namespace,
+                period: 300,
+                statistic: "Sum",
+                threshold: 1,
+                alarmDescription: "CIS 3.11 - Monitors Network ACL changes",
+                alarmActions: [snsTopicArn],
+                treatMissingData: "notBreaching",
+                tags: {
+                    ...this.config.generalTags,
+                    CIS: "3.11",
+                    service_name: "alarm-admin",
+                    Name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/NetworkACLChanges`)
+                }
+            },
+            {dependsOn: [metricFilter]}
+        );
 
-        const logTarget = new aws.cloudwatch.EventTarget(`${this.config.project}-alarms-admin-iam-log-target`, {
-            rule: rule.name,
-            arn: logGroup.arn
-        });
-
-        return {rule, targets: [lambdaTarget, logTarget]};
+        return {metricFilter, alarm};
     }
 
     /**
-     * Create EventBridge rule for Console Login Failures
+     * CIS 3.12 - Monitor network gateway changes
      */
-    private createConsoleLoginFailureRule(lambdaFunction: aws.lambda.Function, logGroup: aws.cloudwatch.LogGroup): {
-        rule: aws.cloudwatch.EventRule;
-        targets: aws.cloudwatch.EventTarget[]
-    } {
-        const rule = new aws.cloudwatch.EventRule(`${this.config.project}-alarms-admin-console-login-failures`, {
-            name: `${this.config.generalPrefix}-alarm-console-login-failures`,
-            description: "Capture failed AWS Console login attempts",
-            eventPattern: JSON.stringify({
-                source: ["aws.signin"],
-                "detail-type": ["AWS Console Sign In via CloudTrail"],
-                detail: {
-                    eventName: ["ConsoleLogin"],
-                    responseElements: {
-                        ConsoleLogin: ["Failure"]
-                    }
+    private createNetworkGatewayChangesMetric(
+        logGroupName: pulumi.Input<string>,
+        snsTopicArn: pulumi.Input<string>,
+        namespace: string
+    ): { metricFilter: aws.cloudwatch.LogMetricFilter; alarm: aws.cloudwatch.MetricAlarm } {
+        const metricName = "NetworkGatewayChanges";
+
+        const metricFilter = new aws.cloudwatch.LogMetricFilter(
+            `${this.config.project}-cis-network-gateway-changes-filter`,
+            {
+                name: `${this.config.generalPrefix}-NetworkGatewayChanges`,
+                logGroupName: logGroupName,
+                pattern: '{ ($.eventName = CreateCustomerGateway) || ($.eventName = DeleteCustomerGateway) || ($.eventName = AttachInternetGateway) || ($.eventName = CreateInternetGateway) || ($.eventName = DeleteInternetGateway) || ($.eventName = DetachInternetGateway) }',
+                metricTransformation: {
+                    name: metricName,
+                    namespace: namespace,
+                    value: "1",
+                    defaultValue: "0"
                 }
-            }),
-            tags: {
-                ...this.config.generalTags,
-                Name: `${this.config.generalPrefix}-console-login-failures`
             }
-        });
+        );
 
-        const lambdaTarget = new aws.cloudwatch.EventTarget(`${this.config.project}-alarms-admin-login-fail-lambda-target`, {
-            rule: rule.name,
-            arn: lambdaFunction.arn,
-            inputTransformer: {
-                inputPaths: {
-                    userName: "$.detail.userIdentity.principalId",
-                    sourceIp: "$.detail.sourceIPAddress",
-                    userAgent: "$.detail.userAgent",
-                    region: "$.region",
-                    time: "$.time",
-                    accountId: "$.account"
-                },
-                inputTemplate: `{"type":"alarm-admin","title":"Console Login Failure","event":"ConsoleLogin","user":"<userName>","account":"<accountId>","stack":"${this.config.stack}","region":"<region>","time":"<time>","sourceIp":"<sourceIp>","userAgent":"<userAgent>"}`
-            }
-        });
+        const alarm = new aws.cloudwatch.MetricAlarm(
+            `${this.config.project}-cis-network-gateway-changes-alarm`,
+            {
+                name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/NetworkGatewayChanges`),
+                comparisonOperator: "GreaterThanOrEqualToThreshold",
+                evaluationPeriods: 1,
+                metricName: metricName,
+                namespace: namespace,
+                period: 300,
+                statistic: "Sum",
+                threshold: 1,
+                alarmDescription: "CIS 3.12 - Monitors network gateway changes",
+                alarmActions: [snsTopicArn],
+                treatMissingData: "notBreaching",
+                tags: {
+                    ...this.config.generalTags,
+                    CIS: "3.12",
+                    service_name: "alarm-admin",
+                    Name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/NetworkGatewayChanges`)
+                }
+            },
+            {dependsOn: [metricFilter]}
+        );
 
-        const logTarget = new aws.cloudwatch.EventTarget(`${this.config.project}-alarms-admin-login-fail-log-target`, {
-            rule: rule.name,
-            arn: logGroup.arn
-        });
-
-        return {rule, targets: [lambdaTarget, logTarget]};
+        return {metricFilter, alarm};
     }
 
     /**
-     * Create EventBridge rule for Root Account Access
+     * CIS 3.13 - Monitor route table changes
      */
-    private createRootAccountAccessRule(lambdaFunction: aws.lambda.Function, logGroup: aws.cloudwatch.LogGroup): {
-        rule: aws.cloudwatch.EventRule;
-        targets: aws.cloudwatch.EventTarget[]
-    } {
-        const rule = new aws.cloudwatch.EventRule(`${this.config.project}-alarms-admin-root-account-access`, {
-            name: `${this.config.generalPrefix}-alarm-root-account-access`,
-            description: "Capture any activity with AWS root account",
-            eventPattern: JSON.stringify({
-                source: ["aws.signin"],
-                "detail-type": ["AWS Console Sign In via CloudTrail"],
-                detail: {
-                    userIdentity: {
-                        type: ["Root"]
-                    }
+    private createRouteTableChangesMetric(
+        logGroupName: pulumi.Input<string>,
+        snsTopicArn: pulumi.Input<string>,
+        namespace: string
+    ): { metricFilter: aws.cloudwatch.LogMetricFilter; alarm: aws.cloudwatch.MetricAlarm } {
+        const metricName = "RouteTableChanges";
+
+        const metricFilter = new aws.cloudwatch.LogMetricFilter(
+            `${this.config.project}-cis-route-table-changes-filter`,
+            {
+                name: `${this.config.generalPrefix}-RouteTableChanges`,
+                logGroupName: logGroupName,
+                pattern: '{ ($.eventName = CreateRoute) || ($.eventName = CreateRouteTable) || ($.eventName = ReplaceRoute) || ($.eventName = ReplaceRouteTableAssociation) || ($.eventName = DeleteRouteTable) || ($.eventName = DeleteRoute) || ($.eventName = DisassociateRouteTable) }',
+                metricTransformation: {
+                    name: metricName,
+                    namespace: namespace,
+                    value: "1",
+                    defaultValue: "0"
                 }
-            }),
-            tags: {
-                ...this.config.generalTags,
-                Name: `${this.config.generalPrefix}-root-account-access`
             }
-        });
+        );
 
-        const lambdaTarget = new aws.cloudwatch.EventTarget(`${this.config.project}-alarms-admin-root-access-lambda-target`, {
-            rule: rule.name,
-            arn: lambdaFunction.arn,
-            inputTransformer: {
-                inputPaths: {
-                    eventName: "$.detail.eventName",
-                    sourceIp: "$.detail.sourceIPAddress",
-                    userAgent: "$.detail.userAgent",
-                    region: "$.region",
-                    time: "$.time",
-                    accountId: "$.account"
-                },
-                inputTemplate: `{"type":"alarm-admin","title":"Root Account Access","event":"<eventName>","user":"ROOT","account":"<accountId>","stack":"${this.config.stack}","region":"<region>","time":"<time>","sourceIp":"<sourceIp>","userAgent":"<userAgent>"}`
-            }
-        });
+        const alarm = new aws.cloudwatch.MetricAlarm(
+            `${this.config.project}-cis-route-table-changes-alarm`,
+            {
+                name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/RouteTableChanges`),
+                comparisonOperator: "GreaterThanOrEqualToThreshold",
+                evaluationPeriods: 1,
+                metricName: metricName,
+                namespace: namespace,
+                period: 300,
+                statistic: "Sum",
+                threshold: 1,
+                alarmDescription: "CIS 3.13 - Monitors route table changes",
+                alarmActions: [snsTopicArn],
+                treatMissingData: "notBreaching",
+                tags: {
+                    ...this.config.generalTags,
+                    CIS: "3.13",
+                    service_name: "alarm-admin",
+                    Name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/RouteTableChanges`)
+                }
+            },
+            {dependsOn: [metricFilter]}
+        );
 
-        const logTarget = new aws.cloudwatch.EventTarget(`${this.config.project}-alarms-admin-root-access-log-target`, {
-            rule: rule.name,
-            arn: logGroup.arn
-        });
-
-        return {rule, targets: [lambdaTarget, logTarget]};
+        return {metricFilter, alarm};
     }
 
     /**
-     * Create EventBridge rule for Access Without MFA
+     * CIS 3.14 - Monitor VPC changes
      */
-    private createAccessWithoutMfaRule(lambdaFunction: aws.lambda.Function, logGroup: aws.cloudwatch.LogGroup): {
-        rule: aws.cloudwatch.EventRule;
-        targets: aws.cloudwatch.EventTarget[]
-    } {
-        const rule = new aws.cloudwatch.EventRule(`${this.config.project}-alarms-admin-access-without-mfa`, {
-            name: `${this.config.generalPrefix}-alarm-access-without-mfa`,
-            description: "Capture console login attempts without MFA",
-            eventPattern: JSON.stringify({
-                source: ["aws.signin"],
-                "detail-type": ["AWS Console Sign In via CloudTrail"],
-                detail: {
-                    eventName: ["ConsoleLogin"],
-                    additionalEventData: {
-                        MFAUsed: ["No"]
-                    }
+    private createVpcChangesMetric(
+        logGroupName: pulumi.Input<string>,
+        snsTopicArn: pulumi.Input<string>,
+        namespace: string
+    ): { metricFilter: aws.cloudwatch.LogMetricFilter; alarm: aws.cloudwatch.MetricAlarm } {
+        const metricName = "VPCChanges";
+
+        const metricFilter = new aws.cloudwatch.LogMetricFilter(
+            `${this.config.project}-cis-vpc-changes-filter`,
+            {
+                name: `${this.config.generalPrefix}-VPCChanges`,
+                logGroupName: logGroupName,
+                pattern: '{ ($.eventName = CreateVpc) || ($.eventName = DeleteVpc) || ($.eventName = ModifyVpcAttribute) || ($.eventName = AcceptVpcPeeringConnection) || ($.eventName = CreateVpcPeeringConnection) || ($.eventName = DeleteVpcPeeringConnection) || ($.eventName = RejectVpcPeeringConnection) || ($.eventName = AttachClassicLinkVpc) || ($.eventName = DetachClassicLinkVpc) || ($.eventName = DisableVpcClassicLink) || ($.eventName = EnableVpcClassicLink) }',
+                metricTransformation: {
+                    name: metricName,
+                    namespace: namespace,
+                    value: "1",
+                    defaultValue: "0"
                 }
-            }),
-            tags: {
-                ...this.config.generalTags,
-                Name: `${this.config.generalPrefix}-access-without-mfa`
             }
-        });
+        );
 
-        const lambdaTarget = new aws.cloudwatch.EventTarget(`${this.config.project}-alarms-admin-no-mfa-lambda-target`, {
-            rule: rule.name,
-            arn: lambdaFunction.arn,
-            inputTransformer: {
-                inputPaths: {
-                    userName: "$.detail.userIdentity.principalId",
-                    sourceIp: "$.detail.sourceIPAddress",
-                    userAgent: "$.detail.userAgent",
-                    region: "$.region",
-                    time: "$.time",
-                    accountId: "$.account"
-                },
-                inputTemplate: `{"type":"alarm-admin","title":"Login Without MFA","event":"ConsoleLogin","user":"<userName>","account":"<accountId>","stack":"${this.config.stack}","region":"<region>","time":"<time>","sourceIp":"<sourceIp>","userAgent":"<userAgent>"}`
-            }
-        });
+        const alarm = new aws.cloudwatch.MetricAlarm(
+            `${this.config.project}-cis-vpc-changes-alarm`,
+            {
+                name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/VPCChanges`),
+                comparisonOperator: "GreaterThanOrEqualToThreshold",
+                evaluationPeriods: 1,
+                metricName: metricName,
+                namespace: namespace,
+                period: 300,
+                statistic: "Sum",
+                threshold: 1,
+                alarmDescription: "CIS 3.14 - Monitors VPC changes",
+                alarmActions: [snsTopicArn],
+                treatMissingData: "notBreaching",
+                tags: {
+                    ...this.config.generalTags,
+                    CIS: "3.14",
+                    service_name: "alarm-admin",
+                    Name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/VPCChanges`)
+                }
+            },
+            {dependsOn: [metricFilter]}
+        );
 
-        const logTarget = new aws.cloudwatch.EventTarget(`${this.config.project}-alarms-admin-no-mfa-log-target`, {
-            rule: rule.name,
-            arn: logGroup.arn
-        });
-
-        return {rule, targets: [lambdaTarget, logTarget]};
+        return {metricFilter, alarm};
     }
 }
 

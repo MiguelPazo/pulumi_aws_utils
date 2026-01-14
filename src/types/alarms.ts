@@ -87,7 +87,7 @@ export type AlarmsResult = {
     lambdaNotificationsSnsSubscription?: aws.sns.TopicSubscription;
 };
 
-export type AlarmsAdminConfig = {
+export type AlarmsAdminEBConfig = {
     snsArn: pulumi.Input<string>;
     kmsKey: pulumi.Output<aws.kms.Key>;
     lambdaFunction: aws.lambda.Function;
@@ -105,11 +105,38 @@ export type AlarmsAdminConfig = {
     monitorConsoleLoginFailures?: boolean;
     monitorRootAccountAccess?: boolean;
     monitorAccessWithoutMfa?: boolean;
+    monitorUnauthorizedAccess?: boolean;
 };
 
-export type AlarmsAdminResult = {
+export type AlarmsAdminEBResult = {
     logGroup: aws.cloudwatch.LogGroup;
     logGroupPolicy: aws.cloudwatch.LogResourcePolicy;
     eventRules: aws.cloudwatch.EventRule[];
     eventTargets: aws.cloudwatch.EventTarget[];
+};
+
+export type AlarmsAdminConfig = {
+    cloudTrailLogGroupName: pulumi.Input<string>;
+    snsTopicArn: pulumi.Input<string>;
+    alarmNamespace?: string; // Default: "CISBenchmark"
+    // All controls are enabled by default (true). Set to false to disable.
+    enableUnauthorizedApiCalls?: boolean; // Default: true
+    enableConsoleSignInWithoutMfa?: boolean; // Default: true
+    enableRootAccountUsage?: boolean; // Default: true
+    enableIamPolicyChanges?: boolean; // Default: true
+    enableCloudTrailChanges?: boolean; // Default: true
+    enableConsoleAuthenticationFailures?: boolean; // Default: true
+    enableDisableOrDeleteKms?: boolean; // Default: true
+    enableS3BucketPolicyChanges?: boolean; // Default: true
+    enableAwsConfigChanges?: boolean; // Default: true
+    enableSecurityGroupChanges?: boolean; // Default: true
+    enableNetworkAclChanges?: boolean; // Default: true
+    enableNetworkGatewayChanges?: boolean; // Default: true
+    enableRouteTableChanges?: boolean; // Default: true
+    enableVpcChanges?: boolean; // Default: true
+};
+
+export type AlarmsAdminResult = {
+    metricFilters: aws.cloudwatch.LogMetricFilter[];
+    alarms: aws.cloudwatch.MetricAlarm[];
 };

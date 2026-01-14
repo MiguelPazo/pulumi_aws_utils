@@ -257,3 +257,6 @@ bin/
 /*.sh
 /.claude
 
+# Lambda ZIP files
+src/resources/lambdas/**/*.zip
+
