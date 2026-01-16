@@ -5,7 +5,6 @@ import * as aws from "@pulumi/aws";
 import {InitConfig} from "../types/module";
 import {EcsClusterModuleConfig} from "../types";
 import {getInit} from "../config";
-import * as pulumi from "@pulumi/pulumi";
 
 class EcsCluster {
     private static __instance: EcsCluster;

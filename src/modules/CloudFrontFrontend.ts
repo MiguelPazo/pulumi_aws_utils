@@ -3,7 +3,7 @@
  */
 import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
-import {CertificatesResult, CloudFrontBaseResult} from "../types";
+import {CloudFrontFrontendModuleConfig} from "../types";
 import {UtilsInfra} from "../common/UtilsInfra";
 import {getInit} from "../config";
 import {InitConfig} from "../types/module";
@@ -24,15 +24,16 @@ class CloudFrontFrontend {
         return this.__instance;
     }
 
-    async main(
-        name: string,
-        aliasDns: string,
-        cfbase: pulumi.Output<CloudFrontBaseResult>,
-        s3Logs: pulumi.Output<aws.s3.Bucket>,
-        certificate: CertificatesResult,
-        waf: pulumi.Output<aws.wafv2.WebAcl>,
-        customErrorResponses?: aws.types.input.cloudfront.DistributionCustomErrorResponse[]
-    ): Promise<aws.cloudfront.Distribution> {
+    async main(config: CloudFrontFrontendModuleConfig): Promise<aws.cloudfront.Distribution> {
+        const {
+            name,
+            aliasDns,
+            cfbase,
+            s3Logs,
+            certificate,
+            waf,
+            customErrorResponses
+        } = config;
         // Create CloudFront distribution
         const cdn = new aws.cloudfront.Distribution(`${this.config.project}-${name}-cf`, {
             enabled: true,
@@ -50,16 +51,20 @@ class CloudFrontFrontend {
                 }
             ],
 
-            defaultCacheBehavior: {
+            defaultCacheBehavior: pulumi.output(cfbase).apply(base => ({
                 targetOriginId: name,
                 viewerProtocolPolicy: "redirect-to-https",
                 allowedMethods: ["GET", "HEAD", "OPTIONS"],
                 cachedMethods: ["GET", "HEAD", "OPTIONS"],
                 compress: true,
-                responseHeadersPolicyId: cfbase.hpFrontend.id,
-                cachePolicyId: cfbase.cpFrontend.id,
-                originRequestPolicyId: "88a5eaf4-2fd4-4709-b370-b4c650ea3fcf"
-            },
+                responseHeadersPolicyId: base.hpFrontend.id,
+                cachePolicyId: base.cpFrontend.id,
+                originRequestPolicyId: "88a5eaf4-2fd4-4709-b370-b4c650ea3fcf",
+                functionAssociations: base.functionSecureHeaders ? [{
+                    eventType: "viewer-response",
+                    functionArn: base.functionSecureHeaders.arn
+                }] : undefined
+            })),
 
             customErrorResponses: customErrorResponses ?? [
                 {errorCode: 404, responseCode: 404, responsePagePath: "/errors/404.html"},

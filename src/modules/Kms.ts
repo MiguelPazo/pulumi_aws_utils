@@ -4,7 +4,7 @@
 import * as pulumi from "@pulumi/pulumi";
 import * as aws from "@pulumi/aws";
 import {InitConfig} from "../types/module";
-import type {KmsModuleConfig, KmsKeyResult} from "../types";
+import type {KmsKeyResult, KmsModuleConfig} from "../types";
 import {getInit} from "../config";
 
 class Kms {

@@ -10,6 +10,7 @@ export type CloudFrontBaseResult = {
     hpFrontend: aws.cloudfront.ResponseHeadersPolicy;
     hpBackend: aws.cloudfront.ResponseHeadersPolicy;
     cpFrontend: aws.cloudfront.CachePolicy;
+    functionSecureHeaders?: aws.cloudfront.Function;
 };
 
 export type CertificatesResult = {

@@ -45,6 +45,8 @@ import {LambdaRestart} from "./src/tools/LambdaRestart";
 import {LambdaAlarms} from "./src/tools/LambdaAlarms";
 import {LambdaNotifications} from "./src/tools/LambdaNotifications";
 import {UserProwler} from "./src/tools/UserProwler";
+import {LambdaExportBackup} from "./src/tools/LambdaExportBackup";
+import {ExportFinalBackup} from "./src/modules/ExportFinalBackup";
 
 export const AwsUtilsInit = {
     init
@@ -59,6 +61,7 @@ export const AwsUtilsTools = {
     LambdaRestart,
     LambdaAlarms,
     LambdaNotifications,
+    LambdaExportBackup,
     UserProwler,
 };
 
@@ -80,6 +83,7 @@ export const AwsUtilsModules = {
     EcsService,
     Efs,
     ElastiCache,
+    ExportFinalBackup,
     Kms,
     LambdaRole,
     Rds,

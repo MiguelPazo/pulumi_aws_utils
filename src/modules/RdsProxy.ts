@@ -2,7 +2,6 @@
  * Created by Miguel Pazo (https://miguelpazo.com)
  */
 import * as aws from "@pulumi/aws";
-import * as pulumi from "@pulumi/pulumi";
 import {getInit} from "../config";
 import {InitConfig} from "../types/module";
 import {RdsProxyModuleConfig, RdsProxyResult} from "../types";

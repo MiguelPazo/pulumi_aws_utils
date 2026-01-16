@@ -3,7 +3,7 @@
  */
 import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
-import {CertificatesResult, CloudFrontBaseResult} from "../types";
+import {CloudFrontBackendModuleConfig} from "../types";
 import {UtilsInfra} from "../common/UtilsInfra";
 import {getInit} from "../config";
 import {InitConfig} from "../types/module";
@@ -24,18 +24,19 @@ class CloudFrontBackend {
         return this.__instance;
     }
 
-    async main(
-        name: string,
-        aliasDns: string,
-        vpcOriginId: pulumi.Output<string>,
-        vpcOriginDns: pulumi.Output<string>,
-        vpcOriginPath: string,
-        apigw: pulumi.Output<aws.apigateway.RestApi>,
-        cfbase: pulumi.Output<CloudFrontBaseResult>,
-        s3Logs: pulumi.Output<aws.s3.Bucket>,
-        certificate: CertificatesResult,
-        waf: pulumi.Output<aws.wafv2.WebAcl>
-    ): Promise<aws.cloudfront.Distribution> {
+    async main(config: CloudFrontBackendModuleConfig): Promise<aws.cloudfront.Distribution> {
+        const {
+            name,
+            aliasDns,
+            vpcOriginId,
+            vpcOriginDns,
+            vpcOriginPath,
+            apigw,
+            cfbase,
+            s3Logs,
+            certificate,
+            waf
+        } = config;
         // Create CloudFront distribution
         const cdn = new aws.cloudfront.Distribution(`${this.config.project}-${name}-cf`, {
             enabled: true,
@@ -58,16 +59,20 @@ class CloudFrontBackend {
                 }
             ],
 
-            defaultCacheBehavior: {
+            defaultCacheBehavior: pulumi.output(cfbase).apply(base => ({
                 targetOriginId: name,
                 viewerProtocolPolicy: "redirect-to-https",
                 allowedMethods: ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT", "DELETE"],
                 cachedMethods: ["GET", "HEAD", "OPTIONS"],
                 compress: true,
-                responseHeadersPolicyId: cfbase.hpBackend.id,
+                responseHeadersPolicyId: base.hpBackend.id,
                 cachePolicyId: "4135ea2d-6df8-44a3-9df3-4b5a84be39ad",
-                originRequestPolicyId: "216adef6-5c7f-47e4-b989-5492eafa07d3"
-            },
+                originRequestPolicyId: "216adef6-5c7f-47e4-b989-5492eafa07d3",
+                functionAssociations: base.functionSecureHeaders ? [{
+                    eventType: "viewer-response",
+                    functionArn: base.functionSecureHeaders.arn
+                }] : undefined
+            })),
 
             customErrorResponses: [
                 {errorCode: 404, responseCode: 404, responsePagePath: "/errors/404.html"},

@@ -3,7 +3,6 @@
  */
 import * as aws from "@pulumi/aws";
 import {getInit} from "../config";
-import * as pulumi from "@pulumi/pulumi";
 import {InitConfig} from "../types/module";
 import {ElastiCacheModuleConfig, ElastiCacheResult} from "../types";
 

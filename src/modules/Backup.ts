@@ -1,7 +1,6 @@
 /**
  * Created by Miguel Pazo (https://miguelpazo.com)
  */
-import * as pulumi from "@pulumi/pulumi";
 import * as aws from "@pulumi/aws";
 import {InitConfig} from "../types/module";
 import {BackupConfig, BackupPlan, BackupResult} from "../types";
