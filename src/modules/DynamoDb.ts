@@ -4,7 +4,7 @@
 import * as aws from "@pulumi/aws";
 import {getInit} from "../config";
 import {InitConfig} from "../types/module";
-import {DynamoDbResult, DynamoDbTableConfig} from "../types";
+import {DynamoDbModuleConfig, DynamoDbResult, DynamoDbTableConfig} from "../types";
 import * as pulumi from "@pulumi/pulumi";
 
 
@@ -24,89 +24,127 @@ class DynamoDb {
         return this.__instance;
     }
 
-    async main(
-        tableConfigs: DynamoDbTableConfig[],
-        kmsKey?: pulumi.Output<aws.kms.Key>,
-    ): Promise<DynamoDbResult> {
+    async main(config: DynamoDbModuleConfig): Promise<DynamoDbResult> {
+        const {
+            tableConfigs,
+            kmsKey,
+            replicaRegion,
+            replicaConfig,
+            tablePrefix = "table",
+            skipReplicaCreation = true
+        } = config;
+
         const tables: { [key: string]: aws.dynamodb.Table } = {};
 
-        tableConfigs.forEach(config => {
-            // Convert table name to camelCase for object key
-            const tableName = config.name.replace(/-/g, '_');
-            const tableKey = `${tableName.replace(/_([a-z])/g, (match, letter) => letter.toUpperCase())}`;
+        tableConfigs.forEach(tableConfig => {
+            const tableKey = tableConfig.name;
+            const shouldSkipReplica = skipReplicaCreation && tableConfig.billingMode === "PROVISIONED";
 
-            // Create DynamoDB table
-            const table = new aws.dynamodb.Table(`${this.config.project}-dynamodb-${config.name}`, {
-                name: `${this.config.generalPrefix}-table-${config.name}`,
-                attributes: config.attributes,
-                hashKey: config.hashKey,
-                ...(config.rangeKey && {rangeKey: config.rangeKey}),
-                billingMode: config.billingMode,
-                ...(config.billingMode === "PROVISIONED" && {
-                    readCapacity: config.readCapacity,
-                    writeCapacity: config.writeCapacity
+            // Create DynamoDB table (without replicas if Auto Scaling is needed)
+            const table = new aws.dynamodb.Table(`${this.config.project}-dynamodb-${tableConfig.name}`, {
+                name: `${this.config.generalPrefix}-${tablePrefix}-${tableConfig.name}`,
+                attributes: tableConfig.attributes,
+                hashKey: tableConfig.hashKey,
+                ...(tableConfig.rangeKey && {rangeKey: tableConfig.rangeKey}),
+                billingMode: tableConfig.billingMode,
+                ...(tableConfig.billingMode === "PROVISIONED" && {
+                    readCapacity: tableConfig.readCapacity || tableConfig.autoScaling?.read?.minCapacity || 5,
+                    writeCapacity: tableConfig.writeCapacity || tableConfig.autoScaling?.write?.minCapacity || 5
                 }),
-                ...(config.globalSecondaryIndexes && {
-                    globalSecondaryIndexes: config.globalSecondaryIndexes.map(gsi => ({
+                ...(tableConfig.globalSecondaryIndexes && {
+                    globalSecondaryIndexes: tableConfig.globalSecondaryIndexes.map(gsi => ({
                         name: gsi.name,
                         hashKey: gsi.hashKey,
                         ...(gsi.rangeKey && {rangeKey: gsi.rangeKey}),
                         projectionType: gsi.projectionType,
                         ...(gsi.projectionAttributes && {projectionAttributes: gsi.projectionAttributes}),
-                        ...(config.billingMode === "PROVISIONED" && {
-                            readCapacity: gsi.readCapacity || config.readCapacity || 5,
-                            writeCapacity: gsi.writeCapacity || config.writeCapacity || 5
+                        ...(tableConfig.billingMode === "PROVISIONED" && {
+                            readCapacity: gsi.readCapacity || tableConfig.readCapacity || 5,
+                            writeCapacity: gsi.writeCapacity || tableConfig.writeCapacity || 5
                         })
                     }))
                 }),
-                ...(config.localSecondaryIndexes && {
-                    localSecondaryIndexes: config.localSecondaryIndexes
+                ...(tableConfig.localSecondaryIndexes && {
+                    localSecondaryIndexes: tableConfig.localSecondaryIndexes
                 }),
-                ...(config.streamEnabled && {
-                    streamEnabled: config.streamEnabled,
-                    streamViewType: config.streamViewType || "NEW_AND_OLD_IMAGES"
-                }),
+                // Enable streams if configured OR if using replicas (required for Global Tables)
+                ...(tableConfig.streamEnabled || replicaRegion ? {
+                    streamEnabled: true,
+                    streamViewType: tableConfig.streamViewType || "NEW_AND_OLD_IMAGES"
+                } : {}),
                 serverSideEncryption: {
                     enabled: true,
                     ...(kmsKey && {kmsKeyArn: kmsKey.arn})
                 },
                 pointInTimeRecovery: {
-                    enabled: config.pointInTimeRecovery || false
+                    enabled: tableConfig.pointInTimeRecovery || false
                 },
-                deletionProtectionEnabled: config.deleteProtection || false,
+                deletionProtectionEnabled: tableConfig.deleteProtection || false,
+                // Only add replicas if not skipped (only skips for PROVISIONED mode)
+                ...(!shouldSkipReplica && replicaRegion && {
+                    replicas: [{
+                        regionName: replicaRegion,
+                        pointInTimeRecovery: replicaConfig?.pointInTimeRecovery ?? tableConfig.pointInTimeRecovery ?? false,
+                        propagateTags: replicaConfig?.propagateTags ?? true,
+                        ...(replicaConfig?.deletionProtectionEnabled !== undefined && {
+                            deletionProtectionEnabled: replicaConfig.deletionProtectionEnabled
+                        }),
+                        // Use customer managed KMS key for replica encryption if provided
+                        ...(replicaConfig?.kmsKey && {
+                            kmsKeyArn: pulumi.output(replicaConfig.kmsKey).apply(k => k.arn)
+                        })
+                    }]
+                }),
                 tags: {
                     ...this.config.generalTags,
-                    Name: `${this.config.generalPrefix}-table-${config.name}`,
-                    ...config.tags
+                    Name: `${this.config.generalPrefix}-${tablePrefix}-${tableConfig.name}`,
+                    ...tableConfig.tags
                 }
             });
 
             tables[tableKey] = table;
 
             // Configure Auto Scaling for table if enabled and billingMode is PROVISIONED
-            if (config.billingMode === "PROVISIONED" && config.autoScaling) {
-                this.configureTableAutoScaling(config, table);
+            // Note: With Global Tables, Auto Scaling policies are automatically replicated to all regions
+            // Only create policies in the primary region (where the table is created)
+            const autoScalingPolicies: pulumi.Resource[] = [];
+
+            if (tableConfig.billingMode === "PROVISIONED" && tableConfig.autoScaling) {
+                const tablePolicies = this.configureTableAutoScaling(tableConfig, table);
+                autoScalingPolicies.push(...tablePolicies);
             }
 
             // Configure Auto Scaling for GSI if enabled
-            if (config.billingMode === "PROVISIONED" && config.globalSecondaryIndexes) {
-                config.globalSecondaryIndexes.forEach(gsi => {
+            if (tableConfig.billingMode === "PROVISIONED" && tableConfig.globalSecondaryIndexes) {
+                tableConfig.globalSecondaryIndexes.forEach(gsi => {
                     // Apply table auto scaling to all GSI if flag is enabled
-                    if (config.applyAutoScalingToAllGsi && config.autoScaling) {
-                        this.configureGsiAutoScaling(config, table, gsi.name, config.autoScaling);
+                    if (tableConfig.applyAutoScalingToAllGsi && tableConfig.autoScaling) {
+                        const gsiPolicies = this.configureGsiAutoScaling(tableConfig, table, gsi.name, tableConfig.autoScaling);
+                        autoScalingPolicies.push(...gsiPolicies);
                     }
                     // Apply specific GSI auto scaling configuration
-                    else if (config.gsiAutoScaling && config.gsiAutoScaling[gsi.name]) {
-                        this.configureGsiAutoScaling(config, table, gsi.name, config.gsiAutoScaling[gsi.name]);
+                    else if (tableConfig.gsiAutoScaling && tableConfig.gsiAutoScaling[gsi.name]) {
+                        const gsiPolicies = this.configureGsiAutoScaling(tableConfig, table, gsi.name, tableConfig.gsiAutoScaling[gsi.name]);
+                        autoScalingPolicies.push(...gsiPolicies);
                     }
                 });
+            }
+
+            // Log info about replica creation for PROVISIONED tables
+            if (shouldSkipReplica && replicaRegion) {
+                pulumi.log.info(
+                    `Table ${tableConfig.name}: Skipping replica creation (PROVISIONED mode). ` +
+                    `Set skipReplicaCreation=false in second deployment to add replicas.`,
+                    table
+                );
             }
         });
 
         return tables as DynamoDbResult;
     }
 
-    private configureTableAutoScaling(config: DynamoDbTableConfig, table: aws.dynamodb.Table): void {
+    private configureTableAutoScaling(config: DynamoDbTableConfig, table: aws.dynamodb.Table): pulumi.Resource[] {
+        const policies: pulumi.Resource[] = [];
         // Read Auto Scaling
         if (config.autoScaling?.read?.enabled) {
             const readTarget = new aws.appautoscaling.Target(
@@ -120,7 +158,7 @@ class DynamoDb {
                 }
             );
 
-            new aws.appautoscaling.Policy(
+            const readPolicy = new aws.appautoscaling.Policy(
                 `${this.config.project}-dynamodb-${config.name}-read-policy`,
                 {
                     policyType: "TargetTrackingScaling",
@@ -141,6 +179,7 @@ class DynamoDb {
                     },
                 }
             );
+            policies.push(readPolicy);
         }
 
         // Write Auto Scaling
@@ -156,7 +195,7 @@ class DynamoDb {
                 }
             );
 
-            new aws.appautoscaling.Policy(
+            const writePolicy = new aws.appautoscaling.Policy(
                 `${this.config.project}-dynamodb-${config.name}-write-policy`,
                 {
                     policyType: "TargetTrackingScaling",
@@ -177,7 +216,10 @@ class DynamoDb {
                     },
                 }
             );
+            policies.push(writePolicy);
         }
+
+        return policies;
     }
 
     private configureGsiAutoScaling(
@@ -185,7 +227,8 @@ class DynamoDb {
         table: aws.dynamodb.Table,
         indexName: string,
         autoScaling: { read?: any; write?: any }
-    ): void {
+    ): pulumi.Resource[] {
+        const policies: pulumi.Resource[] = [];
         // Read Auto Scaling for GSI
         if (autoScaling.read?.enabled) {
             const readTarget = new aws.appautoscaling.Target(
@@ -199,7 +242,7 @@ class DynamoDb {
                 }
             );
 
-            new aws.appautoscaling.Policy(
+            const readPolicy = new aws.appautoscaling.Policy(
                 `${this.config.project}-dynamodb-${config.name}-gsi-${indexName}-read-policy`,
                 {
                     policyType: "TargetTrackingScaling",
@@ -220,6 +263,7 @@ class DynamoDb {
                     },
                 }
             );
+            policies.push(readPolicy);
         }
 
         // Write Auto Scaling for GSI
@@ -235,7 +279,7 @@ class DynamoDb {
                 }
             );
 
-            new aws.appautoscaling.Policy(
+            const writePolicy = new aws.appautoscaling.Policy(
                 `${this.config.project}-dynamodb-${config.name}-gsi-${indexName}-write-policy`,
                 {
                     policyType: "TargetTrackingScaling",
@@ -256,7 +300,10 @@ class DynamoDb {
                     },
                 }
             );
+            policies.push(writePolicy);
         }
+
+        return policies;
     }
 }
 

@@ -1,0 +1,65 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "GetReplicationConfiguration",
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetReplicationConfiguration",
+        "s3:ListBucket"
+      ],
+      "Resource": "arn:aws:s3:::rep_bucket_prefix*"
+    },
+    {
+      "Sid": "GetObjectsFromSource",
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObjectVersionForReplication",
+        "s3:GetObjectVersionAcl",
+        "s3:GetObjectVersionTagging",
+        "s3:GetObjectRetention",
+        "s3:GetObjectLegalHold"
+      ],
+      "Resource": "arn:aws:s3:::rep_bucket_prefix*/*"
+    },
+    {
+      "Sid": "ReplicateToDestination",
+      "Effect": "Allow",
+      "Action": [
+        "s3:ReplicateObject",
+        "s3:ReplicateDelete",
+        "s3:ReplicateTags",
+        "s3:ObjectOwnerOverrideToBucketOwner"
+      ],
+      "Resource": "arn:aws:s3:::rep_bucket_prefix*/*"
+    },
+    {
+      "Sid": "DecryptSourceKMS",
+      "Effect": "Allow",
+      "Action": [
+        "kms:Decrypt",
+        "kms:DescribeKey"
+      ],
+      "Resource": "rep_source_kms_arn",
+      "Condition": {
+        "StringLike": {
+          "kms:ViaService": "s3.rep_source_region.amazonaws.com"
+        }
+      }
+    },
+    {
+      "Sid": "EncryptDestinationKMS",
+      "Effect": "Allow",
+      "Action": [
+        "kms:Encrypt",
+        "kms:GenerateDataKey"
+      ],
+      "Resource": "rep_destination_kms_arn",
+      "Condition": {
+        "StringLike": {
+          "kms:ViaService": "s3.rep_destination_region.amazonaws.com"
+        }
+      }
+    }
+  ]
+}

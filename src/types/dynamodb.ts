@@ -2,6 +2,7 @@
  * Created by Miguel Pazo (https://miguelpazo.com)
  */
 import * as aws from "@pulumi/aws";
+import * as pulumi from "@pulumi/pulumi";
 
 export type DynamoDbAttribute = {
     name: string;
@@ -43,6 +44,13 @@ export type DynamoDbGsiAutoScaling = {
     [indexName: string]: DynamoDbAutoScaling;
 };
 
+export type DynamoDbReplicaConfig = {
+    pointInTimeRecovery?: boolean;
+    propagateTags?: boolean;
+    deletionProtectionEnabled?: boolean;
+    kmsKey?: pulumi.Input<aws.kms.Key | aws.kms.ReplicaKey>;
+};
+
 export type DynamoDbTableConfig = {
     name: string;
     hashKey: string;
@@ -65,4 +73,15 @@ export type DynamoDbTableConfig = {
 
 export type DynamoDbResult = {
     [key: string]: aws.dynamodb.Table;
+};
+
+export type DynamoDbModuleConfig = {
+    tableConfigs: DynamoDbTableConfig[];
+    kmsKey?: pulumi.Output<aws.kms.Key>;
+    replicaRegion?: string;
+    replicaConfig?: DynamoDbReplicaConfig;
+    tablePrefix?: string;
+    // Set to true to skip replica creation in first deployment phase
+    // Required when using PROVISIONED + Auto Scaling + Global Tables
+    skipReplicaCreation?: boolean;
 };
