@@ -6,6 +6,7 @@ import * as aws from "@pulumi/aws";
 import {InitConfig} from "../types/module";
 import {S3Config} from "../types";
 import {getInit} from "../config";
+import {S3Replica} from "./S3Replica";
 
 class S3 {
     private static __instance: S3;
@@ -34,10 +35,41 @@ class S3 {
             cloudfront,
             fullName,
             enableObjectLock = false,
+            enableVersioning = false,
             disableAcl = true,
             disablePolicy = false,
             provider,
+            multiRegion = false,
+            failoverReplica = false,
+            s3LogsReplica,
+            regionReplica,
+            providerReplica,
+            replicationRole,
+            enableDeleteMarkerReplication,
+            enableRTC = false,
+            kmsKeyReplica,
         } = config;
+
+        /**
+         * Handle failover replica scenario - get existing bucket
+         */
+        if (failoverReplica) {
+            if (!regionReplica) {
+                throw new Error("regionReplica is required when failoverReplica is true");
+            }
+
+            const replicaName = `${name}-replica-${regionReplica}`;
+            const bucketName = pulumi.interpolate`${this.config.generalPrefix}-${this.config.accountId}-${replicaName}`;
+
+            const resourceOptions: pulumi.ResourceOptions = provider ? {provider} : {};
+
+            return aws.s3.Bucket.get(
+                `${this.config.project}-${name}-bucket-failover`,
+                bucketName,
+                undefined,
+                resourceOptions
+            );
+        }
 
         const bucketName = fullName || pulumi.interpolate`${this.config.generalPrefix}-${this.config.accountId}-${name}`;
 
@@ -52,16 +84,18 @@ class S3 {
             }
         }, resourceOptions);
 
-        // Configure versioning (required for Object Lock)
-        if (enableObjectLock) {
+        // Configure versioning (required for Object Lock or if explicitly enabled)
+        if (enableObjectLock || enableVersioning) {
             new aws.s3.BucketVersioning(`${this.config.project}-${name}-bucket-versioning`, {
                 bucket: bucket.id,
                 versioningConfiguration: {
                     status: "Enabled"
                 }
             }, resourceOptions);
+        }
 
-            // Configure Object Lock default retention
+        // Configure Object Lock default retention (only if Object Lock is enabled)
+        if (enableObjectLock) {
             new aws.s3.BucketObjectLockConfiguration(`${this.config.project}-${name}-bucket-object-lock`, {
                 bucket: bucket.id,
                 rule: {
@@ -260,6 +294,47 @@ class S3 {
                     }
                 ]
             }, resourceOptions);
+        }
+
+        /**
+         * Handle multi-region replication
+         */
+        if (multiRegion && !failoverReplica) {
+            if (!regionReplica) {
+                throw new Error("regionReplica is required when multiRegion is true");
+            }
+            if (!kmsKeyReplica) {
+                throw new Error("kmsKeyReplica is required when multiRegion is true");
+            }
+            if (!replicationRole) {
+                throw new Error("replicationRole is required when multiRegion is true");
+            }
+
+            const replicaName = `${name}-replica-${regionReplica}`;
+
+            // Create replica bucket in secondary region
+            const replicaBucket = await this.main({
+                name: replicaName,
+                kmsKey: kmsKeyReplica,
+                s3Logs: s3LogsReplica,
+                enableVersioning: true,
+                provider: providerReplica,
+                multiRegion: false, // Prevent recursion
+                disableAcl,
+                disablePolicy,
+            });
+
+            // Setup replication configuration
+            await S3Replica.getInstance().main({
+                replicationConfigName: name,
+                createRole: false,
+                replicationRole: replicationRole,
+                enableDeleteMarkerReplication: enableDeleteMarkerReplication,
+                enableRTC: enableRTC,
+                s3Source: bucket,
+                s3Replica: replicaBucket,
+                destKmsArn: kmsKeyReplica.arn,
+            });
         }
 
         return bucket

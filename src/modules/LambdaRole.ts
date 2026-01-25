@@ -76,9 +76,6 @@ class LambdaRole {
                             Condition: {
                                 StringEquals: {
                                     "aws:SourceAccount": accountId
-                                },
-                                ArnLike: {
-                                    "aws:SourceArn": `arn:aws:lambda:${region}:${accountId}:function:${this.config.generalPrefix}-${lambda.name}*`
                                 }
                             }
                         }

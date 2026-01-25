@@ -62,9 +62,6 @@ class EcsService {
                             Condition: {
                                 StringEquals: {
                                     "aws:SourceAccount": accountId
-                                },
-                                ArnLike: {
-                                    "aws:SourceArn": `arn:aws:ecs:${aws.config.region}:${accountId}:service/${this.config.generalPrefixShort}-${service.name}-*`
                                 }
                             }
                         }
@@ -95,9 +92,6 @@ class EcsService {
                             Condition: {
                                 StringEquals: {
                                     "aws:SourceAccount": accountId
-                                },
-                                ArnLike: {
-                                    "aws:SourceArn": `arn:aws:ecs:${aws.config.region}:${accountId}:service/${this.config.generalPrefixShort}-${service.name}-*`
                                 }
                             }
                         }

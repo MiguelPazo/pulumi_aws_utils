@@ -29,8 +29,10 @@ import {Efs} from './src/modules/Efs';
 import {ElastiCache} from './src/modules/ElastiCache';
 import {Rds} from './src/modules/Rds';
 import {RdsAurora} from './src/modules/RdsAurora';
+import {RdsAuroraGlobal} from './src/modules/RdsAuroraGlobal';
 import {RdsProxy} from './src/modules/RdsProxy';
 import {S3} from './src/modules/S3';
+import {S3Replica} from './src/modules/S3Replica';
 import {Sqs} from './src/modules/Sqs';
 import {ApiGatewayVpcLink} from './src/modules/ApiGatewayVpcLink';
 import {init} from './src/config';
@@ -88,8 +90,10 @@ export const AwsUtilsModules = {
     LambdaRole,
     Rds,
     RdsAurora,
+    RdsAuroraGlobal,
     RdsProxy,
     S3,
+    S3Replica,
     Sqs,
     Ssm,
     ApiGatewayVpcLink,

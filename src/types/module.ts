@@ -17,4 +17,5 @@ export type InitConfig = {
     albSslPolicyDefault?: string;
     cloudwatchRetentionLogs: number;
     deleteProtection: boolean;
+    failoverReplica?: boolean;
 }

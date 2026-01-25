@@ -101,7 +101,7 @@ class Kms {
 
                 // Get region from provider
                 const regionData = await aws.getRegion({}, {provider: replicaProvider});
-                const region = regionData.name;
+                const region = regionData.region;
 
                 // Create replica key
                 const replicaKey = new aws.kms.ReplicaKey(`${this.config.project}-${name}-kms-replica-${index}`, {
