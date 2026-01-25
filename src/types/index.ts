@@ -22,3 +22,4 @@ export * from './backup';
 export * from './ses';
 export * from './cloudwatch';
 export * from './stepfunctions';
+export * from './secrets';

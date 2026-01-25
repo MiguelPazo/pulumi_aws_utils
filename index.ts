@@ -33,6 +33,7 @@ import {RdsAuroraGlobal} from './src/modules/RdsAuroraGlobal';
 import {RdsProxy} from './src/modules/RdsProxy';
 import {S3} from './src/modules/S3';
 import {S3Replica} from './src/modules/S3Replica';
+import {Secrets} from './src/modules/Secrets';
 import {Sqs} from './src/modules/Sqs';
 import {ApiGatewayVpcLink} from './src/modules/ApiGatewayVpcLink';
 import {init} from './src/config';
@@ -94,6 +95,7 @@ export const AwsUtilsModules = {
     RdsProxy,
     S3,
     S3Replica,
+    Secrets,
     Sqs,
     Ssm,
     ApiGatewayVpcLink,
