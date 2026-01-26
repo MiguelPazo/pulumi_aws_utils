@@ -149,14 +149,10 @@ class RdsAurora {
         /**
          * Aurora Cluster
          */
-        const cluster = new aws.rds.Cluster(`${this.config.project}-${auroraConfig.engine}-${auroraConfig.name}`, {
+        const clusterConfig: aws.rds.ClusterArgs = {
             clusterIdentifier: `${this.config.generalPrefix}-${auroraConfig.engine}-${auroraConfig.name}`,
             engine: auroraConfig.engine,
             engineVersion: auroraConfig.engineVersion,
-            databaseName: auroraConfig.databaseName,
-            masterUsername: auroraConfig.username,
-            masterPassword: auroraConfig.password,
-            port: auroraConfig.port,
             dbSubnetGroupName: subnetGroup.name,
             dbClusterParameterGroupName: clusterParameterGroup?.name,
             vpcSecurityGroupIds: [securityGroup.id],
@@ -174,7 +170,41 @@ class RdsAurora {
                 ...tags,
                 Name: `${this.config.generalPrefix}-${auroraConfig.engine}-${auroraConfig.name}`,
             }
-        });
+        };
+
+        // Configure for Global Database if specified
+        if (auroraConfig.globalClusterIdentifier) {
+            clusterConfig.globalClusterIdentifier = auroraConfig.globalClusterIdentifier;
+
+            // Secondary clusters don't need these parameters
+            if (auroraConfig.isSecondaryCluster) {
+                delete clusterConfig.databaseName;
+                delete clusterConfig.masterUsername;
+                delete clusterConfig.masterPassword;
+
+                // Secondary cluster uses sourceRegion for replication
+                if (auroraConfig.sourceRegion) {
+                    clusterConfig.sourceRegion = auroraConfig.sourceRegion;
+                }
+            } else {
+                // Primary cluster configuration
+                clusterConfig.databaseName = auroraConfig.databaseName;
+                clusterConfig.masterUsername = auroraConfig.username;
+                clusterConfig.masterPassword = auroraConfig.password;
+                clusterConfig.port = auroraConfig.port;
+            }
+        } else {
+            // Standard single-region cluster
+            clusterConfig.databaseName = auroraConfig.databaseName;
+            clusterConfig.masterUsername = auroraConfig.username;
+            clusterConfig.masterPassword = auroraConfig.password;
+            clusterConfig.port = auroraConfig.port;
+        }
+
+        const cluster = new aws.rds.Cluster(
+            `${this.config.project}-${auroraConfig.engine}-${auroraConfig.name}`,
+            clusterConfig
+        );
 
         /**
          * Aurora Cluster Instances

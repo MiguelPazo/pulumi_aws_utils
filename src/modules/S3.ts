@@ -39,16 +39,18 @@ class S3 {
             disableAcl = true,
             disablePolicy = false,
             provider,
-            multiRegion = false,
-            failoverReplica = false,
             s3LogsReplica,
-            regionReplica,
-            providerReplica,
             replicationRole,
             enableDeleteMarkerReplication,
             enableRTC = false,
             kmsKeyReplica,
+            enableMultiregion = false
         } = config;
+
+        const multiRegion = (enableMultiregion && this.config.multiRegion) || false;
+        const failoverReplica = this.config.failoverReplica || false;
+        const regionReplica = this.config.regionReplica;
+        const providerReplica = this.config.providerReplica;
 
         /**
          * Handle failover replica scenario - get existing bucket
@@ -61,7 +63,7 @@ class S3 {
             const replicaName = `${name}-replica-${regionReplica}`;
             const bucketName = pulumi.interpolate`${this.config.generalPrefix}-${this.config.accountId}-${replicaName}`;
 
-            const resourceOptions: pulumi.ResourceOptions = provider ? {provider} : {};
+            const resourceOptions: pulumi.ResourceOptions = providerReplica ? {provider: providerReplica} : {};
 
             return aws.s3.Bucket.get(
                 `${this.config.project}-${name}-bucket-failover`,
@@ -303,6 +305,9 @@ class S3 {
             if (!regionReplica) {
                 throw new Error("regionReplica is required when multiRegion is true");
             }
+            if (!providerReplica) {
+                throw new Error("providerReplica is required when multiRegion is true");
+            }
             if (!kmsKeyReplica) {
                 throw new Error("kmsKeyReplica is required when multiRegion is true");
             }
@@ -319,7 +324,6 @@ class S3 {
                 s3Logs: s3LogsReplica,
                 enableVersioning: true,
                 provider: providerReplica,
-                multiRegion: false, // Prevent recursion
                 disableAcl,
                 disablePolicy,
             });

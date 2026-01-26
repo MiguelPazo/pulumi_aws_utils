@@ -18,15 +18,12 @@ export type S3Config = {
     disableAcl?: boolean;
     disablePolicy?: boolean;
     provider?: aws.Provider;
-    multiRegion?: boolean;
-    failoverReplica?: boolean;
     s3LogsReplica?: pulumi.Output<aws.s3.Bucket>;
-    regionReplica?: string;
-    providerReplica?: aws.Provider;
     replicationRole?: pulumi.Input<aws.iam.Role>;
     enableDeleteMarkerReplication?: boolean;
     enableRTC?: boolean;
     kmsKeyReplica?: pulumi.Output<aws.kms.Key | aws.kms.ReplicaKey>;
+    enableMultiregion?: boolean;
 };
 
 export type S3ReplicaConfig = {

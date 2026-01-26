@@ -30,12 +30,14 @@ class Secrets {
             description,
             recoveryWindowInDays = 30,
             forceOverwriteReplicaSecret = true,
-            multiRegion = false,
-            failoverReplica = false,
-            regionReplica,
             kmsKeyReplica,
             tags
         } = config;
+
+        const multiRegion = this.config.multiRegion || false;
+        const failoverReplica = this.config.failoverReplica || false;
+        const regionReplica = this.config.regionReplica;
+
         const secretName = `${this.config.generalPrefix}-${name}`;
 
         /**

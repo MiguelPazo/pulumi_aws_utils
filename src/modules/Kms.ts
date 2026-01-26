@@ -30,24 +30,71 @@ class Kms {
             createAlias = true,
             additionalStatements,
             provider,
-            providersReplicas
+            enableMultiregion = false
         } = config;
 
-        const isMultiRegion = keyConfig?.multiRegion || false;
-
-        // Validate that providersReplicas is provided when multiRegion is true
-        if (isMultiRegion && (!providersReplicas || providersReplicas.length === 0)) {
-            throw new Error("providersReplicas array is required when multiRegion is true");
-        }
+        const multiRegion = (enableMultiregion && this.config.multiRegion) || false;
+        const failoverReplica = this.config.failoverReplica || false;
+        const regionReplica = this.config.regionReplica;
+        const providerReplica = this.config.providerReplica;
 
         const keyName = `${this.config.project}-${name}-kms-key`;
         const keyDescription = keyConfig?.description || `KMS key for ${name}`;
+
+        /**
+         * Handle failover replica scenario - get existing replica key
+         */
+        if (failoverReplica) {
+            if (!regionReplica) {
+                throw new Error("regionReplica is required when failoverReplica is true");
+            }
+
+            const replicaKeyName = `${keyName}-replica-${regionReplica}`;
+
+            const replicaKey = aws.kms.ReplicaKey.get(
+                `${this.config.project}-${name}-kms-replica-failover`,
+                replicaKeyName,
+                undefined,
+                providerReplica ? {provider: providerReplica} : undefined
+            );
+
+            let replicaAlias: aws.kms.Alias | undefined;
+
+            if (createAlias) {
+                const aliasName = `alias/${this.config.generalPrefix}-${name}-kms-replica-${regionReplica}`;
+                replicaAlias = aws.kms.Alias.get(
+                    `${this.config.project}-${name}-kms-alias-failover`,
+                    aliasName,
+                    undefined,
+                    providerReplica ? {provider: providerReplica} : undefined
+                );
+            }
+
+            return {
+                key: replicaKey as any,
+                alias: replicaAlias,
+                replicas: [replicaKey],
+                replicaAliases: replicaAlias ? [replicaAlias] : undefined
+            };
+        }
+
+        /**
+         * Validate multi-region requirements
+         */
+        if (multiRegion) {
+            if (!regionReplica) {
+                throw new Error("regionReplica is required when multiRegion is true");
+            }
+            if (!providerReplica) {
+                throw new Error("providerReplica is required when multiRegion is true");
+            }
+        }
 
         const key = new aws.kms.Key(keyName, {
             description: keyDescription,
             keyUsage: keyConfig?.keyUsage || "ENCRYPT_DECRYPT",
             customerMasterKeySpec: keyConfig?.keySpec || "SYMMETRIC_DEFAULT",
-            multiRegion: isMultiRegion,
+            multiRegion: multiRegion,
             deletionWindowInDays: keyConfig?.deletionWindowInDays || 7,
             enableKeyRotation: keyConfig?.enableKeyRotation || true,
             policy: keyConfig?.policy || pulumi.output(this.config.accountId).apply(x => {
@@ -88,66 +135,39 @@ class Kms {
             }, provider ? {provider} : undefined);
         }
 
-        // Create replicas in other regions if multiRegion is enabled
+        /**
+         * Create replica in other region if multiRegion is enabled
+         */
         let replicas: aws.kms.ReplicaKey[] | undefined;
         let replicaAliases: aws.kms.Alias[] | undefined;
 
-        if (isMultiRegion && providersReplicas && createAlias) {
-            replicas = [];
-            replicaAliases = [];
+        if (multiRegion && regionReplica && providerReplica) {
+            // Get region name
+            const regionData = await aws.getRegion({}, {provider: providerReplica});
+            const region = regionData.region;
 
-            for (let index = 0; index < providersReplicas.length; index++) {
-                const replicaProvider = providersReplicas[index];
+            // Create replica key
+            const replicaKey = new aws.kms.ReplicaKey(`${this.config.project}-${name}-kms-replica`, {
+                description: keyDescription,
+                primaryKeyArn: key.arn,
+                deletionWindowInDays: keyConfig?.deletionWindowInDays || 7,
+                tags: {
+                    ...this.config.generalTags,
+                    Name: `${keyName}-replica-${region}`,
+                    ...keyConfig?.tags
+                }
+            }, {provider: providerReplica});
 
-                // Get region from provider
-                const regionData = await aws.getRegion({}, {provider: replicaProvider});
-                const region = regionData.region;
+            replicas = [replicaKey];
 
-                // Create replica key
-                const replicaKey = new aws.kms.ReplicaKey(`${this.config.project}-${name}-kms-replica-${index}`, {
-                    description: keyDescription,
-                    primaryKeyArn: key.arn,
-                    deletionWindowInDays: keyConfig?.deletionWindowInDays || 7,
-                    tags: {
-                        ...this.config.generalTags,
-                        Name: `${keyName}-replica-${region}`,
-                        ...keyConfig?.tags
-                    }
-                }, {provider: replicaProvider});
-
-                replicas.push(replicaKey);
-
+            if (createAlias) {
                 // Create alias for replica
-                const replicaAlias = new aws.kms.Alias(`${this.config.project}-${name}-kms-alias-replica-${index}`, {
+                const replicaAlias = new aws.kms.Alias(`${this.config.project}-${name}-kms-alias-replica`, {
                     name: `alias/${this.config.generalPrefix}-${name}-kms-replica-${region}`,
                     targetKeyId: replicaKey.keyId,
-                }, {provider: replicaProvider});
+                }, {provider: providerReplica});
 
-                replicaAliases.push(replicaAlias);
-            }
-        } else if (isMultiRegion && providersReplicas) {
-            replicas = [];
-
-            for (let index = 0; index < providersReplicas.length; index++) {
-                const replicaProvider = providersReplicas[index];
-
-                // Get region from provider
-                const regionData = await aws.getRegion({}, {provider: replicaProvider});
-                const region = regionData.name;
-
-                // Create replica key
-                const replicaKey = new aws.kms.ReplicaKey(`${this.config.project}-${name}-kms-replica-${index}`, {
-                    description: keyDescription,
-                    primaryKeyArn: key.arn,
-                    deletionWindowInDays: keyConfig?.deletionWindowInDays || 7,
-                    tags: {
-                        ...this.config.generalTags,
-                        Name: `${keyName}-replica-${region}`,
-                        ...keyConfig?.tags
-                    }
-                }, {provider: replicaProvider});
-
-                replicas.push(replicaKey);
+                replicaAliases = [replicaAlias];
             }
         }
 

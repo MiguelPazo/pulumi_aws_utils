@@ -17,5 +17,8 @@ export type InitConfig = {
     albSslPolicyDefault?: string;
     cloudwatchRetentionLogs: number;
     deleteProtection: boolean;
+    multiRegion?: boolean;
     failoverReplica?: boolean;
+    regionReplica?: string;
+    providerReplica?: aws.Provider;
 }

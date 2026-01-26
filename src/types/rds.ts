@@ -57,6 +57,9 @@ export type RdsAuroraConfig = {
     enablePerformanceInsights?: boolean;
     publiclyAccessible?: boolean;
     applyImmediately?: boolean;
+    globalClusterIdentifier?: pulumi.Output<string>;
+    isSecondaryCluster?: boolean;
+    sourceRegion?: string;
 };
 
 export type RdsAuroraResult = {
@@ -66,6 +69,15 @@ export type RdsAuroraResult = {
     securityGroup: aws.ec2.SecurityGroup;
     clusterParameterGroup?: aws.rds.ClusterParameterGroup;
     parameterGroup?: aws.rds.ParameterGroup;
+};
+
+export type RdsAuroraGlobalModuleConfig = {
+    globalClusterIdentifier: string;
+    engine: string;
+    engineVersion: string;
+    databaseName?: string;
+    deletionProtection?: boolean;
+    existingGlobalClusterId?: pulumi.Input<string>;  // Optional: reference existing global cluster
 };
 
 export type RdsProxyAuth = {
