@@ -77,7 +77,7 @@ export type DynamoDbResult = {
 
 export type DynamoDbModuleConfig = {
     tableConfigs: DynamoDbTableConfig[];
-    kmsKey?: pulumi.Output<aws.kms.Key>;
+    kmsKey?: pulumi.Output<aws.kms.Key | aws.kms.ReplicaKey>;
     replicaRegion?: string;
     replicaConfig?: DynamoDbReplicaConfig;
     tablePrefix?: string;

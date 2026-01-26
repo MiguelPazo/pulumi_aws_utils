@@ -114,7 +114,7 @@ export type RdsModuleConfig = {
     rdsConfig: RdsConfig;
     vpc: pulumi.Output<VpcImportResult>;
     subnetIds: pulumi.Output<string[]>;
-    kmsKey?: pulumi.Output<aws.kms.Key>;
+    kmsKey?: pulumi.Output<aws.kms.Key | aws.kms.ReplicaKey>;
     phz?: pulumi.Output<PhzResult>;
     publicZoneRoodId?: pulumi.Output<string>;
     tags?: Record<string, string>;
@@ -125,7 +125,7 @@ export type RdsAuroraModuleConfig = {
     vpc: pulumi.Output<VpcImportResult>;
     subnetIds: pulumi.Output<string[]>;
     phz: pulumi.Output<PhzResult>;
-    kmsKey?: pulumi.Output<aws.kms.Key>;
+    kmsKey?: pulumi.Output<aws.kms.Key | aws.kms.ReplicaKey>;
     publicZoneRoodId?: pulumi.Output<string>;
     tags?: Record<string, string>;
 };

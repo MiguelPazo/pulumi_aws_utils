@@ -2,6 +2,7 @@
  * Created by Miguel Pazo (https://miguelpazo.com)
  */
 import * as aws from "@pulumi/aws";
+import * as pulumi from "@pulumi/pulumi";
 import {InitConfig} from "../types/module";
 import {SecretsConfig, SecretsResult} from "../types";
 import {getInit} from "../config";
@@ -31,26 +32,36 @@ class Secrets {
             recoveryWindowInDays = 30,
             forceOverwriteReplicaSecret = true,
             kmsKeyReplica,
+            enableMultiregion = false,
             tags
         } = config;
 
-        const multiRegion = this.config.multiRegion || false;
+        const multiRegion = (enableMultiregion && this.config.multiRegion) || false;
         const failoverReplica = this.config.failoverReplica || false;
         const regionReplica = this.config.regionReplica;
+        const providerReplica = this.config.providerReplica;
 
         /**
          * Handle failover replica scenario - get existing secret
          */
-        if (failoverReplica) {
+        if (multiRegion && failoverReplica) {
             if (!regionReplica) {
                 throw new Error("regionReplica is required when failoverReplica is true");
             }
 
             const secretNameReplica = `${this.config.generalPrefixMultiregion}-${name}`;
 
+            // Lookup the secret ARN by name using getSecretOutput (returns Output<GetSecretResult>)
+            const secretData = aws.secretsmanager.getSecretOutput({
+                name: secretNameReplica
+            }, providerReplica ? {provider: providerReplica} : undefined);
+
+            // Get the secret resource using the ARN from the output
             const existingSecret = aws.secretsmanager.Secret.get(
-                `${this.config.project}-${name}-secret-failover`,
-                secretNameReplica
+                `${this.config.project}-${name}-secret-replica`,
+                secretData.arn,
+                undefined,
+                providerReplica ? {provider: providerReplica} : undefined
             );
 
             return {

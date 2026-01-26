@@ -2,6 +2,7 @@
  * Created by Miguel Pazo (https://miguelpazo.com)
  */
 import * as aws from "@pulumi/aws";
+import * as pulumi from "@pulumi/pulumi";
 
 export type KmsKeyConfig = {
     description?: string;
@@ -28,7 +29,7 @@ export type KmsAliasConfig = {
 };
 
 export type KmsKeyResult = {
-    key: aws.kms.Key;
+    key: aws.kms.Key | aws.kms.ReplicaKey;
     alias?: aws.kms.Alias;
     replicas?: aws.kms.ReplicaKey[];
     replicaAliases?: aws.kms.Alias[];

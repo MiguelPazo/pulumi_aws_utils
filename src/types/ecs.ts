@@ -55,7 +55,7 @@ export type EcsServiceModuleConfig = {
     vpc: pulumi.Output<VpcImportResult>;
     securityGroups: aws.ec2.SecurityGroup[];
     createLogGroup: boolean;
-    logGroupKmsKey: pulumi.Output<aws.kms.Key>;
+    logGroupKmsKey: pulumi.Output<aws.kms.Key | aws.kms.ReplicaKey>;
     targetGroups?: pulumi.Output<aws.lb.TargetGroup>[];
     containerDefinitions?: any;
     cmDomain?: aws.servicediscovery.Service;

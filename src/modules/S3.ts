@@ -55,7 +55,7 @@ class S3 {
         /**
          * Handle failover replica scenario - get existing bucket
          */
-        if (failoverReplica) {
+        if (multiRegion && failoverReplica) {
             if (!regionReplica) {
                 throw new Error("regionReplica is required when failoverReplica is true");
             }

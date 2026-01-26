@@ -12,6 +12,7 @@ export type SecretsConfig = {
     recoveryWindowInDays?: number;
     forceOverwriteReplicaSecret?: boolean;
     kmsKeyReplica?: pulumi.Output<aws.kms.Key | aws.kms.ReplicaKey>;
+    enableMultiregion?: boolean;
     tags?: Record<string, string>;
 };
 

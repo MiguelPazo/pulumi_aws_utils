@@ -31,7 +31,7 @@ export type ElastiCacheModuleConfig = {
     vpc: pulumi.Output<VpcImportResult>;
     subnetIds: pulumi.Output<string[]>;
     phz: pulumi.Output<PhzResult>;
-    kmsKey?: pulumi.Output<aws.kms.Key>;
+    kmsKey?: pulumi.Output<aws.kms.Key | aws.kms.ReplicaKey>;
 };
 
 export type ElastiCacheResult = {

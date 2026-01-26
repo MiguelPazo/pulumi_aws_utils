@@ -43,40 +43,35 @@ class Kms {
         const keyDescription = keyConfig?.description || `KMS key for ${name}`;
 
         /**
-         * Handle failover replica scenario - get existing replica key
+         * Handle failover replica scenario - get existing replica key using alias
          */
-        if (failoverReplica) {
+        if (multiRegion && failoverReplica) {
             if (!regionReplica) {
                 throw new Error("regionReplica is required when failoverReplica is true");
             }
 
-            const replicaKeyName = `${this.config.generalPrefixMultiregion}-${name}-replica-${regionReplica}`;
+            const aliasName = `alias/${this.config.generalPrefixMultiregion}-${name}-kms-replica`;
 
-            const replicaKey = aws.kms.ReplicaKey.get(
-                `${this.config.project}-${name}-kms-replica`,
-                replicaKeyName,
+            // Get the alias as a managed resource first
+            const replicaAlias = aws.kms.Alias.get(
+                `${this.config.project}-${name}-kms-alias-replica`,
+                aliasName,
                 undefined,
                 providerReplica ? {provider: providerReplica} : undefined
             );
 
-            let replicaAlias: aws.kms.Alias | undefined;
-
-            if (createAlias) {
-                const aliasName = `alias/${this.config.generalPrefixMultiregion}-${name}-kms-replica-${regionReplica}`;
-
-                replicaAlias = aws.kms.Alias.get(
-                    `${this.config.project}-${name}-kms-alias-replica`,
-                    aliasName,
-                    undefined,
-                    providerReplica ? {provider: providerReplica} : undefined
-                );
-            }
+            // Get the replica key using the targetKeyId from the alias
+            const replicaKey = aws.kms.ReplicaKey.get(
+                `${this.config.project}-${name}-kms-replica`,
+                replicaAlias.targetKeyId,
+                undefined,
+                providerReplica ? {provider: providerReplica} : undefined
+            );
 
             return {
-                key: replicaKey as any,
-                alias: replicaAlias,
-                replicas: [replicaKey],
-                replicaAliases: replicaAlias ? [replicaAlias] : undefined
+                key: replicaKey,
+                alias: createAlias ? replicaAlias : undefined,
+                replicaAliases: createAlias ? [replicaAlias] : undefined
             };
         }
 
@@ -143,7 +138,7 @@ class Kms {
         let replicas: aws.kms.ReplicaKey[] | undefined;
         let replicaAliases: aws.kms.Alias[] | undefined;
 
-        if (multiRegion && regionReplica && providerReplica) {
+        if (multiRegion && providerReplica) {
             // Create replica key
             const replicaKey = new aws.kms.ReplicaKey(`${this.config.project}-${name}-kms-replica`, {
                 description: keyDescription,
@@ -151,7 +146,7 @@ class Kms {
                 deletionWindowInDays: keyConfig?.deletionWindowInDays || 7,
                 tags: {
                     ...this.config.generalTags,
-                    Name: `${keyName}-replica-${regionReplica}`,
+                    Name: `${keyName}-replica`,
                     ...keyConfig?.tags
                 }
             }, {provider: providerReplica});
@@ -161,7 +156,7 @@ class Kms {
             if (createAlias) {
                 // Create alias for replica
                 const replicaAlias = new aws.kms.Alias(`${this.config.project}-${name}-kms-alias-replica`, {
-                    name: `alias/${this.config.generalPrefix}-${name}-kms-replica-${regionReplica}`,
+                    name: `alias/${this.config.generalPrefix}-${name}-kms-replica`,
                     targetKeyId: replicaKey.keyId,
                 }, {provider: providerReplica});
 
