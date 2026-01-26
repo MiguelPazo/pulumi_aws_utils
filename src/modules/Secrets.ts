@@ -3,7 +3,7 @@
  */
 import * as aws from "@pulumi/aws";
 import {InitConfig} from "../types/module";
-import {SecretsConfig} from "../types";
+import {SecretsConfig, SecretsResult} from "../types";
 import {getInit} from "../config";
 
 class Secrets {
@@ -22,7 +22,7 @@ class Secrets {
         return this.__instance;
     }
 
-    async main(config: SecretsConfig): Promise<aws.secretsmanager.Secret> {
+    async main(config: SecretsConfig): Promise<SecretsResult> {
         const {
             name,
             kmsKey,
@@ -38,8 +38,6 @@ class Secrets {
         const failoverReplica = this.config.failoverReplica || false;
         const regionReplica = this.config.regionReplica;
 
-        const secretName = `${this.config.generalPrefix}-${name}`;
-
         /**
          * Handle failover replica scenario - get existing secret
          */
@@ -48,11 +46,19 @@ class Secrets {
                 throw new Error("regionReplica is required when failoverReplica is true");
             }
 
-            return aws.secretsmanager.Secret.get(
+            const secretNameReplica = `${this.config.generalPrefixMultiregion}-${name}`;
+
+            const existingSecret = aws.secretsmanager.Secret.get(
                 `${this.config.project}-${name}-secret-failover`,
-                secretName
+                secretNameReplica
             );
+
+            return {
+                secret: existingSecret
+            };
         }
+
+        const secretName = `${this.config.generalPrefix}-${name}`;
 
         /**
          * Validate multi-region requirements
@@ -92,14 +98,17 @@ class Secrets {
         /**
          * Create secret version with secretString
          */
-        new aws.secretsmanager.SecretVersion(`${this.config.project}-${name}-secret-version`, {
+        const secretVersion = new aws.secretsmanager.SecretVersion(`${this.config.project}-${name}-secret-version`, {
             secretId: secret.id,
             secretString: JSON.stringify(secretString)
         }, {
             ignoreChanges: ["secretString", "versionStages"]
         });
 
-        return secret;
+        return {
+            secret,
+            secretVersion
+        } as SecretsResult;
     }
 }
 

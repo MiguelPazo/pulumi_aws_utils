@@ -61,8 +61,7 @@ class S3 {
             }
 
             const replicaName = `${name}-replica-${regionReplica}`;
-            const bucketName = pulumi.interpolate`${this.config.generalPrefix}-${this.config.accountId}-${replicaName}`;
-
+            const bucketName = pulumi.interpolate`${this.config.generalPrefixMultiregion}-${this.config.accountId}-${replicaName}`;
             const resourceOptions: pulumi.ResourceOptions = providerReplica ? {provider: providerReplica} : {};
 
             return aws.s3.Bucket.get(

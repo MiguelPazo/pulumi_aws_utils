@@ -11,6 +11,7 @@ export type InitConfig = {
     generalPrefix: string;
     generalPrefixShort: string;
     generalPrefixShort2: string;
+    generalPrefixMultiregion?: string;
     generalTags: {};
     region: string;
     providerVirginia: aws.Provider;

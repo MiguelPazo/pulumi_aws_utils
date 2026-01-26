@@ -38,7 +38,8 @@ class Kms {
         const regionReplica = this.config.regionReplica;
         const providerReplica = this.config.providerReplica;
 
-        const keyName = `${this.config.project}-${name}-kms-key`;
+        const keyNameResource = `${this.config.project}-${name}-kms-key`;
+        const keyName = `${this.config.generalPrefix}-${name}-kms`;
         const keyDescription = keyConfig?.description || `KMS key for ${name}`;
 
         /**
@@ -49,10 +50,10 @@ class Kms {
                 throw new Error("regionReplica is required when failoverReplica is true");
             }
 
-            const replicaKeyName = `${keyName}-replica-${regionReplica}`;
+            const replicaKeyName = `${this.config.generalPrefixMultiregion}-${name}-replica-${regionReplica}`;
 
             const replicaKey = aws.kms.ReplicaKey.get(
-                `${this.config.project}-${name}-kms-replica-failover`,
+                `${this.config.project}-${name}-kms-replica`,
                 replicaKeyName,
                 undefined,
                 providerReplica ? {provider: providerReplica} : undefined
@@ -61,9 +62,10 @@ class Kms {
             let replicaAlias: aws.kms.Alias | undefined;
 
             if (createAlias) {
-                const aliasName = `alias/${this.config.generalPrefix}-${name}-kms-replica-${regionReplica}`;
+                const aliasName = `alias/${this.config.generalPrefixMultiregion}-${name}-kms-replica-${regionReplica}`;
+
                 replicaAlias = aws.kms.Alias.get(
-                    `${this.config.project}-${name}-kms-alias-failover`,
+                    `${this.config.project}-${name}-kms-alias-replica`,
                     aliasName,
                     undefined,
                     providerReplica ? {provider: providerReplica} : undefined
@@ -90,7 +92,7 @@ class Kms {
             }
         }
 
-        const key = new aws.kms.Key(keyName, {
+        const key = new aws.kms.Key(keyNameResource, {
             description: keyDescription,
             keyUsage: keyConfig?.keyUsage || "ENCRYPT_DECRYPT",
             customerMasterKeySpec: keyConfig?.keySpec || "SYMMETRIC_DEFAULT",
@@ -142,10 +144,6 @@ class Kms {
         let replicaAliases: aws.kms.Alias[] | undefined;
 
         if (multiRegion && regionReplica && providerReplica) {
-            // Get region name
-            const regionData = await aws.getRegion({}, {provider: providerReplica});
-            const region = regionData.region;
-
             // Create replica key
             const replicaKey = new aws.kms.ReplicaKey(`${this.config.project}-${name}-kms-replica`, {
                 description: keyDescription,
@@ -153,7 +151,7 @@ class Kms {
                 deletionWindowInDays: keyConfig?.deletionWindowInDays || 7,
                 tags: {
                     ...this.config.generalTags,
-                    Name: `${keyName}-replica-${region}`,
+                    Name: `${keyName}-replica-${regionReplica}`,
                     ...keyConfig?.tags
                 }
             }, {provider: providerReplica});
@@ -163,7 +161,7 @@ class Kms {
             if (createAlias) {
                 // Create alias for replica
                 const replicaAlias = new aws.kms.Alias(`${this.config.project}-${name}-kms-alias-replica`, {
-                    name: `alias/${this.config.generalPrefix}-${name}-kms-replica-${region}`,
+                    name: `alias/${this.config.generalPrefix}-${name}-kms-replica-${regionReplica}`,
                     targetKeyId: replicaKey.keyId,
                 }, {provider: providerReplica});
 

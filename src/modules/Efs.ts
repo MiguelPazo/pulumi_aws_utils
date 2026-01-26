@@ -29,8 +29,15 @@ class Efs {
             vpc,
             subnetIds,
             kmsKey,
+            kmsKeyReplica,
+            fileSystemReplicaId,
             tags
         } = config;
+
+        const multiRegion = (config.enableMultiregion && this.config.multiRegion && fileSystemReplicaId !== undefined) || false;
+        const failoverReplica = this.config.failoverReplica || false;
+        const regionReplica = this.config.regionReplica;
+
         /**
          * KMS
          */
@@ -168,6 +175,31 @@ class Efs {
                     }
                 });
             }));
+        }
+
+        /**
+         * Handle multi-region replication
+         */
+        if (multiRegion && !failoverReplica) {
+            if (!regionReplica) {
+                throw new Error("regionReplica is required when multiRegion is true");
+            }
+            if (!fileSystemReplicaId) {
+                throw new Error("fileSystemReplicaId is required when multiRegion is true");
+            }
+            if (!kmsKeyReplica) {
+                throw new Error("kmsKeyReplica is required when multiRegion is true");
+            }
+
+            // Setup EFS replication configuration
+            new aws.efs.ReplicationConfiguration(`${this.config.project}-efs-${efsConfig.name}-replication`, {
+                sourceFileSystemId: fileSystem.id,
+                destination: {
+                    region: regionReplica,
+                    fileSystemId: fileSystemReplicaId,
+                    kmsKeyId: kmsKeyReplica.arn,
+                }
+            });
         }
 
         return {

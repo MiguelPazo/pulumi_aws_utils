@@ -15,3 +15,8 @@ export type SecretsConfig = {
     tags?: Record<string, string>;
 };
 
+export type SecretsResult = {
+    secret: aws.secretsmanager.Secret;
+    secretVersion?: aws.secretsmanager.SecretVersion;
+};
+
