@@ -25,7 +25,7 @@ class Sqs {
 
     async main(
         sqsConfig: SqsConfig,
-        kmsKey?: pulumi.Output<aws.kms.Key>
+        kmsKey?: pulumi.Output<aws.kms.Key | aws.kms.ReplicaKey>
     ): Promise<SqsResult> {
         /**
          * KMS

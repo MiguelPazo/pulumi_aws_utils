@@ -35,6 +35,7 @@ export type EfsConfig = {
     provisionedThroughputInMibps?: number;
     lifecyclePolicy?: EfsLifecyclePolicy;
     accessPoints?: EfsAccessPoint[];
+    enableReplicationOverwrite?: boolean;
 };
 
 export type EfsResult = {
