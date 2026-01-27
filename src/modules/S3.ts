@@ -139,7 +139,7 @@ class S3 {
             let elbServiceAccPromise: Promise<any> | null = null;
 
             if (enableReceiveLogs) {
-                elbServiceAccPromise = aws.elb.getServiceAccount({});
+                elbServiceAccPromise = aws.elb.getServiceAccount({}, provider ? {provider} : undefined);
                 policyInputs.push(elbServiceAccPromise);
             }
 
