@@ -50,6 +50,7 @@ import {LambdaNotifications} from "./src/tools/LambdaNotifications";
 import {UserProwler} from "./src/tools/UserProwler";
 import {LambdaExportBackup} from "./src/tools/LambdaExportBackup";
 import {ExportFinalBackup} from "./src/modules/ExportFinalBackup";
+import {Route53} from "./src/modules/Route53";
 
 export const AwsUtilsInit = {
     init
@@ -93,6 +94,7 @@ export const AwsUtilsModules = {
     RdsAurora,
     RdsAuroraGlobal,
     RdsProxy,
+    Route53,
     S3,
     S3Replica,
     Secrets,
