@@ -342,6 +342,50 @@ class S3 {
 
         return bucket
     }
+
+    async enableCloudfront(
+        name: string = 'cloudfront-access',
+        bucket: pulumi.Output<aws.s3.Bucket>,
+        cloudfront: pulumi.Output<aws.cloudfront.Distribution>,
+    ): Promise<void> {
+        new aws.s3.BucketPolicy(`${this.config.project}-${name}-bucket-policy`, {
+            bucket: bucket.id,
+            policy: pulumi.all([bucket.arn, cloudfront.id, this.config.accountId]).apply(([bucketArn, cdnId, accountId]) => {
+                return JSON.stringify({
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Deny",
+                            "Principal": "*",
+                            "Action": "s3:*",
+                            "Resource": [
+                                bucketArn,
+                                `${bucketArn}/*`
+                            ],
+                            "Condition": {
+                                "Bool": {
+                                    "aws:SecureTransport": "false"
+                                }
+                            }
+                        },
+                        {
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": "cloudfront.amazonaws.com"
+                            },
+                            "Action": "s3:GetObject",
+                            "Resource": `${bucketArn}/*`,
+                            "Condition": {
+                                "StringEquals": {
+                                    "AWS:SourceArn": `arn:aws:cloudfront::${accountId}:distribution/${cdnId}`
+                                }
+                            }
+                        }
+                    ]
+                });
+            })
+        });
+    }
 }
 
 export {S3}

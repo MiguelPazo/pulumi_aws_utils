@@ -4,7 +4,7 @@
 import * as pulumi from "@pulumi/pulumi";
 import * as aws from "@pulumi/aws";
 import * as crypto from "crypto";
-import {ApiGatewayResult, CertificatesResult, VpceDnsOutput, VpcImportResult} from "../types";
+import {ApiGatewayModuleConfig, ApiGatewayResult} from "../types";
 import * as yaml from "js-yaml";
 import {UtilsInfra} from "../common/UtilsInfra";
 import {getInit} from "../config";
@@ -26,24 +26,24 @@ class ApiGateway {
         return this.__instance;
     }
 
-    async main(
-        name: string,
-        isPrivate: boolean,
-        stageName: string,
-        template?: string,
-        certificates?: CertificatesResult[],
-        logLevel?: string,
-        enableLogs?: boolean,
-        logGroupKmsKey?: pulumi.Output<aws.kms.Key>,
-        enableXRay?: boolean,
-        privateVpcEndpointIds?: pulumi.Output<string>[],
-        ignoreOpenApiChanges?: boolean,
-        dependsOn?: any[],
-        vpceApiGwDns?: pulumi.Output<VpceDnsOutput>,
-        vpc?: pulumi.Output<VpcImportResult>,
-    ): Promise<ApiGatewayResult> {
-        logLevel = logLevel == undefined ? "INFO" : logLevel;
-        ignoreOpenApiChanges = ignoreOpenApiChanges == undefined ? false : ignoreOpenApiChanges;
+    async main(config: ApiGatewayModuleConfig): Promise<ApiGatewayResult> {
+        const {
+            name,
+            isPrivate = false,
+            stageName,
+            template,
+            certificates,
+            logLevel = "INFO",
+            enableLogs,
+            logGroupKmsKey,
+            enableXRay,
+            privateVpcEndpointIds,
+            ignoreOpenApiChanges = false,
+            dependsOn,
+            vpceApiGwDns,
+            vpc,
+        } = config;
+
         const openApiSpec = yaml.load(template);
 
         /**
@@ -158,7 +158,7 @@ class ApiGateway {
         /**
          * DNS
          */
-        certificates.forEach((cert, index) => {
+        certificates?.forEach((cert, index) => {
             const domainNameArgs: aws.apigateway.DomainNameArgs = {
                 domainName: cert.domain,
                 securityPolicy: "TLS_1_2",

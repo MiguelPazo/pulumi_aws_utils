@@ -19,7 +19,7 @@ export type BackupCopy = {
 
 export type BackupConfig = {
     name: string;
-    kmsKey?: pulumi.Output<aws.kms.Key>;
+    kmsKey?: pulumi.Output<aws.kms.Key | aws.kms.ReplicaKey>;
     copies?: BackupCopy[];
     plans?: BackupPlan[];
 };
