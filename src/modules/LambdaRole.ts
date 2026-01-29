@@ -40,6 +40,7 @@ class LambdaRole {
                 .replace(/rep_stack_alias/g, this.config.stackAlias)
                 .replace(/rep_stack/g, this.config.stack)
                 .replace(/rep_project/g, this.config.project)
+                .replace(/rep_general_prefix_multiregion/g, this.config.generalPrefixMultiregion)
                 .replace(/rep_general_prefix/g, this.config.generalPrefix)
                 .replace(/rep_log_grup/g, `${this.config.generalPrefix}-${lambda.name}`);
 
