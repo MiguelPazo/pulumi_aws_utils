@@ -111,7 +111,7 @@ class Secrets {
          */
         const secretVersion = new aws.secretsmanager.SecretVersion(`${this.config.project}-${name}-secret-version`, {
             secretId: secret.id,
-            secretString: JSON.stringify(secretString)
+            secretString: pulumi.output(secretString).apply(s => JSON.stringify(s))
         }, {
             ignoreChanges: ["secretString", "versionStages"]
         });

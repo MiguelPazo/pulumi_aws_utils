@@ -7,7 +7,7 @@ import * as pulumi from "@pulumi/pulumi";
 export type SecretsConfig = {
     name: string;
     kmsKey?: pulumi.Output<aws.kms.Key | aws.kms.ReplicaKey>;
-    secretString?: Record<string, any>;
+    secretString?: Record<string, any> | pulumi.Output<Record<string, any>>;
     description?: string;
     recoveryWindowInDays?: number;
     forceOverwriteReplicaSecret?: boolean;

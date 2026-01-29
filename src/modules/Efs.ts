@@ -127,9 +127,9 @@ class Efs {
                 transitionToIa: efsConfig.lifecyclePolicy.transitionToIa || "AFTER_30_DAYS",
                 transitionToPrimaryStorageClass: efsConfig.lifecyclePolicy.transitionToPrimaryStorageClass || "AFTER_1_ACCESS"
             }] : undefined,
-            protection: {
-                replicationOverwrite: efsConfig.enableReplicationOverwrite ? "DISABLED" : "ENABLED"
-            },
+            // protection: {
+            //     replicationOverwrite: efsConfig.enableReplicationOverwrite ? "DISABLED" : "ENABLED"
+            // },
             tags: {
                 ...this.config.generalTags,
                 ...tags,
