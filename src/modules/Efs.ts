@@ -68,7 +68,6 @@ class Efs {
                             Action: [
                                 "kms:Encrypt",
                                 "kms:Decrypt",
-                                "kms:List",
                                 "kms:ReEncrypt*",
                                 "kms:GenerateDataKey*",
                                 "kms:DescribeKey"

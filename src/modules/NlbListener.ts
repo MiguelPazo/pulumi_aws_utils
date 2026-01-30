@@ -1,9 +1,8 @@
 /**
  * Created by Miguel Pazo (https://miguelpazo.com)
  */
-import * as pulumi from "@pulumi/pulumi";
 import * as aws from "@pulumi/aws";
-import {CertificatesResult, LBConfig, VpcImportResult} from "../types";
+import {NlbListenerModuleConfig} from "../types";
 import {InitConfig} from "../types/module";
 import {getInit} from "../config";
 
@@ -23,13 +22,14 @@ class NlbListener {
         return this.__instance;
     }
 
-    async main(
-        name: string,
-        nlb: pulumi.Output<aws.lb.LoadBalancer>,
-        vpc: pulumi.Output<VpcImportResult>,
-        lstCertificate: CertificatesResult,
-        lbConfig: LBConfig
-    ): Promise<aws.lb.TargetGroup> {
+    async main(nlbListenerConfig: NlbListenerModuleConfig): Promise<aws.lb.TargetGroup> {
+        const {
+            name,
+            nlb,
+            vpc,
+            certificate,
+            lbConfig
+        } = nlbListenerConfig;
         const targetGroup = new aws.lb.TargetGroup(`${this.config.project}-${name}-tg`, {
             name: `${this.config.generalPrefixShort}-${name}-tg`,
             vpcId: vpc.id,
@@ -66,7 +66,7 @@ class NlbListener {
             loadBalancerArn: nlb.arn,
             port: lbConfig.lstPort,
             protocol: lstProtocol,
-            certificateArn: lstProtocol === "TLS" ? lstCertificate.arn : undefined,
+            certificateArn: lstProtocol === "TLS" ? certificate.arn : undefined,
             sslPolicy: lstProtocol === "TLS" ? this.config.albSslPolicyDefault : undefined,
             defaultActions: [{
                 type: "forward",

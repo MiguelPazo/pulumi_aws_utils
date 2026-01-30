@@ -32,13 +32,14 @@ class CloudFrontFrontend {
             s3Logs,
             certificate,
             waf,
-            customErrorResponses
+            customErrorResponses,
+            dnsRoute53
         } = config;
         // Create CloudFront distribution
         const cdn = new aws.cloudfront.Distribution(`${this.config.project}-${name}-cf`, {
             enabled: true,
             comment: `${this.config.generalPrefix}-${name}-cf`,
-            aliases: [aliasDns],
+            aliases: aliasDns,
             defaultRootObject: "index.html",
             priceClass: "PriceClass_100",
             webAclId: waf.arn,
@@ -110,7 +111,7 @@ class CloudFrontFrontend {
             name: `${this.config.generalPrefix}-${name}-cf-s3-destination`,
             outputFormat: "parquet",
             deliveryDestinationConfiguration: {
-                destinationResourceArn: pulumi.interpolate`${s3Logs.arn}/${aliasDns}/`
+                destinationResourceArn: pulumi.interpolate`${s3Logs.arn}/${aliasDns[0]}/`
             },
             tags: {
                 ...this.config.generalTags,
@@ -136,7 +137,11 @@ class CloudFrontFrontend {
             dependsOn: [logDeliverySource, logDeliveryDestination]
         });
 
-        UtilsInfra.createAliasRecord(certificate, cdn.domainName, cdn.hostedZoneId, true);
+        if (dnsRoute53) {
+            UtilsInfra.createAliasRecordWithCustomDomain(dnsRoute53, certificate, cdn.domainName, cdn.hostedZoneId, true);
+        } else {
+            UtilsInfra.createAliasRecord(certificate, cdn.domainName, cdn.hostedZoneId, true);
+        }
 
         return cdn;
     }

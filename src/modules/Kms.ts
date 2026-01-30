@@ -139,11 +139,33 @@ class Kms {
         let replicaAliases: aws.kms.Alias[] | undefined;
 
         if (multiRegion && providerReplica) {
-            // Create replica key
+            // Create replica key with same policy as primary
             const replicaKey = new aws.kms.ReplicaKey(`${this.config.project}-${name}-kms-replica`, {
                 description: keyDescription,
                 primaryKeyArn: key.arn,
                 deletionWindowInDays: keyConfig?.deletionWindowInDays || 7,
+                policy: keyConfig?.policy || pulumi.output(this.config.accountId).apply(x => {
+                    const baseStatements = [
+                        {
+                            Sid: "EnableRootPermissions",
+                            Effect: "Allow",
+                            Principal: {
+                                AWS: `arn:aws:iam::${x}:root`,
+                            },
+                            Action: "kms:*",
+                            Resource: "*",
+                        }
+                    ];
+
+                    if (additionalStatements) {
+                        baseStatements.push(...additionalStatements);
+                    }
+
+                    return JSON.stringify({
+                        Version: "2012-10-17",
+                        Statement: baseStatements
+                    })
+                }),
                 tags: {
                     ...this.config.generalTags,
                     Name: `${keyName}-replica`,

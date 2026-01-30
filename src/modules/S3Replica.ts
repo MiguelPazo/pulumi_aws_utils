@@ -40,7 +40,7 @@ class S3Replica {
             enableRTC = false
         } = config;
 
-        const roleName = name || 's3-replication';
+        const roleName = name || "s3-replication";
         const configName = replicationConfigName || roleName;
         let resultRole: aws.iam.Role;
         let replicationRoleArn: pulumi.Input<string>;

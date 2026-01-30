@@ -55,3 +55,11 @@ export type AlbListenerModuleConfig = {
     createRoute53Record?: boolean;
     targetIps?: string[];
 };
+
+export type NlbListenerModuleConfig = {
+    name: string;
+    nlb: pulumi.Output<aws.lb.LoadBalancer>;
+    vpc: pulumi.Output<VpcImportResult>;
+    certificate: CertificatesResult;
+    lbConfig: LBConfig;
+};
