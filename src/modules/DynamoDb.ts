@@ -31,8 +31,42 @@ class DynamoDb {
             replicaRegion,
             replicaConfig,
             tablePrefix = "table",
-            skipReplicaCreation = true
+            skipReplicaCreation = true,
+            enableMultiregion = false
         } = config;
+
+        const multiRegion = (enableMultiregion && this.config.multiRegion) || false;
+        const failoverReplica = this.config.failoverReplica || false;
+        const regionReplica = this.config.regionReplica;
+        const providerReplica = this.config.providerReplica;
+
+        /**
+         * Handle failover replica scenario - get existing tables
+         */
+        if (multiRegion && failoverReplica) {
+            if (!regionReplica) {
+                throw new Error("regionReplica is required when failoverReplica is true");
+            }
+
+            const tables: { [key: string]: aws.dynamodb.Table } = {};
+            const resourceOptions: pulumi.ResourceOptions = providerReplica ? {provider: providerReplica} : {};
+
+            tableConfigs.forEach(tableConfig => {
+                const tableKey = tableConfig.name;
+                const replicaTableName = `${this.config.generalPrefixMultiregion}-${tablePrefix}-${tableConfig.name}`;
+
+                const table = aws.dynamodb.Table.get(
+                    `${this.config.project}-dynamodb-${tableConfig.name}-failover`,
+                    replicaTableName,
+                    undefined,
+                    resourceOptions
+                );
+
+                tables[tableKey] = table;
+            });
+
+            return tables as DynamoDbResult;
+        }
 
         const tables: { [key: string]: aws.dynamodb.Table } = {};
 

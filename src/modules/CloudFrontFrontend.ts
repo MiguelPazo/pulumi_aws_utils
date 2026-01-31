@@ -47,7 +47,7 @@ class CloudFrontFrontend {
             origins: [
                 {
                     originId: name,
-                    domainName: pulumi.interpolate`${this.config.generalPrefix}-${this.config.accountId}-${name}.s3.${this.config.region}.amazonaws.com`,
+                    domainName: pulumi.interpolate`${this.config.generalPrefixMultiregion}-${this.config.accountId}-${name}.s3.${this.config.region}.amazonaws.com`,
                     originAccessControlId: cfbase.oac.id
                 }
             ],

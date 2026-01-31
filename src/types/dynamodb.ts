@@ -84,4 +84,5 @@ export type DynamoDbModuleConfig = {
     // Set to true to skip replica creation in first deployment phase
     // Required when using PROVISIONED + Auto Scaling + Global Tables
     skipReplicaCreation?: boolean;
+    enableMultiregion?: boolean;
 };

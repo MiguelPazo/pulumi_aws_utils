@@ -27,7 +27,7 @@ export type CloudWatchDataProtectionConfig = {
     deidentifyMode?: boolean;
     dataIdentifiers?: DataIdentifierConfig;
     auditDestination?: AuditDestination;
-    kmsKey?: pulumi.Input<aws.kms.Key>;
+    kmsKey?: pulumi.Input<aws.kms.Key | aws.kms.ReplicaKey>;
 };
 
 export type CloudWatchDataProtectionResult = {

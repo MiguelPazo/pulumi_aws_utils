@@ -31,10 +31,11 @@ class Efs {
             kmsKey,
             kmsKeyReplica,
             fileSystemReplicaId,
-            tags
+            tags,
+            enableMultiregion = false
         } = config;
 
-        const multiRegion = (config.enableMultiregion && this.config.multiRegion && fileSystemReplicaId !== undefined) || false;
+        const multiRegion = (enableMultiregion && this.config.multiRegion && fileSystemReplicaId !== undefined) || false;
         const failoverReplica = this.config.failoverReplica || false;
         const regionReplica = this.config.regionReplica;
 
