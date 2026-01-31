@@ -137,10 +137,15 @@ class CloudFrontFrontend {
             dependsOn: [logDeliverySource, logDeliveryDestination]
         });
 
+        // Create Route53 alias records
         if (dnsRoute53) {
+            // If dnsRoute53 is provided, create only one record with that domain
             UtilsInfra.createAliasRecordWithCustomDomain(dnsRoute53, certificate, cdn.domainName, cdn.hostedZoneId, true);
         } else {
-            UtilsInfra.createAliasRecord(certificate, cdn.domainName, cdn.hostedZoneId, true);
+            // If dnsRoute53 is not provided, create records for all DNS aliases
+            aliasDns.forEach(alias => {
+                UtilsInfra.createAliasRecordWithCustomDomain(alias, certificate, cdn.domainName, cdn.hostedZoneId, true);
+            });
         }
 
         return cdn;
