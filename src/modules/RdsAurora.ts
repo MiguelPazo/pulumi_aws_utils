@@ -207,7 +207,7 @@ class RdsAurora {
             `${this.config.project}-${auroraConfig.engine}-${auroraConfig.name}`,
             clusterConfig,
             auroraConfig.isSecondaryCluster ? {
-                ignoreChanges: ["globalClusterIdentifier"]
+                ignoreChanges: ["globalClusterIdentifier", "replicationSourceIdentifier"]
             } : undefined
         );
 

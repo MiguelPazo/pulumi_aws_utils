@@ -21,6 +21,7 @@ export type KmsModuleConfig = {
     additionalStatements?: any[];
     provider?: aws.Provider;
     enableMultiregion?: boolean;
+    additionalReplicas?: aws.Provider[];
 };
 
 export type KmsAliasConfig = {

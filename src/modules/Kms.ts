@@ -4,7 +4,7 @@
 import * as pulumi from "@pulumi/pulumi";
 import * as aws from "@pulumi/aws";
 import {InitConfig} from "../types/module";
-import type {KmsKeyResult, KmsModuleConfig} from "../types";
+import type {KmsKeyConfig, KmsKeyResult, KmsModuleConfig} from "../types";
 import {getInit} from "../config";
 
 class Kms {
@@ -23,6 +23,41 @@ class Kms {
         return this.__instance;
     }
 
+    /**
+     * Generate KMS key policy with optional additional statements
+     */
+    private generateKeyPolicy(
+        keyConfig: KmsKeyConfig | undefined,
+        additionalStatements: any[] | undefined
+    ): string | pulumi.Output<string> {
+        if (keyConfig?.policy) {
+            return keyConfig.policy;
+        }
+
+        return pulumi.output(this.config.accountId).apply(accountId => {
+            const baseStatements = [
+                {
+                    Sid: "EnableRootPermissions",
+                    Effect: "Allow",
+                    Principal: {
+                        AWS: `arn:aws:iam::${accountId}:root`,
+                    },
+                    Action: "kms:*",
+                    Resource: "*",
+                }
+            ];
+
+            if (additionalStatements) {
+                baseStatements.push(...additionalStatements);
+            }
+
+            return JSON.stringify({
+                Version: "2012-10-17",
+                Statement: baseStatements
+            });
+        });
+    }
+
     async main(config: KmsModuleConfig): Promise<KmsKeyResult> {
         const {
             name,
@@ -30,7 +65,8 @@ class Kms {
             createAlias = true,
             additionalStatements,
             provider,
-            enableMultiregion = false
+            enableMultiregion = false,
+            additionalReplicas = []
         } = config;
 
         const multiRegion = (enableMultiregion && this.config.multiRegion) || false;
@@ -94,28 +130,7 @@ class Kms {
             multiRegion: multiRegion,
             deletionWindowInDays: keyConfig?.deletionWindowInDays || 7,
             enableKeyRotation: keyConfig?.enableKeyRotation || true,
-            policy: keyConfig?.policy || pulumi.output(this.config.accountId).apply(x => {
-                const baseStatements = [
-                    {
-                        Sid: "EnableRootPermissions",
-                        Effect: "Allow",
-                        Principal: {
-                            AWS: `arn:aws:iam::${x}:root`,
-                        },
-                        Action: "kms:*",
-                        Resource: "*",
-                    }
-                ];
-
-                if (additionalStatements) {
-                    baseStatements.push(...additionalStatements);
-                }
-
-                return JSON.stringify({
-                    Version: "2012-10-17",
-                    Statement: baseStatements
-                })
-            }),
+            policy: this.generateKeyPolicy(keyConfig, additionalStatements),
             tags: {
                 ...this.config.generalTags,
                 Name: keyName,
@@ -135,8 +150,8 @@ class Kms {
         /**
          * Create replica in other region if multiRegion is enabled
          */
-        let replicas: aws.kms.ReplicaKey[] | undefined;
-        let replicaAliases: aws.kms.Alias[] | undefined;
+        let replicas: aws.kms.ReplicaKey[] = [];
+        let replicaAliases: aws.kms.Alias[] = [];
 
         if (multiRegion && providerReplica) {
             // Create replica key with same policy as primary
@@ -144,28 +159,7 @@ class Kms {
                 description: keyDescription,
                 primaryKeyArn: key.arn,
                 deletionWindowInDays: keyConfig?.deletionWindowInDays || 7,
-                policy: keyConfig?.policy || pulumi.output(this.config.accountId).apply(x => {
-                    const baseStatements = [
-                        {
-                            Sid: "EnableRootPermissions",
-                            Effect: "Allow",
-                            Principal: {
-                                AWS: `arn:aws:iam::${x}:root`,
-                            },
-                            Action: "kms:*",
-                            Resource: "*",
-                        }
-                    ];
-
-                    if (additionalStatements) {
-                        baseStatements.push(...additionalStatements);
-                    }
-
-                    return JSON.stringify({
-                        Version: "2012-10-17",
-                        Statement: baseStatements
-                    })
-                }),
+                policy: this.generateKeyPolicy(keyConfig, additionalStatements),
                 tags: {
                     ...this.config.generalTags,
                     Name: `${keyName}-replica`,
@@ -173,7 +167,7 @@ class Kms {
                 }
             }, {provider: providerReplica});
 
-            replicas = [replicaKey];
+            replicas.push(replicaKey);
 
             if (createAlias) {
                 // Create alias for replica
@@ -182,15 +176,58 @@ class Kms {
                     targetKeyId: replicaKey.keyId,
                 }, {provider: providerReplica});
 
-                replicaAliases = [replicaAlias];
+                replicaAliases.push(replicaAlias);
+            }
+        }
+
+        /**
+         * Create additional replicas if provided
+         */
+        if (multiRegion && additionalReplicas.length > 0) {
+            for (let i = 0; i < additionalReplicas.length; i++) {
+                const replicaProvider = additionalReplicas[i];
+                const replicaIndex = i + 1; // Start from 1 since index 0 is the main replica
+
+                // Create additional replica key
+                const additionalReplicaKey = new aws.kms.ReplicaKey(
+                    `${this.config.project}-${name}-kms-replica-${replicaIndex}`,
+                    {
+                        description: keyDescription,
+                        primaryKeyArn: key.arn,
+                        deletionWindowInDays: keyConfig?.deletionWindowInDays || 7,
+                        policy: this.generateKeyPolicy(keyConfig, additionalStatements),
+                        tags: {
+                            ...this.config.generalTags,
+                            Name: `${keyName}-replica-${replicaIndex}`,
+                            ...keyConfig?.tags
+                        }
+                    },
+                    {provider: replicaProvider}
+                );
+
+                replicas.push(additionalReplicaKey);
+
+                if (createAlias) {
+                    // Create alias for additional replica
+                    const additionalReplicaAlias = new aws.kms.Alias(
+                        `${this.config.project}-${name}-kms-alias-replica-${replicaIndex}`,
+                        {
+                            name: `alias/${this.config.generalPrefix}-${name}-kms-replica-${replicaIndex}`,
+                            targetKeyId: additionalReplicaKey.keyId,
+                        },
+                        {provider: replicaProvider}
+                    );
+
+                    replicaAliases.push(additionalReplicaAlias);
+                }
             }
         }
 
         return {
             key,
             alias,
-            replicas,
-            replicaAliases
+            replicas: replicas.length > 0 ? replicas : undefined,
+            replicaAliases: replicaAliases.length > 0 ? replicaAliases : undefined
         } as KmsKeyResult
     }
 
