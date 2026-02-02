@@ -41,19 +41,33 @@ class General {
         return null;
     }
 
+    /**
+     * Apply standard replacements to a text string
+     * @param text - The text content to process
+     * @param accountId - AWS account ID
+     * @returns Processed text with replacements applied
+     */
+    static renderText(text: string, accountId: string): string {
+        const config = getInit();
+
+        return text
+            .replace(/rep_region/g, config.region)
+            .replace(/rep_accountid/g, accountId)
+            .replace(/rep_general_prefix_multiregion/g, config.generalPrefixMultiregion || config.generalPrefix)
+            .replace(/rep_general_prefix/g, config.generalPrefix)
+            .replace(/rep_stack_alias/g, config.stackAlias || config.stack)
+            .replace(/rep_project/g, config.project)
+            .replace(/rep_stack/g, config.stack);
+    }
+
     static renderPolicy(filePolicy: string): pulumi.Output<any> {
         const config = getInit();
 
         return pulumi.all([config.accountId]).apply(([accountId]) => {
-            let policyStr = fs.readFileSync(filePolicy, 'utf8')
-                .replace(/rep_region/g, aws.config.region)
-                .replace(/rep_accountid/g, accountId)
-                .replace(/rep_general_prefix_multiregion/g, config.generalPrefixMultiregion)
-                .replace(/rep_general_prefix/g, config.generalPrefix)
-                .replace(/rep_stack_alias/g, config.stackAlias)
-                .replace(/rep_project/g, config.project);
+            const fileContent = fs.readFileSync(filePolicy, 'utf8');
+            const renderedContent = General.renderText(fileContent, accountId);
 
-            return Promise.resolve(JSON.parse(policyStr));
+            return Promise.resolve(JSON.parse(renderedContent));
         });
     }
 }

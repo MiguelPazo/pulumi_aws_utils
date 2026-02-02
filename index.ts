@@ -44,13 +44,16 @@ import {VpcImport} from "./src/modules/VpcImport";
 import {Ssm} from "./src/modules/Ssm";
 import {Kms} from "./src/modules/Kms";
 import {DynamoDb} from "./src/modules/DynamoDb";
+import {ParamStore} from "./src/modules/ParamStore";
 import {LambdaRestart} from "./src/tools/LambdaRestart";
 import {LambdaAlarms} from "./src/tools/LambdaAlarms";
 import {LambdaNotifications} from "./src/tools/LambdaNotifications";
 import {UserProwler} from "./src/tools/UserProwler";
 import {LambdaExportBackup} from "./src/tools/LambdaExportBackup";
+import {LambdaFailover} from "./src/tools/LambdaFailover";
 import {ExportFinalBackup} from "./src/modules/ExportFinalBackup";
 import {Route53} from "./src/modules/Route53";
+import {StepFunctionFailover} from "./src/modules/StepFunctionFailover";
 
 export const AwsUtilsInit = {
     init
@@ -66,6 +69,7 @@ export const AwsUtilsTools = {
     LambdaAlarms,
     LambdaNotifications,
     LambdaExportBackup,
+    LambdaFailover,
     UserProwler,
 };
 
@@ -90,6 +94,7 @@ export const AwsUtilsModules = {
     ExportFinalBackup,
     Kms,
     LambdaRole,
+    ParamStore,
     Rds,
     RdsAurora,
     RdsAuroraGlobal,
@@ -100,6 +105,7 @@ export const AwsUtilsModules = {
     Secrets,
     Sqs,
     Ssm,
+    StepFunctionFailover,
     ApiGatewayVpcLink,
     NlbListener,
     Ses,

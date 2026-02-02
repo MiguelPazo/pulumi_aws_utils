@@ -1,0 +1,109 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogGroup",
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+      ],
+      "Resource": "arn:aws:logs:*:rep_accountid:log-group:/aws/lambda/rep_log_grup:*"
+    },
+    {
+      "Sid": "RDSFailover",
+      "Effect": "Allow",
+      "Action": [
+        "rds:DescribeGlobalClusters",
+        "rds:DescribeDBClusters",
+        "rds:FailoverGlobalCluster",
+        "rds:RemoveFromGlobalCluster"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "EFSReplication",
+      "Effect": "Allow",
+      "Action": [
+        "elasticfilesystem:DescribeReplicationConfigurations",
+        "elasticfilesystem:DeleteReplicationConfiguration",
+        "elasticfilesystem:DescribeFileSystems"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "S3Replication",
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetReplicationConfiguration",
+        "s3:GetBucketVersioning",
+        "s3:ListBucket",
+        "s3:GetBucketReplication",
+        "cloudwatch:GetMetricStatistics"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "CloudFrontManagement",
+      "Effect": "Allow",
+      "Action": [
+        "cloudfront:GetDistribution",
+        "cloudfront:GetDistributionConfig",
+        "cloudfront:UpdateDistribution",
+        "cloudfront:ListDistributions"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "Route53Management",
+      "Effect": "Allow",
+      "Action": [
+        "route53:GetHostedZone",
+        "route53:ListResourceRecordSets",
+        "route53:ChangeResourceRecordSets",
+        "route53:GetChange"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "ECSServiceManagement",
+      "Effect": "Allow",
+      "Action": [
+        "ecs:DescribeServices",
+        "ecs:UpdateService",
+        "ecs:DescribeTaskDefinition",
+        "ecs:ListServices",
+        "ecs:ListClusters"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "EventBridgeManagement",
+      "Effect": "Allow",
+      "Action": [
+        "events:DescribeRule",
+        "events:EnableRule",
+        "events:DisableRule",
+        "events:ListRules"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "SNSNotifications",
+      "Effect": "Allow",
+      "Action": [
+        "sns:Publish"
+      ],
+      "Resource": "rep_sns_arn"
+    },
+    {
+      "Sid": "SSMParameterStore",
+      "Effect": "Allow",
+      "Action": [
+        "ssm:GetParameter",
+        "ssm:GetParameters"
+      ],
+      "Resource": "arn:aws:ssm:*:rep_accountid:parameter/*"
+    }
+  ]
+}

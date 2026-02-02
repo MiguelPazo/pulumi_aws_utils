@@ -1,0 +1,46 @@
+[
+  {
+    "name": "/database/host",
+    "type": "String",
+    "value": "db.rep_stack.rep_region.rds.amazonaws.com",
+    "description": "Database host endpoint"
+  },
+  {
+    "name": "/database/port",
+    "type": "String",
+    "value": "5432",
+    "description": "Database port"
+  },
+  {
+    "name": "/api/key",
+    "type": "SecureString",
+    "value": "your-api-key-here",
+    "description": "API key for external service",
+    "ignoreChanges": true
+  },
+  {
+    "name": "/aws/account-id",
+    "type": "String",
+    "value": "rep_accountid",
+    "description": "AWS Account ID"
+  },
+  {
+    "name": "/aws/region",
+    "type": "String",
+    "value": "rep_region",
+    "description": "AWS Region"
+  },
+  {
+    "name": "/app/prefix",
+    "type": "String",
+    "value": "rep_general_prefix",
+    "description": "General prefix for resources"
+  },
+  {
+    "name": "/config/failover",
+    "type": "SecureString",
+    "value": "[[failover.json]]",
+    "description": "Multi-region failover configuration for Step Functions",
+    "ignoreChanges": true
+  }
+]

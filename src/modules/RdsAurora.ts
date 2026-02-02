@@ -200,9 +200,6 @@ class RdsAurora {
             clusterConfig.port = auroraConfig.port;
         }
 
-        console.log("====> auroraConfig.isSecondaryCluster");
-        console.log(auroraConfig.isSecondaryCluster);
-
         const cluster = new aws.rds.Cluster(
             `${this.config.project}-${auroraConfig.engine}-${auroraConfig.name}`,
             clusterConfig,
