@@ -1,6 +1,49 @@
 /**
  * Lambda function to receive SNS notifications and send them to Slack
  */
+import {SSMClient, GetParameterCommand} from '@aws-sdk/client-ssm';
+
+// Global variables for environment configuration
+let ENV_CONFIG = null;
+
+/**
+ * Load environment variables from SSM Parameter Store if PARAM_STORE_PATH is defined,
+ * otherwise use standard environment variables
+ */
+async function loadEnvironment() {
+    if (ENV_CONFIG) {
+        return ENV_CONFIG;
+    }
+
+    const paramStorePath = process.env.PARAM_STORE_PATH;
+
+    if (paramStorePath) {
+        // Load from SSM Parameter Store
+        console.log(`Loading environment from SSM Parameter Store: ${paramStorePath}`);
+        const ssmClient = new SSMClient({});
+
+        try {
+            const command = new GetParameterCommand({
+                Name: paramStorePath,
+                WithDecryption: true
+            });
+
+            const response = await ssmClient.send(command);
+            ENV_CONFIG = JSON.parse(response.Parameter.Value);
+            console.log('Environment loaded successfully from SSM Parameter Store');
+        } catch (error) {
+            console.error('Error loading from SSM Parameter Store:', error);
+            throw new Error(`Failed to load environment from SSM: ${error.message}`);
+        }
+    } else {
+        // Use standard environment variables
+        ENV_CONFIG = {
+            SLACK_WEBHOOK_URL: process.env.SLACK_WEBHOOK_URL
+        };
+    }
+
+    return ENV_CONFIG;
+}
 
 /**
  * Main Lambda handler for processing SNS events and sending to Slack
@@ -8,7 +51,10 @@
  * @param {Object} context - Lambda context object
  */
 export const handler = async (event, context) => {
-    const slackWebhookUrl = process.env.SLACK_WEBHOOK_URL;
+    // Load environment configuration
+    const config = await loadEnvironment();
+
+    const slackWebhookUrl = config.SLACK_WEBHOOK_URL;
 
     if (!slackWebhookUrl) {
         console.error('SLACK_WEBHOOK_URL environment variable is not defined');

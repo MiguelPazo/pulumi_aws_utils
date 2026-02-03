@@ -1,0 +1,58 @@
+{
+  "Records": [
+    {
+      "EventSource": "aws:sns",
+      "EventVersion": "1.0",
+      "EventSubscriptionArn": "arn:aws:sns:us-east-1:123456789012:test-topic:12345678-1234-1234-1234-123456789012",
+      "Sns": {
+        "Type": "Notification",
+        "MessageId": "11111111-1111-1111-1111-111111111111",
+        "TopicArn": "arn:aws:sns:us-east-1:123456789012:test-topic",
+        "Subject": "ALARM: AWS/123456789012/my-project - [production][frontend][us-east-1]",
+        "Message": "Name: my-project-frontend-5xx-errors\n\nDescription: High rate of 5xx errors detected\n\nState Change: OK -> ALARM\n\nReason: Error rate exceeded threshold",
+        "Timestamp": "2026-02-03T20:30:00.000Z",
+        "SignatureVersion": "1",
+        "Signature": "EXAMPLE",
+        "SigningCertUrl": "EXAMPLE",
+        "UnsubscribeUrl": "EXAMPLE",
+        "MessageAttributes": {}
+      }
+    },
+    {
+      "EventSource": "aws:sns",
+      "EventVersion": "1.0",
+      "EventSubscriptionArn": "arn:aws:sns:us-east-1:123456789012:test-topic:12345678-1234-1234-1234-123456789012",
+      "Sns": {
+        "Type": "Notification",
+        "MessageId": "22222222-2222-2222-2222-222222222222",
+        "TopicArn": "arn:aws:sns:us-east-1:123456789012:test-topic",
+        "Subject": "OK: AWS/123456789012/my-project - [production][backend][us-east-1]",
+        "Message": "Name: my-project-backend-latency\n\nDescription: API latency monitoring\n\nState Change: ALARM -> OK\n\nReason: Latency returned to normal levels",
+        "Timestamp": "2026-02-03T20:30:15.000Z",
+        "SignatureVersion": "1",
+        "Signature": "EXAMPLE",
+        "SigningCertUrl": "EXAMPLE",
+        "UnsubscribeUrl": "EXAMPLE",
+        "MessageAttributes": {}
+      }
+    },
+    {
+      "EventSource": "aws:sns",
+      "EventVersion": "1.0",
+      "EventSubscriptionArn": "arn:aws:sns:us-east-1:123456789012:test-topic:12345678-1234-1234-1234-123456789012",
+      "Sns": {
+        "Type": "Notification",
+        "MessageId": "33333333-3333-3333-3333-333333333333",
+        "TopicArn": "arn:aws:sns:us-east-1:123456789012:test-topic",
+        "Subject": "ALARM ADMIN: AWS/123456789012/my-project - [production][IAM Policy Change][us-east-1]",
+        "Message": "IAM Policy Modified!\n\nEvent: PutUserPolicy\nUser: admin-user\nAccount: 123456789012\nTime: 2026-02-03T20:30:20Z",
+        "Timestamp": "2026-02-03T20:30:25.000Z",
+        "SignatureVersion": "1",
+        "Signature": "EXAMPLE",
+        "SigningCertUrl": "EXAMPLE",
+        "UnsubscribeUrl": "EXAMPLE",
+        "MessageAttributes": {}
+      }
+    }
+  ]
+}

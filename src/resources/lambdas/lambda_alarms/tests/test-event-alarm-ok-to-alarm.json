@@ -1,0 +1,48 @@
+{
+  "version": "0",
+  "id": "c1234567-89ab-cdef-0123-456789abcdef",
+  "detail-type": "CloudWatch Alarm State Change",
+  "source": "aws.cloudwatch",
+  "account": "123456789012",
+  "time": "2026-02-03T20:47:15Z",
+  "region": "us-east-1",
+  "resources": [
+    "arn:aws:cloudwatch:us-east-1:123456789012:alarm:my-project-prod-api-cpu-high"
+  ],
+  "detail": {
+    "alarmName": "my-project-prod-api-cpu-high",
+    "state": {
+      "value": "ALARM",
+      "reason": "Threshold Crossed: 3 out of the last 3 datapoints [85.5 (03/02/26 20:45:00), 87.2 (03/02/26 20:46:00), 89.8 (03/02/26 20:47:00)] were greater than the threshold (80.0) (minimum 3 datapoints for OK -> ALARM transition).",
+      "reasonData": "{\"version\":\"1.0\",\"queryDate\":\"2026-02-03T20:47:15.123+0000\",\"startDate\":\"2026-02-03T20:45:00.000+0000\",\"statistic\":\"Average\",\"period\":60,\"recentDatapoints\":[85.5,87.2,89.8],\"threshold\":80.0,\"evaluatedDatapoints\":[{\"timestamp\":\"2026-02-03T20:47:00.000+0000\",\"sampleCount\":1.0,\"value\":89.8}]}",
+      "timestamp": "2026-02-03T20:47:15.123Z"
+    },
+    "previousState": {
+      "value": "OK",
+      "reason": "Threshold Crossed: datapoint was not greater than the threshold",
+      "reasonData": "{\"version\":\"1.0\",\"queryDate\":\"2026-02-03T20:40:00.000+0000\",\"startDate\":\"2026-02-03T20:38:00.000+0000\",\"statistic\":\"Average\",\"period\":60,\"recentDatapoints\":[65.2,68.1,72.3],\"threshold\":80.0}",
+      "timestamp": "2026-02-03T20:40:00.000Z"
+    },
+    "configuration": {
+      "description": "CPU utilization is too high on production API service",
+      "metrics": [
+        {
+          "id": "m1",
+          "metricStat": {
+            "metric": {
+              "namespace": "AWS/ECS",
+              "name": "CPUUtilization",
+              "dimensions": {
+                "ServiceName": "my-project-prod-api",
+                "ClusterName": "my-project-prod-cluster"
+              }
+            },
+            "period": 60,
+            "stat": "Average"
+          },
+          "returnData": true
+        }
+      ]
+    }
+  }
+}

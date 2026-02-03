@@ -28,6 +28,13 @@ class AlarmsAdmin {
         const alarms: aws.cloudwatch.MetricAlarm[] = [];
         const namespace = cisConfig.alarmNamespace || "CISBenchmark";
 
+        // Prioritize lambdaAlarmsArn over snsTopicArn
+        const actionArn = cisConfig.lambdaAlarmsArn || cisConfig.snsTopicArn;
+
+        if (!actionArn) {
+            throw new Error("Either lambdaAlarmsArn or snsTopicArn must be provided");
+        }
+
         // Set default values to true for all boolean flags
         const config = {
             enableUnauthorizedApiCalls: cisConfig.enableUnauthorizedApiCalls !== false,
@@ -50,7 +57,7 @@ class AlarmsAdmin {
         if (config.enableUnauthorizedApiCalls) {
             const {metricFilter, alarm} = this.createUnauthorizedApiCallsMetric(
                 cisConfig.cloudTrailLogGroupName,
-                cisConfig.snsTopicArn,
+                actionArn,
                 namespace
             );
             metricFilters.push(metricFilter);
@@ -61,7 +68,7 @@ class AlarmsAdmin {
         if (config.enableConsoleSignInWithoutMfa) {
             const {metricFilter, alarm} = this.createConsoleSignInWithoutMfaMetric(
                 cisConfig.cloudTrailLogGroupName,
-                cisConfig.snsTopicArn,
+                actionArn,
                 namespace
             );
             metricFilters.push(metricFilter);
@@ -72,7 +79,7 @@ class AlarmsAdmin {
         if (config.enableRootAccountUsage) {
             const {metricFilter, alarm} = this.createRootAccountUsageMetric(
                 cisConfig.cloudTrailLogGroupName,
-                cisConfig.snsTopicArn,
+                actionArn,
                 namespace
             );
             metricFilters.push(metricFilter);
@@ -83,7 +90,7 @@ class AlarmsAdmin {
         if (config.enableIamPolicyChanges) {
             const {metricFilter, alarm} = this.createIamPolicyChangesMetric(
                 cisConfig.cloudTrailLogGroupName,
-                cisConfig.snsTopicArn,
+                actionArn,
                 namespace
             );
             metricFilters.push(metricFilter);
@@ -94,7 +101,7 @@ class AlarmsAdmin {
         if (config.enableCloudTrailChanges) {
             const {metricFilter, alarm} = this.createCloudTrailChangesMetric(
                 cisConfig.cloudTrailLogGroupName,
-                cisConfig.snsTopicArn,
+                actionArn,
                 namespace
             );
             metricFilters.push(metricFilter);
@@ -105,7 +112,7 @@ class AlarmsAdmin {
         if (config.enableConsoleAuthenticationFailures) {
             const {metricFilter, alarm} = this.createConsoleAuthenticationFailuresMetric(
                 cisConfig.cloudTrailLogGroupName,
-                cisConfig.snsTopicArn,
+                actionArn,
                 namespace
             );
             metricFilters.push(metricFilter);
@@ -116,7 +123,7 @@ class AlarmsAdmin {
         if (config.enableDisableOrDeleteKms) {
             const {metricFilter, alarm} = this.createDisableOrDeleteKmsMetric(
                 cisConfig.cloudTrailLogGroupName,
-                cisConfig.snsTopicArn,
+                actionArn,
                 namespace
             );
             metricFilters.push(metricFilter);
@@ -127,7 +134,7 @@ class AlarmsAdmin {
         if (config.enableS3BucketPolicyChanges) {
             const {metricFilter, alarm} = this.createS3BucketPolicyChangesMetric(
                 cisConfig.cloudTrailLogGroupName,
-                cisConfig.snsTopicArn,
+                actionArn,
                 namespace
             );
             metricFilters.push(metricFilter);
@@ -138,7 +145,7 @@ class AlarmsAdmin {
         if (config.enableAwsConfigChanges) {
             const {metricFilter, alarm} = this.createAwsConfigChangesMetric(
                 cisConfig.cloudTrailLogGroupName,
-                cisConfig.snsTopicArn,
+                actionArn,
                 namespace
             );
             metricFilters.push(metricFilter);
@@ -149,7 +156,7 @@ class AlarmsAdmin {
         if (config.enableSecurityGroupChanges) {
             const {metricFilter, alarm} = this.createSecurityGroupChangesMetric(
                 cisConfig.cloudTrailLogGroupName,
-                cisConfig.snsTopicArn,
+                actionArn,
                 namespace
             );
             metricFilters.push(metricFilter);
@@ -160,7 +167,7 @@ class AlarmsAdmin {
         if (config.enableNetworkAclChanges) {
             const {metricFilter, alarm} = this.createNetworkAclChangesMetric(
                 cisConfig.cloudTrailLogGroupName,
-                cisConfig.snsTopicArn,
+                actionArn,
                 namespace
             );
             metricFilters.push(metricFilter);
@@ -171,7 +178,7 @@ class AlarmsAdmin {
         if (config.enableNetworkGatewayChanges) {
             const {metricFilter, alarm} = this.createNetworkGatewayChangesMetric(
                 cisConfig.cloudTrailLogGroupName,
-                cisConfig.snsTopicArn,
+                actionArn,
                 namespace
             );
             metricFilters.push(metricFilter);
@@ -182,7 +189,7 @@ class AlarmsAdmin {
         if (config.enableRouteTableChanges) {
             const {metricFilter, alarm} = this.createRouteTableChangesMetric(
                 cisConfig.cloudTrailLogGroupName,
-                cisConfig.snsTopicArn,
+                actionArn,
                 namespace
             );
             metricFilters.push(metricFilter);
@@ -193,7 +200,7 @@ class AlarmsAdmin {
         if (config.enableVpcChanges) {
             const {metricFilter, alarm} = this.createVpcChangesMetric(
                 cisConfig.cloudTrailLogGroupName,
-                cisConfig.snsTopicArn,
+                actionArn,
                 namespace
             );
             metricFilters.push(metricFilter);
@@ -211,7 +218,7 @@ class AlarmsAdmin {
      */
     private createUnauthorizedApiCallsMetric(
         logGroupName: pulumi.Input<string>,
-        snsTopicArn: pulumi.Input<string>,
+        actionArn: pulumi.Input<string>,
         namespace: string
     ): { metricFilter: aws.cloudwatch.LogMetricFilter; alarm: aws.cloudwatch.MetricAlarm } {
         const metricName = "UnauthorizedAPICalls";
@@ -243,7 +250,7 @@ class AlarmsAdmin {
                 statistic: "Sum",
                 threshold: 1,
                 alarmDescription: "CIS 3.1 - Monitors unauthorized API calls",
-                alarmActions: [snsTopicArn],
+                alarmActions: [actionArn],
                 treatMissingData: "notBreaching",
                 tags: {
                     ...this.config.generalTags,
@@ -263,7 +270,7 @@ class AlarmsAdmin {
      */
     private createConsoleSignInWithoutMfaMetric(
         logGroupName: pulumi.Input<string>,
-        snsTopicArn: pulumi.Input<string>,
+        actionArn: pulumi.Input<string>,
         namespace: string
     ): { metricFilter: aws.cloudwatch.LogMetricFilter; alarm: aws.cloudwatch.MetricAlarm } {
         const metricName = "ConsoleSignInWithoutMFA";
@@ -295,7 +302,7 @@ class AlarmsAdmin {
                 statistic: "Sum",
                 threshold: 1,
                 alarmDescription: "CIS 3.2 - Monitors console sign-in without MFA",
-                alarmActions: [snsTopicArn],
+                alarmActions: [actionArn],
                 treatMissingData: "notBreaching",
                 tags: {
                     ...this.config.generalTags,
@@ -315,7 +322,7 @@ class AlarmsAdmin {
      */
     private createRootAccountUsageMetric(
         logGroupName: pulumi.Input<string>,
-        snsTopicArn: pulumi.Input<string>,
+        actionArn: pulumi.Input<string>,
         namespace: string
     ): { metricFilter: aws.cloudwatch.LogMetricFilter; alarm: aws.cloudwatch.MetricAlarm } {
         const metricName = "RootAccountUsage";
@@ -347,7 +354,7 @@ class AlarmsAdmin {
                 statistic: "Sum",
                 threshold: 1,
                 alarmDescription: "CIS 3.3 - Monitors root account usage",
-                alarmActions: [snsTopicArn],
+                alarmActions: [actionArn],
                 treatMissingData: "notBreaching",
                 tags: {
                     ...this.config.generalTags,
@@ -367,7 +374,7 @@ class AlarmsAdmin {
      */
     private createIamPolicyChangesMetric(
         logGroupName: pulumi.Input<string>,
-        snsTopicArn: pulumi.Input<string>,
+        actionArn: pulumi.Input<string>,
         namespace: string
     ): { metricFilter: aws.cloudwatch.LogMetricFilter; alarm: aws.cloudwatch.MetricAlarm } {
         const metricName = "IAMPolicyChanges";
@@ -399,7 +406,7 @@ class AlarmsAdmin {
                 statistic: "Sum",
                 threshold: 1,
                 alarmDescription: "CIS 3.4 - Monitors IAM policy changes",
-                alarmActions: [snsTopicArn],
+                alarmActions: [actionArn],
                 treatMissingData: "notBreaching",
                 tags: {
                     ...this.config.generalTags,
@@ -419,7 +426,7 @@ class AlarmsAdmin {
      */
     private createCloudTrailChangesMetric(
         logGroupName: pulumi.Input<string>,
-        snsTopicArn: pulumi.Input<string>,
+        actionArn: pulumi.Input<string>,
         namespace: string
     ): { metricFilter: aws.cloudwatch.LogMetricFilter; alarm: aws.cloudwatch.MetricAlarm } {
         const metricName = "CloudTrailConfigChanges";
@@ -451,7 +458,7 @@ class AlarmsAdmin {
                 statistic: "Sum",
                 threshold: 1,
                 alarmDescription: "CIS 3.5 - Monitors CloudTrail configuration changes",
-                alarmActions: [snsTopicArn],
+                alarmActions: [actionArn],
                 treatMissingData: "notBreaching",
                 tags: {
                     ...this.config.generalTags,
@@ -471,7 +478,7 @@ class AlarmsAdmin {
      */
     private createConsoleAuthenticationFailuresMetric(
         logGroupName: pulumi.Input<string>,
-        snsTopicArn: pulumi.Input<string>,
+        actionArn: pulumi.Input<string>,
         namespace: string
     ): { metricFilter: aws.cloudwatch.LogMetricFilter; alarm: aws.cloudwatch.MetricAlarm } {
         const metricName = "ConsoleAuthenticationFailures";
@@ -503,7 +510,7 @@ class AlarmsAdmin {
                 statistic: "Sum",
                 threshold: 3,
                 alarmDescription: "CIS 3.6 - Monitors console authentication failures",
-                alarmActions: [snsTopicArn],
+                alarmActions: [actionArn],
                 treatMissingData: "notBreaching",
                 tags: {
                     ...this.config.generalTags,
@@ -523,7 +530,7 @@ class AlarmsAdmin {
      */
     private createDisableOrDeleteKmsMetric(
         logGroupName: pulumi.Input<string>,
-        snsTopicArn: pulumi.Input<string>,
+        actionArn: pulumi.Input<string>,
         namespace: string
     ): { metricFilter: aws.cloudwatch.LogMetricFilter; alarm: aws.cloudwatch.MetricAlarm } {
         const metricName = "DisableOrDeleteKMSKeys";
@@ -555,7 +562,7 @@ class AlarmsAdmin {
                 statistic: "Sum",
                 threshold: 1,
                 alarmDescription: "CIS 3.7 - Monitors disabling or deletion of KMS keys",
-                alarmActions: [snsTopicArn],
+                alarmActions: [actionArn],
                 treatMissingData: "notBreaching",
                 tags: {
                     ...this.config.generalTags,
@@ -575,7 +582,7 @@ class AlarmsAdmin {
      */
     private createS3BucketPolicyChangesMetric(
         logGroupName: pulumi.Input<string>,
-        snsTopicArn: pulumi.Input<string>,
+        actionArn: pulumi.Input<string>,
         namespace: string
     ): { metricFilter: aws.cloudwatch.LogMetricFilter; alarm: aws.cloudwatch.MetricAlarm } {
         const metricName = "S3BucketPolicyChanges";
@@ -607,7 +614,7 @@ class AlarmsAdmin {
                 statistic: "Sum",
                 threshold: 1,
                 alarmDescription: "CIS 3.8 - Monitors S3 bucket policy changes",
-                alarmActions: [snsTopicArn],
+                alarmActions: [actionArn],
                 treatMissingData: "notBreaching",
                 tags: {
                     ...this.config.generalTags,
@@ -627,7 +634,7 @@ class AlarmsAdmin {
      */
     private createAwsConfigChangesMetric(
         logGroupName: pulumi.Input<string>,
-        snsTopicArn: pulumi.Input<string>,
+        actionArn: pulumi.Input<string>,
         namespace: string
     ): { metricFilter: aws.cloudwatch.LogMetricFilter; alarm: aws.cloudwatch.MetricAlarm } {
         const metricName = "AWSConfigChanges";
@@ -659,7 +666,7 @@ class AlarmsAdmin {
                 statistic: "Sum",
                 threshold: 1,
                 alarmDescription: "CIS 3.9 - Monitors AWS Config configuration changes",
-                alarmActions: [snsTopicArn],
+                alarmActions: [actionArn],
                 treatMissingData: "notBreaching",
                 tags: {
                     ...this.config.generalTags,
@@ -679,7 +686,7 @@ class AlarmsAdmin {
      */
     private createSecurityGroupChangesMetric(
         logGroupName: pulumi.Input<string>,
-        snsTopicArn: pulumi.Input<string>,
+        actionArn: pulumi.Input<string>,
         namespace: string
     ): { metricFilter: aws.cloudwatch.LogMetricFilter; alarm: aws.cloudwatch.MetricAlarm } {
         const metricName = "SecurityGroupChanges";
@@ -711,7 +718,7 @@ class AlarmsAdmin {
                 statistic: "Sum",
                 threshold: 1,
                 alarmDescription: "CIS 3.10 - Monitors security group changes",
-                alarmActions: [snsTopicArn],
+                alarmActions: [actionArn],
                 treatMissingData: "notBreaching",
                 tags: {
                     ...this.config.generalTags,
@@ -731,7 +738,7 @@ class AlarmsAdmin {
      */
     private createNetworkAclChangesMetric(
         logGroupName: pulumi.Input<string>,
-        snsTopicArn: pulumi.Input<string>,
+        actionArn: pulumi.Input<string>,
         namespace: string
     ): { metricFilter: aws.cloudwatch.LogMetricFilter; alarm: aws.cloudwatch.MetricAlarm } {
         const metricName = "NetworkACLChanges";
@@ -763,7 +770,7 @@ class AlarmsAdmin {
                 statistic: "Sum",
                 threshold: 1,
                 alarmDescription: "CIS 3.11 - Monitors Network ACL changes",
-                alarmActions: [snsTopicArn],
+                alarmActions: [actionArn],
                 treatMissingData: "notBreaching",
                 tags: {
                     ...this.config.generalTags,
@@ -783,7 +790,7 @@ class AlarmsAdmin {
      */
     private createNetworkGatewayChangesMetric(
         logGroupName: pulumi.Input<string>,
-        snsTopicArn: pulumi.Input<string>,
+        actionArn: pulumi.Input<string>,
         namespace: string
     ): { metricFilter: aws.cloudwatch.LogMetricFilter; alarm: aws.cloudwatch.MetricAlarm } {
         const metricName = "NetworkGatewayChanges";
@@ -815,7 +822,7 @@ class AlarmsAdmin {
                 statistic: "Sum",
                 threshold: 1,
                 alarmDescription: "CIS 3.12 - Monitors network gateway changes",
-                alarmActions: [snsTopicArn],
+                alarmActions: [actionArn],
                 treatMissingData: "notBreaching",
                 tags: {
                     ...this.config.generalTags,
@@ -835,7 +842,7 @@ class AlarmsAdmin {
      */
     private createRouteTableChangesMetric(
         logGroupName: pulumi.Input<string>,
-        snsTopicArn: pulumi.Input<string>,
+        actionArn: pulumi.Input<string>,
         namespace: string
     ): { metricFilter: aws.cloudwatch.LogMetricFilter; alarm: aws.cloudwatch.MetricAlarm } {
         const metricName = "RouteTableChanges";
@@ -867,7 +874,7 @@ class AlarmsAdmin {
                 statistic: "Sum",
                 threshold: 1,
                 alarmDescription: "CIS 3.13 - Monitors route table changes",
-                alarmActions: [snsTopicArn],
+                alarmActions: [actionArn],
                 treatMissingData: "notBreaching",
                 tags: {
                     ...this.config.generalTags,
@@ -887,7 +894,7 @@ class AlarmsAdmin {
      */
     private createVpcChangesMetric(
         logGroupName: pulumi.Input<string>,
-        snsTopicArn: pulumi.Input<string>,
+        actionArn: pulumi.Input<string>,
         namespace: string
     ): { metricFilter: aws.cloudwatch.LogMetricFilter; alarm: aws.cloudwatch.MetricAlarm } {
         const metricName = "VPCChanges";
@@ -919,7 +926,7 @@ class AlarmsAdmin {
                 statistic: "Sum",
                 threshold: 1,
                 alarmDescription: "CIS 3.14 - Monitors VPC changes",
-                alarmActions: [snsTopicArn],
+                alarmActions: [actionArn],
                 treatMissingData: "notBreaching",
                 tags: {
                     ...this.config.generalTags,

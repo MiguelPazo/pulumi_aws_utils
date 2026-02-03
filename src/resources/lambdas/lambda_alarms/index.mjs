@@ -1,10 +1,53 @@
 import {PublishCommand, SNSClient} from '@aws-sdk/client-sns';
 import {CloudWatchClient, ListTagsForResourceCommand} from '@aws-sdk/client-cloudwatch';
+import {SSMClient, GetParameterCommand} from '@aws-sdk/client-ssm';
 
-// Initialize clients
-const region = process.env.REGION;
-const snsClient = new SNSClient({region});
-const cloudwatchClient = new CloudWatchClient({region});
+// Global variables for environment configuration
+let ENV_CONFIG = null;
+
+/**
+ * Load environment variables from SSM Parameter Store if PARAM_STORE_PATH is defined,
+ * otherwise use standard environment variables
+ */
+async function loadEnvironment() {
+    if (ENV_CONFIG) {
+        return ENV_CONFIG;
+    }
+
+    const paramStorePath = process.env.PARAM_STORE_PATH;
+
+    if (paramStorePath) {
+        // Load from SSM Parameter Store
+        console.log(`Loading environment from SSM Parameter Store: ${paramStorePath}`);
+        const ssmClient = new SSMClient({});
+
+        try {
+            const command = new GetParameterCommand({
+                Name: paramStorePath,
+                WithDecryption: true
+            });
+
+            const response = await ssmClient.send(command);
+            ENV_CONFIG = JSON.parse(response.Parameter.Value);
+            console.log('Environment loaded successfully from SSM Parameter Store');
+        } catch (error) {
+            console.error('Error loading from SSM Parameter Store:', error);
+            throw new Error(`Failed to load environment from SSM: ${error.message}`);
+        }
+    } else {
+        // Use standard environment variables
+        ENV_CONFIG = {
+            REGION: process.env.REGION,
+            SNS_TOPIC_ARN: process.env.SNS_TOPIC_ARN
+        };
+    }
+
+    return ENV_CONFIG;
+}
+
+// Initialize clients (will be configured after loading environment)
+let snsClient;
+let cloudwatchClient;
 
 /**
  * Main Lambda handler for processing CloudWatch alarm events
@@ -12,7 +55,16 @@ const cloudwatchClient = new CloudWatchClient({region});
  * @param {Object} context - Lambda context object
  */
 export const handler = async (event, context) => {
-    const topicArn = process.env.SNS_TOPIC_ARN;
+    // Load environment configuration
+    const config = await loadEnvironment();
+
+    // Initialize clients if not already initialized
+    if (!snsClient) {
+        snsClient = new SNSClient({region: config.REGION});
+        cloudwatchClient = new CloudWatchClient({region: config.REGION});
+    }
+
+    const topicArn = config.SNS_TOPIC_ARN;
 
     if (!topicArn) {
         console.log(JSON.stringify({
@@ -24,17 +76,29 @@ export const handler = async (event, context) => {
 
     // Check if this is an alarm-admin event from EventBridge
     if (event.type === 'alarm-admin') {
-        await handleAlarmAdminEvent(event, topicArn);
+        await handleAlarmAdminEvent(event, topicArn, config);
         return;
     }
 
-    // Standard CloudWatch Alarm processing
-    const alarmData = event.alarmData || {};
+    // Determine if this is an EventBridge CloudWatch Alarm State Change event or legacy format
+    let alarmData, alarmArn, accountId;
+
+    if (event['detail-type'] === 'CloudWatch Alarm State Change') {
+        // EventBridge format (standard when CloudWatch invokes Lambda directly)
+        alarmData = event.detail || {};
+        alarmArn = event.resources?.[0] || '';
+        accountId = event.account || '';
+    } else {
+        // Legacy custom format (for backwards compatibility)
+        alarmData = event.alarmData || {};
+        alarmArn = event.alarmArn || '';
+        accountId = event.accountId || '';
+    }
+
     const alarmName = alarmData.alarmName || '';
     const newState = alarmData.state?.value || '';
     const previousState = alarmData.previousState?.value || '';
-    const alarmArn = event.alarmArn || '';
-    const accountId = event.accountId || '';
+    const region = event.region || config.REGION;
 
     // Skip notification for INSUFFICIENT_DATA to OK transitions
     if (previousState === 'INSUFFICIENT_DATA' && newState === 'OK') {
@@ -98,8 +162,9 @@ export const handler = async (event, context) => {
  * Handle alarm-admin events from EventBridge
  * @param {Object} event - Alarm admin event data
  * @param {string} topicArn - SNS topic ARN
+ * @param {Object} config - Environment configuration
  */
-async function handleAlarmAdminEvent(event, topicArn) {
+async function handleAlarmAdminEvent(event, topicArn, config) {
     const {
         title = 'Unknown',
         event: eventName = '',
@@ -110,11 +175,12 @@ async function handleAlarmAdminEvent(event, topicArn) {
         time = '',
         bucket = '',
         sourceIp = '',
-        userAgent = ''
+        userAgent = '',
+        project = 'project'
     } = event;
 
     // Build subject
-    const subject = `ALARM ADMIN: AWS/${account}/${process.env.PROJECT || 'project'} - [${stack}][${title}][${eventRegion}]`;
+    const subject = `ALARM ADMIN: AWS/${account}/${project} - [${stack}][${title}][${eventRegion}]`;
 
     // Build message parts
     const messageParts = [

@@ -1,0 +1,47 @@
+{
+  "version": "0",
+  "id": "e3456789-abcd-ef01-2345-6789abcdef01",
+  "detail-type": "CloudWatch Alarm State Change",
+  "source": "aws.cloudwatch",
+  "account": "123456789012",
+  "time": "2026-02-03T21:15:00Z",
+  "region": "us-west-2",
+  "resources": [
+    "arn:aws:cloudwatch:us-west-2:123456789012:alarm:my-project-staging-cache-hit-rate"
+  ],
+  "detail": {
+    "alarmName": "my-project-staging-cache-hit-rate",
+    "state": {
+      "value": "INSUFFICIENT_DATA",
+      "reason": "Insufficient Data: 1 datapoint was unknown. The alarm check failed because the metric had insufficient data.",
+      "reasonData": "{\"version\":\"1.0\",\"queryDate\":\"2026-02-03T21:15:00.789+0000\",\"period\":300,\"recentDatapoints\":[],\"threshold\":0.8}",
+      "timestamp": "2026-02-03T21:15:00.789Z"
+    },
+    "previousState": {
+      "value": "OK",
+      "reason": "Threshold Crossed: 1 datapoint [0.92] was not less than the threshold (0.8).",
+      "reasonData": "{\"version\":\"1.0\",\"queryDate\":\"2026-02-03T21:10:00.000+0000\",\"startDate\":\"2026-02-03T21:05:00.000+0000\",\"statistic\":\"Average\",\"period\":300,\"recentDatapoints\":[0.92],\"threshold\":0.8}",
+      "timestamp": "2026-02-03T21:10:00.000Z"
+    },
+    "configuration": {
+      "description": "ElastiCache hit rate monitoring - staging environment",
+      "metrics": [
+        {
+          "id": "m1",
+          "metricStat": {
+            "metric": {
+              "namespace": "AWS/ElastiCache",
+              "name": "CacheHitRate",
+              "dimensions": {
+                "CacheClusterId": "my-project-staging-redis"
+              }
+            },
+            "period": 300,
+            "stat": "Average"
+          },
+          "returnData": true
+        }
+      ]
+    }
+  }
+}

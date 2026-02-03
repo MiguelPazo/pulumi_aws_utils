@@ -1,4 +1,47 @@
 import {DescribeServicesCommand, ECSClient, UpdateServiceCommand} from '@aws-sdk/client-ecs';
+import {SSMClient, GetParameterCommand} from '@aws-sdk/client-ssm';
+
+// Global variables for environment configuration
+let ENV_CONFIG = null;
+
+/**
+ * Load environment variables from SSM Parameter Store if PARAM_STORE_PATH is defined,
+ * otherwise use standard environment variables
+ */
+async function loadEnvironment() {
+    if (ENV_CONFIG) {
+        return ENV_CONFIG;
+    }
+
+    const paramStorePath = process.env.PARAM_STORE_PATH;
+
+    if (paramStorePath) {
+        // Load from SSM Parameter Store
+        console.log(`Loading environment from SSM Parameter Store: ${paramStorePath}`);
+        const ssmClient = new SSMClient({});
+
+        try {
+            const command = new GetParameterCommand({
+                Name: paramStorePath,
+                WithDecryption: true
+            });
+
+            const response = await ssmClient.send(command);
+            ENV_CONFIG = JSON.parse(response.Parameter.Value);
+            console.log('Environment loaded successfully from SSM Parameter Store');
+        } catch (error) {
+            console.error('Error loading from SSM Parameter Store:', error);
+            throw new Error(`Failed to load environment from SSM: ${error.message}`);
+        }
+    } else {
+        // Use standard environment variables
+        ENV_CONFIG = {
+            LOG_LEVEL: process.env.LOG_LEVEL || "INFO"
+        };
+    }
+
+    return ENV_CONFIG;
+}
 
 // Initialize ECS client
 const ecsClient = new ECSClient({});
@@ -11,7 +54,11 @@ const ecsClient = new ECSClient({});
  */
 export const handler = async (event, context) => {
     try {
+        // Load environment configuration on first invocation
+        const config = await loadEnvironment();
+
         console.log(`Received event: ${JSON.stringify(event)}`);
+        console.log(`Log level: ${config.LOG_LEVEL}`);
 
         // Extract ECS service information from the event
         const clusterName = event.cluster_name;

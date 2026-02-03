@@ -1,0 +1,22 @@
+{
+  "Records": [
+    {
+      "EventSource": "aws:sns",
+      "EventVersion": "1.0",
+      "EventSubscriptionArn": "arn:aws:sns:us-east-1:123456789012:test-topic:12345678-1234-1234-1234-123456789012",
+      "Sns": {
+        "Type": "Notification",
+        "MessageId": "aabbccdd-eeff-0011-2233-445566778899",
+        "TopicArn": "arn:aws:sns:us-east-1:123456789012:test-topic",
+        "Subject": "INSUFFICIENT_DATA: AWS/123456789012/my-project - [staging][cache][us-west-2]",
+        "Message": "Name: my-project-cache-hit-rate-alarm\n\nDescription: Cache hit rate monitoring\n\nProject: my-project\n\nState Change: OK -> INSUFFICIENT_DATA\n\nReason for State Change: Insufficient Data: 1 datapoint was unknown.\n\nTimestamp: 2026-02-03T20:15:00.000Z\n\nAWS Account: 123456789012\n\nAlarm Arn: arn:aws:cloudwatch:us-west-2:123456789012:alarm:my-project-cache-hit-rate-alarm\n\nAlarm Link: https://us-west-2.console.aws.amazon.com/cloudwatch/home?region=us-west-2#alarmsV2:alarm/my-project-cache-hit-rate-alarm",
+        "Timestamp": "2026-02-03T20:15:30.111Z",
+        "SignatureVersion": "1",
+        "Signature": "EXAMPLE",
+        "SigningCertUrl": "EXAMPLE",
+        "UnsubscribeUrl": "EXAMPLE",
+        "MessageAttributes": {}
+      }
+    }
+  ]
+}

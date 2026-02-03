@@ -120,7 +120,8 @@ export type AlarmsAdminEBResult = {
 
 export type AlarmsAdminConfig = {
     cloudTrailLogGroupName: pulumi.Input<string>;
-    snsTopicArn: pulumi.Input<string>;
+    snsTopicArn?: pulumi.Input<string>;
+    lambdaAlarmsArn?: pulumi.Input<string>;
     alarmNamespace?: string; // Default: "CISBenchmark"
     // All controls are enabled by default (true). Set to false to disable.
     enableUnauthorizedApiCalls?: boolean; // Default: true

@@ -11,13 +11,60 @@ import {
 import {PublishCommand, SNSClient} from "@aws-sdk/client-sns";
 import {ListObjectsV2Command, PutObjectCommand, S3Client} from "@aws-sdk/client-s3";
 import {CreateJobCommand, DescribeJobCommand, S3ControlClient} from "@aws-sdk/client-s3-control";
+import {SSMClient, GetParameterCommand} from "@aws-sdk/client-ssm";
 
+// Global variables for environment configuration
+let ENV_CONFIG = null;
+
+/**
+ * Load environment variables from SSM Parameter Store if PARAM_STORE_PATH is defined,
+ * otherwise use standard environment variables
+ */
+async function loadEnvironment() {
+    if (ENV_CONFIG) {
+        return ENV_CONFIG;
+    }
+
+    const paramStorePath = process.env.PARAM_STORE_PATH;
+
+    if (paramStorePath) {
+        // Load from SSM Parameter Store
+        console.log(`Loading environment from SSM Parameter Store: ${paramStorePath}`);
+        const ssmClient = new SSMClient({});
+
+        try {
+            const command = new GetParameterCommand({
+                Name: paramStorePath,
+                WithDecryption: true
+            });
+
+            const response = await ssmClient.send(command);
+            ENV_CONFIG = JSON.parse(response.Parameter.Value);
+            console.log('Environment loaded successfully from SSM Parameter Store');
+        } catch (error) {
+            console.error('Error loading from SSM Parameter Store:', error);
+            throw new Error(`Failed to load environment from SSM: ${error.message}`);
+        }
+    } else {
+        // Use standard environment variables
+        ENV_CONFIG = {
+            REGION: process.env.REGION || process.env.AWS_REGION
+        };
+    }
+
+    return ENV_CONFIG;
+}
+
+// Initialize AWS clients (will use default region from Lambda environment)
 const logsClient = new CloudWatchLogsClient({region: process.env.AWS_REGION});
 const snsClient = new SNSClient({region: process.env.AWS_REGION});
 const s3Client = new S3Client({region: process.env.AWS_REGION});
 const s3ControlClient = new S3ControlClient({region: process.env.AWS_REGION});
 
 export const handler = async (event) => {
+    // Load environment configuration on first invocation
+    await loadEnvironment();
+
     console.log('Event:', JSON.stringify(event, null, 2));
 
     const {action} = event;

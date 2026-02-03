@@ -1,0 +1,22 @@
+{
+  "Records": [
+    {
+      "EventSource": "aws:sns",
+      "EventVersion": "1.0",
+      "EventSubscriptionArn": "arn:aws:sns:us-east-1:123456789012:test-topic:12345678-1234-1234-1234-123456789012",
+      "Sns": {
+        "Type": "Notification",
+        "MessageId": "99887766-5544-3322-1100-ffeeddccbbaa",
+        "TopicArn": "arn:aws:sns:us-east-1:123456789012:test-topic",
+        "Subject": "ALARM ADMIN: AWS/123456789012/my-project - [production][Security Alert][us-east-1]",
+        "Message": "Root Account Activity Detected!\n\nEvent: ConsoleLogin\nUser: root\nAccount: 123456789012\nStack: production\nRegion: us-east-1\nTime: 2026-02-03T20:00:00Z\nSource IP: 203.0.113.42\nUser Agent: Mozilla/5.0",
+        "Timestamp": "2026-02-03T20:00:15.789Z",
+        "SignatureVersion": "1",
+        "Signature": "EXAMPLE",
+        "SigningCertUrl": "EXAMPLE",
+        "UnsubscribeUrl": "EXAMPLE",
+        "MessageAttributes": {}
+      }
+    }
+  ]
+}

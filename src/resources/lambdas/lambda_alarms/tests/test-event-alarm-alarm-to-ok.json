@@ -1,0 +1,47 @@
+{
+  "version": "0",
+  "id": "d2345678-9abc-def0-1234-56789abcdef0",
+  "detail-type": "CloudWatch Alarm State Change",
+  "source": "aws.cloudwatch",
+  "account": "123456789012",
+  "time": "2026-02-03T21:01:30Z",
+  "region": "us-east-1",
+  "resources": [
+    "arn:aws:cloudwatch:us-east-1:123456789012:alarm:my-project-prod-database-memory-usage"
+  ],
+  "detail": {
+    "alarmName": "my-project-prod-database-memory-usage",
+    "state": {
+      "value": "OK",
+      "reason": "Threshold Crossed: 2 out of the last 2 datapoints [65.3 (03/02/26 21:00:00), 62.1 (03/02/26 21:01:00)] were not greater than the threshold (80.0) (minimum 2 datapoints for ALARM -> OK transition).",
+      "reasonData": "{\"version\":\"1.0\",\"queryDate\":\"2026-02-03T21:01:30.456+0000\",\"startDate\":\"2026-02-03T21:00:00.000+0000\",\"statistic\":\"Average\",\"period\":60,\"recentDatapoints\":[65.3,62.1],\"threshold\":80.0}",
+      "timestamp": "2026-02-03T21:01:30.456Z"
+    },
+    "previousState": {
+      "value": "ALARM",
+      "reason": "Threshold Crossed: 1 datapoint [85.7] was greater than the threshold (80.0).",
+      "reasonData": "{\"version\":\"1.0\",\"queryDate\":\"2026-02-03T20:55:00.000+0000\",\"startDate\":\"2026-02-03T20:54:00.000+0000\",\"statistic\":\"Average\",\"period\":60,\"recentDatapoints\":[85.7],\"threshold\":80.0}",
+      "timestamp": "2026-02-03T20:55:00.000Z"
+    },
+    "configuration": {
+      "description": "Database memory utilization monitoring for Aurora cluster",
+      "metrics": [
+        {
+          "id": "m1",
+          "metricStat": {
+            "metric": {
+              "namespace": "AWS/RDS",
+              "name": "FreeableMemory",
+              "dimensions": {
+                "DBClusterIdentifier": "my-project-prod-aurora-cluster"
+              }
+            },
+            "period": 60,
+            "stat": "Average"
+          },
+          "returnData": true
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "Records": [
+    {
+      "EventSource": "aws:sns",
+      "EventVersion": "1.0",
+      "EventSubscriptionArn": "arn:aws:sns:us-east-1:123456789012:test-topic:12345678-1234-1234-1234-123456789012",
+      "Sns": {
+        "Type": "Notification",
+        "MessageId": "87654321-4321-4321-4321-210987654321",
+        "TopicArn": "arn:aws:sns:us-east-1:123456789012:test-topic",
+        "Subject": "OK: AWS/123456789012/my-project - [production][database][us-east-1]",
+        "Message": "Name: my-project-database-memory-alarm\n\nDescription: Database memory utilization\n\nProject: my-project\n\nState Change: ALARM -> OK\n\nReason for State Change: Threshold Crossed: 1 out of the last 1 datapoints [65.2 (03/02/26 19:45:00)] was not greater than the threshold (80.0).\n\nTimestamp: 2026-02-03T19:45:00.000Z\n\nAWS Account: 123456789012\n\nAlarm Arn: arn:aws:cloudwatch:us-east-1:123456789012:alarm:my-project-database-memory-alarm\n\nAlarm Link: https://us-east-1.console.aws.amazon.com/cloudwatch/home?region=us-east-1#alarmsV2:alarm/my-project-database-memory-alarm",
+        "Timestamp": "2026-02-03T19:45:30.456Z",
+        "SignatureVersion": "1",
+        "Signature": "EXAMPLE",
+        "SigningCertUrl": "EXAMPLE",
+        "UnsubscribeUrl": "EXAMPLE",
+        "MessageAttributes": {}
+      }
+    }
+  ]
+}
