@@ -33,18 +33,45 @@ class LambdaAlarms {
     async main(
         accountId: string,
         snsArn: pulumi.Input<string>,
-        snsKmsKey: pulumi.Input<aws.kms.Key>,
-        cwLogsKmsKey: pulumi.Input<aws.kms.Key>,
+        snsKmsKey: pulumi.Input<aws.kms.Key | aws.kms.ReplicaKey>,
+        cwLogsKmsKey: pulumi.Input<aws.kms.Key | aws.kms.ReplicaKey>,
+        lambdaKmsKey?: pulumi.Input<aws.kms.Key | aws.kms.ReplicaKey>,
+        enableParamsSecure?: boolean,
+        ssmKmsKey?: pulumi.Input<aws.kms.Key | aws.kms.ReplicaKey>,
     ): Promise<LambdaAlarmsResult> {
         const lambdaFullName = `${this.config.generalPrefixShort}-lambda-alarms`;
+        const paramStorePath = `/${this.config.project}/${this.config.stack}/general/lambda/lambda-alarms`;
+
+        /**
+         * Create SSM Parameter Store for environment variables (if enabled)
+         */
+        let ssmParameter: aws.ssm.Parameter | undefined;
+        if (enableParamsSecure && ssmKmsKey) {
+            ssmParameter = new aws.ssm.Parameter(`${this.config.project}-lambda-alarms-params`, {
+                name: paramStorePath,
+                type: "SecureString",
+                keyId: pulumi.output(ssmKmsKey).apply(key => key.id),
+                value: pulumi.all([snsArn]).apply(([sns]) => {
+                    return JSON.stringify({
+                        REGION: this.config.region,
+                        SNS_TOPIC_ARN: sns
+                    });
+                }),
+                tags: {
+                    ...this.config.generalTags,
+                    Name: `${lambdaFullName}-params`,
+                }
+            });
+        }
 
         /**
          * Create Lambda Role with Policy
          */
         const policyJson: pulumi.Output<string> | any = pulumi.all([
             pulumi.output(snsArn),
-            pulumi.output(snsKmsKey).apply(key => key.arn)
-        ]).apply(([arn, kmsArn]) => {
+            pulumi.output(snsKmsKey).apply(key => key.arn),
+            ssmKmsKey ? pulumi.output(ssmKmsKey).apply(key => key.arn) : pulumi.output(undefined)
+        ]).apply(([arn, kmsArn, ssmKmsArn]) => {
             let policyStr = fs.readFileSync(__dirname + '/../resources/lambdas/lambda_alarms/policy.json', 'utf8')
                 .replace(/rep_region/g, this.config.region)
                 .replace(/rep_accountid/g, accountId)
@@ -52,7 +79,29 @@ class LambdaAlarms {
                 .replace(/rep_sns_arn/g, arn as string)
                 .replace(/rep_kms_key_arn/g, kmsArn as string);
 
-            return Promise.resolve(JSON.parse(policyStr));
+            const policy = JSON.parse(policyStr);
+
+            // Add SSM permissions if secure params are enabled
+            if (enableParamsSecure && ssmKmsArn) {
+                policy.Statement.push({
+                    Effect: "Allow",
+                    Action: [
+                        "ssm:GetParameter",
+                        "ssm:GetParameters"
+                    ],
+                    Resource: `arn:aws:ssm:${this.config.region}:${accountId}:parameter${paramStorePath}`
+                });
+                policy.Statement.push({
+                    Effect: "Allow",
+                    Action: [
+                        "kms:Decrypt",
+                        "kms:GenerateDataKey"
+                    ],
+                    Resource: ssmKmsArn
+                });
+            }
+
+            return Promise.resolve(policy);
         });
 
         const lambdaRole = await LambdaRole.getInstance().main(
@@ -77,6 +126,11 @@ class LambdaAlarms {
         /**
          * Create Lambda Function
          */
+        const lambdaDependencies: pulumi.Resource[] = [logGroup];
+        if (ssmParameter) {
+            lambdaDependencies.push(ssmParameter);
+        }
+
         const lambdaFunction = new aws.lambda.Function(`${this.config.project}-lambda-alarms`, {
             name: lambdaFullName,
             description: "Lambda for processing CloudWatch alarms",
@@ -88,7 +142,12 @@ class LambdaAlarms {
             }),
             timeout: 600,
             memorySize: 128,
-            environment: {
+            kmsKeyArn: lambdaKmsKey ? pulumi.output(lambdaKmsKey).apply(key => key.arn) : undefined,
+            environment: enableParamsSecure ? {
+                variables: {
+                    PARAM_STORE_PATH: paramStorePath
+                }
+            } : {
                 variables: {
                     REGION: this.config.region,
                     SNS_TOPIC_ARN: snsArn
@@ -99,7 +158,7 @@ class LambdaAlarms {
                 Name: `${lambdaFullName}-lambda`,
             }
         }, {
-            dependsOn: [logGroup]
+            dependsOn: lambdaDependencies
         });
 
         /**

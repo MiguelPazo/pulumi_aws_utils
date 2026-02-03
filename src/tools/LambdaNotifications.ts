@@ -35,20 +35,70 @@ class LambdaNotifications {
         accountId: string,
         snsArn: pulumi.Input<string>,
         slackWebhookUrl: pulumi.Input<string>,
-        cwLogsKmsKey: pulumi.Input<aws.kms.Key>,
+        cwLogsKmsKey: pulumi.Input<aws.kms.Key | aws.kms.ReplicaKey>,
+        lambdaKmsKey?: pulumi.Input<aws.kms.Key | aws.kms.ReplicaKey>,
+        enableParamsSecure?: boolean,
+        ssmKmsKey?: pulumi.Input<aws.kms.Key | aws.kms.ReplicaKey>,
     ): Promise<LambdaNotificationsResult> {
         const lambdaFullName = `${this.config.generalPrefixShort}-lambda-notifications`;
+        const paramStorePath = `/${this.config.project}/${this.config.stack}/general/lambda/lambda-notifications`;
+
+        /**
+         * Create SSM Parameter Store for environment variables (if enabled)
+         */
+        let ssmParameter: aws.ssm.Parameter | undefined;
+        if (enableParamsSecure && ssmKmsKey) {
+            ssmParameter = new aws.ssm.Parameter(`${this.config.project}-lambda-notifications-params`, {
+                name: paramStorePath,
+                type: "SecureString",
+                keyId: pulumi.output(ssmKmsKey).apply(key => key.id),
+                value: pulumi.all([slackWebhookUrl]).apply(([webhook]) => {
+                    return JSON.stringify({
+                        SLACK_WEBHOOK_URL: webhook
+                    });
+                }),
+                tags: {
+                    ...this.config.generalTags,
+                    Name: `${lambdaFullName}-params`,
+                }
+            });
+        }
 
         /**
          * Create Lambda Role with Policy
          */
-        const policyJson: pulumi.Output<string> | any = pulumi.all([accountId]).apply(([accId]) => {
+        const policyJson: pulumi.Output<string> | any = pulumi.all([
+            accountId,
+            ssmKmsKey ? pulumi.output(ssmKmsKey).apply(key => key.arn) : pulumi.output(undefined)
+        ]).apply(([accId, ssmKmsArn]) => {
             let policyStr = fs.readFileSync(__dirname + '/../resources/lambdas/lambda_notifications/policy.json', 'utf8')
                 .replace(/rep_region/g, this.config.region)
                 .replace(/rep_accountid/g, accId)
                 .replace(/rep_log_grup/g, lambdaFullName);
 
-            return Promise.resolve(JSON.parse(policyStr));
+            const policy = JSON.parse(policyStr);
+
+            // Add SSM permissions if secure params are enabled
+            if (enableParamsSecure && ssmKmsArn) {
+                policy.Statement.push({
+                    Effect: "Allow",
+                    Action: [
+                        "ssm:GetParameter",
+                        "ssm:GetParameters"
+                    ],
+                    Resource: `arn:aws:ssm:${this.config.region}:${accId}:parameter${paramStorePath}`
+                });
+                policy.Statement.push({
+                    Effect: "Allow",
+                    Action: [
+                        "kms:Decrypt",
+                        "kms:GenerateDataKey"
+                    ],
+                    Resource: ssmKmsArn
+                });
+            }
+
+            return Promise.resolve(policy);
         });
 
         const lambdaRole = await LambdaRole.getInstance().main(
@@ -73,6 +123,11 @@ class LambdaNotifications {
         /**
          * Create Lambda Function
          */
+        const lambdaDependencies: pulumi.Resource[] = [logGroup];
+        if (ssmParameter) {
+            lambdaDependencies.push(ssmParameter);
+        }
+
         const lambdaFunction = new aws.lambda.Function(`${this.config.project}-lambda-notifications`, {
             name: lambdaFullName,
             description: "Lambda for sending notifications to Slack",
@@ -84,7 +139,12 @@ class LambdaNotifications {
             }),
             timeout: 60,
             memorySize: 128,
-            environment: {
+            kmsKeyArn: lambdaKmsKey ? pulumi.output(lambdaKmsKey).apply(key => key.arn) : undefined,
+            environment: enableParamsSecure ? {
+                variables: {
+                    PARAM_STORE_PATH: paramStorePath
+                }
+            } : {
                 variables: {
                     SLACK_WEBHOOK_URL: slackWebhookUrl
                 }
@@ -94,7 +154,7 @@ class LambdaNotifications {
                 Name: `${lambdaFullName}-lambda`,
             }
         }, {
-            dependsOn: [logGroup]
+            dependsOn: lambdaDependencies
         });
 
         /**

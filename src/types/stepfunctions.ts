@@ -8,6 +8,9 @@ export type ExportFinalBackupModuleConfig = {
     s3: pulumi.Output<aws.s3.Bucket>;
     snsArn: pulumi.Output<string>;
     cwLogsKmsKey: pulumi.Input<aws.kms.Key | aws.kms.ReplicaKey>;
+    lambdaKmsKey?: pulumi.Input<aws.kms.Key>;
+    enableParamsSecure?: boolean;
+    ssmKmsKey?: pulumi.Input<aws.kms.Key | aws.kms.ReplicaKey>;
     retentionMonths?: number;
     sourceBuckets?: string[];
 };
@@ -69,6 +72,9 @@ export type StepFunctionFailoverModuleConfig = {
     parameterStoreConfigPath: string;
     snsArn: pulumi.Output<string>;
     cwLogsKmsKey: pulumi.Input<aws.kms.Key | aws.kms.ReplicaKey>;
+    lambdaKmsKey?: pulumi.Input<aws.kms.Key>;
+    enableParamsSecure?: boolean;
+    ssmKmsKey?: pulumi.Input<aws.kms.Key | aws.kms.ReplicaKey>;
 };
 
 export type StepFunctionFailoverResult = {

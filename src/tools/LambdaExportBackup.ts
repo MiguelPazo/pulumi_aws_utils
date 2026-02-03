@@ -34,20 +34,71 @@ class LambdaExportBackup {
         accountId: string,
         bucketName: pulumi.Output<string>,
         snsArn: pulumi.Output<string>,
-        cwLogsKmsKey: pulumi.Input<aws.kms.Key>,
+        cwLogsKmsKey: pulumi.Input<aws.kms.Key | aws.kms.ReplicaKey>,
+        lambdaKmsKey?: pulumi.Input<aws.kms.Key | aws.kms.ReplicaKey>,
+        enableParamsSecure?: boolean,
+        ssmKmsKey?: pulumi.Input<aws.kms.Key | aws.kms.ReplicaKey>,
     ): Promise<LambdaExportBackupResult> {
         const lambdaFullName = `${this.config.generalPrefixShort}-export-backup`;
+        const paramStorePath = `/${this.config.project}/${this.config.stack}/general/lambda/export-backup`;
+
+        /**
+         * Create SSM Parameter Store for environment variables (if enabled)
+         */
+        let ssmParameter: aws.ssm.Parameter | undefined;
+        if (enableParamsSecure && ssmKmsKey) {
+            ssmParameter = new aws.ssm.Parameter(`${this.config.project}-export-backup-params`, {
+                name: paramStorePath,
+                type: "SecureString",
+                keyId: pulumi.output(ssmKmsKey).apply(key => key.id),
+                value: JSON.stringify({
+                    REGION: this.config.region
+                }),
+                tags: {
+                    ...this.config.generalTags,
+                    Name: `${lambdaFullName}-params`,
+                }
+            });
+        }
 
         /**
          * Create Lambda Role with Policy
          */
-        const policyJson: pulumi.Output<string> = pulumi.all([bucketName, snsArn]).apply(([bucket, sns]) => {
-            return fs.readFileSync(__dirname + '/../resources/lambdas/export_backup/policy.json', 'utf8')
+        const policyJson: pulumi.Output<string> = pulumi.all([
+            bucketName,
+            snsArn,
+            ssmKmsKey ? pulumi.output(ssmKmsKey).apply(key => key.arn) : pulumi.output(undefined)
+        ]).apply(([bucket, sns, ssmKmsArn]) => {
+            let policyStr = fs.readFileSync(__dirname + '/../resources/lambdas/export_backup/policy.json', 'utf8')
                 .replace(/rep_region/g, this.config.region)
                 .replace(/rep_accountid/g, accountId)
                 .replace(/rep_bucket_name/g, bucket)
                 .replace(/rep_sns_arn/g, sns)
                 .replace(/rep_log_grup/g, lambdaFullName);
+
+            const policy = JSON.parse(policyStr);
+
+            // Add SSM permissions if secure params are enabled
+            if (enableParamsSecure && ssmKmsArn) {
+                policy.Statement.push({
+                    Effect: "Allow",
+                    Action: [
+                        "ssm:GetParameter",
+                        "ssm:GetParameters"
+                    ],
+                    Resource: `arn:aws:ssm:${this.config.region}:${accountId}:parameter${paramStorePath}`
+                });
+                policy.Statement.push({
+                    Effect: "Allow",
+                    Action: [
+                        "kms:Decrypt",
+                        "kms:GenerateDataKey"
+                    ],
+                    Resource: ssmKmsArn
+                });
+            }
+
+            return policyStr;
         });
 
         const lambdaRole = await LambdaRole.getInstance().main(
@@ -72,6 +123,11 @@ class LambdaExportBackup {
         /**
          * Create Lambda Function
          */
+        const lambdaDependencies: pulumi.Resource[] = [logGroup];
+        if (ssmParameter) {
+            lambdaDependencies.push(ssmParameter);
+        }
+
         const lambdaFunction = new aws.lambda.Function(`${this.config.project}-export-backup`, {
             name: lambdaFullName,
             description: "Unified Lambda for CloudWatch Logs export operations",
@@ -83,12 +139,18 @@ class LambdaExportBackup {
             }),
             timeout: 900,
             memorySize: 256,
+            kmsKeyArn: lambdaKmsKey ? pulumi.output(lambdaKmsKey).apply(key => key.arn) : undefined,
+            environment: enableParamsSecure ? {
+                variables: {
+                    PARAM_STORE_PATH: paramStorePath
+                }
+            } : undefined,
             tags: {
                 ...this.config.generalTags,
                 Name: `${lambdaFullName}-lambda`,
             }
         }, {
-            dependsOn: [logGroup]
+            dependsOn: lambdaDependencies
         });
 
         return {

@@ -41,6 +41,9 @@ class Alarms {
                 alarmsConfig.snsArn,
                 alarmsConfig.snsKmsKey,
                 alarmsConfig.cwLogsKmsKey,
+                alarmsConfig.lambdaKmsKey,
+                alarmsConfig.enableParamsSecure,
+                alarmsConfig.ssmKmsKey
             );
             result.lambdaFunction = lambdaResources.lambdaFunction;
             result.lambdaRole = lambdaResources.lambdaRole;
@@ -58,6 +61,9 @@ class Alarms {
                 alarmsConfig.snsArn,
                 alarmsConfig.slackWebhookUrl,
                 alarmsConfig.cwLogsKmsKey,
+                alarmsConfig.lambdaKmsKey,
+                alarmsConfig.enableParamsSecure,
+                alarmsConfig.ssmKmsKey
             );
             result.lambdaNotificationsFunction = lambdaNotificationsResources.lambdaFunction;
             result.lambdaNotificationsRole = lambdaNotificationsResources.lambdaRole;

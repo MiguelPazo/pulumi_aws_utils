@@ -68,6 +68,9 @@ export type AlarmsModuleConfig = {
     snsArn: pulumi.Input<string>;
     snsKmsKey: pulumi.Input<aws.kms.Key>;
     cwLogsKmsKey: pulumi.Input<aws.kms.Key>;
+    lambdaKmsKey?: pulumi.Input<aws.kms.Key>;
+    enableParamsSecure?: boolean;
+    ssmKmsKey?: pulumi.Input<aws.kms.Key | aws.kms.ReplicaKey>;
     deployLambdaAlarms?: boolean;
     lambdaAlarmsArn?: pulumi.Input<string>;
     deployLambdaNotifications?: boolean;

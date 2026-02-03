@@ -25,3 +25,4 @@ export * from './stepfunctions';
 export * from './secrets';
 export * from './route53';
 export * from './ssm';
+export * from './iam';

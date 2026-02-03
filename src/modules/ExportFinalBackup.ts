@@ -29,6 +29,9 @@ class ExportFinalBackup {
             s3,
             snsArn,
             cwLogsKmsKey,
+            lambdaKmsKey,
+            enableParamsSecure,
+            ssmKmsKey,
             retentionMonths = 12,
             sourceBuckets = []
         } = moduleConfig;
@@ -43,7 +46,10 @@ class ExportFinalBackup {
             accountId,
             bucketName,
             snsArn,
-            cwLogsKmsKey
+            cwLogsKmsKey,
+            lambdaKmsKey,
+            enableParamsSecure,
+            ssmKmsKey
         );
 
         /**

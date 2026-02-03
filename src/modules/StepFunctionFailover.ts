@@ -28,7 +28,10 @@ class StepFunctionFailover {
         const {
             parameterStoreConfigPath,
             snsArn,
-            cwLogsKmsKey
+            cwLogsKmsKey,
+            lambdaKmsKey,
+            enableParamsSecure,
+            ssmKmsKey
         } = moduleConfig;
 
         const accountId = await this.config.accountId;
@@ -39,7 +42,10 @@ class StepFunctionFailover {
         const lambdaFailover = await LambdaFailover.getInstance().main(
             accountId,
             snsArn,
-            cwLogsKmsKey
+            cwLogsKmsKey,
+            lambdaKmsKey,
+            enableParamsSecure,
+            ssmKmsKey
         );
 
         /**

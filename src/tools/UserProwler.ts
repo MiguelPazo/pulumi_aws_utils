@@ -4,12 +4,15 @@
 import * as aws from "@pulumi/aws";
 import * as fs from 'fs';
 import {InitConfig} from "../types/module";
+import {UserProwlerConfig} from "../types";
 import {getInit} from "../config";
 
 export type UserProwlerResult = {
-    user: aws.iam.User;
+    group: aws.iam.Group;
     policy: aws.iam.Policy;
-    policyAttachment: aws.iam.UserPolicyAttachment;
+    groupPolicyAttachment: aws.iam.GroupPolicyAttachment;
+    users: aws.iam.User[];
+    userGroupMemberships: aws.iam.UserGroupMembership[];
 };
 
 class UserProwler {
@@ -28,20 +31,20 @@ class UserProwler {
         return this.__instance;
     }
 
-    async main(
-        userName: string
-    ): Promise<UserProwlerResult> {
-        const userFullName = `${this.config.generalPrefixShort}-${userName}-tool`;
+    async main(config: UserProwlerConfig = {}): Promise<UserProwlerResult> {
+        const {
+            groupName = 'prowler',
+            users = []
+        } = config;
+
+        const groupFullName = `${this.config.generalPrefixShort}-${groupName}-tool`;
 
         /**
-         * Create IAM User
+         * Create IAM Group
          */
-        const user = new aws.iam.User(`${this.config.project}-${userName}-user`, {
-            name: userFullName,
-            tags: {
-                ...this.config.generalTags,
-                Name: userFullName,
-            }
+        const group = new aws.iam.Group(`${this.config.project}-${groupName}-group`, {
+            name: groupFullName,
+            path: "/"
         });
 
         /**
@@ -49,28 +52,59 @@ class UserProwler {
          */
         const policyDocument = fs.readFileSync(__dirname + '/../resources/iam/prowler_policy.json', 'utf8');
 
-        const policy = new aws.iam.Policy(`${this.config.project}-${userName}-policy`, {
-            name: `${userFullName}-policy`,
+        const policy = new aws.iam.Policy(`${this.config.project}-${groupName}-policy`, {
+            name: `${groupFullName}-policy`,
             description: "Prowler security audit policy - read-only access for security assessments",
             policy: policyDocument,
             tags: {
                 ...this.config.generalTags,
-                Name: `${userFullName}-policy`,
+                Name: `${groupFullName}-policy`,
             }
         });
 
         /**
-         * Attach Policy to User
+         * Attach Policy to Group
          */
-        const policyAttachment = new aws.iam.UserPolicyAttachment(`${this.config.project}-${userName}-policy-attachment`, {
-            user: user.name,
+        const groupPolicyAttachment = new aws.iam.GroupPolicyAttachment(`${this.config.project}-${groupName}-policy-attachment`, {
+            group: group.name,
             policyArn: policy.arn
         });
 
+        /**
+         * Create IAM Users and add them to the group
+         */
+        const iamUsers: aws.iam.User[] = [];
+        const userGroupMemberships: aws.iam.UserGroupMembership[] = [];
+
+        for (const userName of users) {
+            const userFullName = `${this.config.generalPrefixShort}-${groupName}-${userName}`;
+
+            // Create IAM User
+            const user = new aws.iam.User(`${this.config.project}-${groupName}-${userName}-user`, {
+                name: userFullName,
+                tags: {
+                    ...this.config.generalTags,
+                    Name: userFullName,
+                }
+            });
+
+            iamUsers.push(user);
+
+            // Add user to group
+            const membership = new aws.iam.UserGroupMembership(`${this.config.project}-${groupName}-${userName}-group-membership`, {
+                user: user.name,
+                groups: [group.name]
+            });
+
+            userGroupMemberships.push(membership);
+        }
+
         return {
-            user,
+            group,
             policy,
-            policyAttachment
+            groupPolicyAttachment,
+            users: iamUsers,
+            userGroupMemberships
         };
     }
 }
