@@ -1,6 +1,6 @@
 import {PublishCommand, SNSClient} from '@aws-sdk/client-sns';
 import {CloudWatchClient, ListTagsForResourceCommand} from '@aws-sdk/client-cloudwatch';
-import {SSMClient, GetParameterCommand} from '@aws-sdk/client-ssm';
+import {GetParameterCommand, SSMClient} from '@aws-sdk/client-ssm';
 
 // Global variables for environment configuration
 let ENV_CONFIG = null;

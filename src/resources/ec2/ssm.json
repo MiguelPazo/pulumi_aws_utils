@@ -71,7 +71,7 @@
         "s3:PutObject",
         "s3:PutObjectAcl"
       ],
-      "Resource": "arn:aws:s3:::rep_bucket_name/*"
+      "Resource": "arn:aws:s3:::{{bucketName}}/*"
     },
     {
       "Effect": "Allow",

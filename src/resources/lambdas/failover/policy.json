@@ -8,7 +8,7 @@
         "logs:CreateLogStream",
         "logs:PutLogEvents"
       ],
-      "Resource": "arn:aws:logs:*:rep_accountid:log-group:/aws/lambda/rep_log_grup:*"
+      "Resource": "arn:aws:logs:*:{{accountId}}:log-group:/aws/lambda/{{logGroup}}:*"
     },
     {
       "Sid": "RDSFailover",
@@ -94,7 +94,7 @@
       "Action": [
         "sns:Publish"
       ],
-      "Resource": "rep_sns_arn"
+      "Resource": "{{snsArn}}"
     },
     {
       "Sid": "SSMParameterStore",
@@ -103,7 +103,7 @@
         "ssm:GetParameter",
         "ssm:GetParameters"
       ],
-      "Resource": "arn:aws:ssm:*:rep_accountid:parameter/*"
+      "Resource": "arn:aws:ssm:*:{{accountId}}:parameter/*"
     }
   ]
 }

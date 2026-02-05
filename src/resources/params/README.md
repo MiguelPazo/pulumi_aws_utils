@@ -36,9 +36,9 @@ Each JSON file should contain an array of parameter configurations:
 
 - **name** (required): The parameter path (will be prefixed with `/{generalPrefix}`)
 - **type** (required): Parameter type
-  - `String`: Plain text parameter
-  - `SecureString`: Encrypted parameter (requires KMS key)
-  - `StringList`: Comma-separated list of values
+    - `String`: Plain text parameter
+    - `SecureString`: Encrypted parameter (requires KMS key)
+    - `StringList`: Comma-separated list of values
 - **value** (required): The parameter value (supports placeholders - see below)
 - **description** (optional): Description of the parameter
 - **ignoreChanges** (optional): If true, Pulumi will ignore changes to the value after creation
@@ -56,6 +56,7 @@ Parameter values support automatic replacement of the following placeholders:
 - **`rep_stack`**: Replaced with stack name (e.g., `dev`, `prod`)
 
 Example:
+
 ```json
 {
   "name": "/database/host",
@@ -63,11 +64,13 @@ Example:
   "value": "db.rep_stack.rep_region.rds.amazonaws.com"
 }
 ```
+
 This would create a parameter with value like: `db.prod.us-east-1.rds.amazonaws.com`
 
 ### File References
 
-For complex JSON configurations (like Step Functions or multi-region failover configs), you can reference external JSON files using the syntax `[[filename.json]]`:
+For complex JSON configurations (like Step Functions or multi-region failover configs), you can reference external JSON
+files using the syntax `[[filename.json]]`:
 
 ```json
 {
@@ -80,12 +83,15 @@ For complex JSON configurations (like Step Functions or multi-region failover co
 ```
 
 **How it works:**
-1. The value `[[failover.json]]` tells ParamStore to load the file from the `values/` subdirectory within the current directory (e.g., `_general/values/failover.json` or `{stack}/values/failover.json`)
+
+1. The value `[[failover.json]]` tells ParamStore to load the file from the `values/` subdirectory within the current
+   directory (e.g., `_general/values/failover.json` or `{stack}/values/failover.json`)
 2. The JSON file is read and validated
 3. Placeholders (like `rep_accountid`, `rep_region`) are replaced in the JSON content
 4. The resulting JSON is minified and stored as a string in SSM Parameter Store
 
 **Benefits:**
+
 - Keep complex configurations in separate, manageable files
 - Reuse configurations across multiple parameters
 - Version control large JSON structures separately
@@ -93,6 +99,7 @@ For complex JSON configurations (like Step Functions or multi-region failover co
 - Support for placeholders within referenced files
 
 **Example _general/values/failover.json:**
+
 ```json
 {
   "primaryRegion": "us-east-1",
@@ -157,25 +164,26 @@ For complex JSON configurations (like Step Functions or multi-region failover co
 ```
 
 **Configuration Fields:**
+
 - **primaryRegion** (required): The primary AWS region where resources are currently running
 - **secondaryRegion** (required): The secondary AWS region for failover
 - **cloudFront** (optional): Array of CloudFront distributions to manage during failover
-  - **distributionId** (required): CloudFront distribution ID
-  - **type** (required): Distribution type - `"backend"` (disabled at start) or `"frontend"` (disabled at end)
-  - **aliasesToRemove** (optional): Array of domain aliases to remove before disabling
-  - **shouldDisable** (required): Whether to disable this distribution during failover
+    - **distributionId** (required): CloudFront distribution ID
+    - **type** (required): Distribution type - `"backend"` (disabled at start) or `"frontend"` (disabled at end)
+    - **aliasesToRemove** (optional): Array of domain aliases to remove before disabling
+    - **shouldDisable** (required): Whether to disable this distribution during failover
 - **s3Buckets** (optional): Array of S3 buckets to validate replication status
 - **rds** (optional): RDS Aurora Global Cluster configuration for promotion
 - **efs** (optional): Array of EFS filesystems to disable replication (uses `sourceFileSystemId` from primary region)
 - **ecsServices** (optional): Array of ECS services to restart after failover
 - **eventBridgeRules** (optional): Array of EventBridge rules to enable/disable during failover
-  - **ruleName** (required): Name of the EventBridge rule
-  - **targetRegion** (required): AWS region where the rule is located
-  - **shouldDisable** (required): `true` to disable the rule during the first phase (typically primary region rules)
-  - **shouldEnable** (required): `true` to enable the rule during the second phase (typically secondary region rules)
-  - **Note**: Rules are processed in two sequential phases to prevent desynchronization:
-    1. **Disable Phase**: All rules with `shouldDisable: true` are disabled first
-    2. **Enable Phase**: All rules with `shouldEnable: true` are enabled after disabling is complete
+    - **ruleName** (required): Name of the EventBridge rule
+    - **targetRegion** (required): AWS region where the rule is located
+    - **shouldDisable** (required): `true` to disable the rule during the first phase (typically primary region rules)
+    - **shouldEnable** (required): `true` to enable the rule during the second phase (typically secondary region rules)
+    - **Note**: Rules are processed in two sequential phases to prevent desynchronization:
+        1. **Disable Phase**: All rules with `shouldDisable: true` are disabled first
+        2. **Enable Phase**: All rules with `shouldEnable: true` are enabled after disabling is complete
 - **route53Records** (optional): Array of DNS records to update (auto-detects hosted zone IDs)
 
 ## Usage Example
@@ -196,19 +204,19 @@ await AwsUtilsModules.ParamStore.getInstance().main({
 ## Behavior
 
 1. **_general directory**: Parameters in this directory are created for all stacks
-   - If the directory doesn't exist, a log message is displayed
+    - If the directory doesn't exist, a log message is displayed
 
 2. **{stack} directory**: Parameters specific to the current stack (e.g., `dev`, `prod`)
-   - If the directory doesn't exist, a log message is displayed
+    - If the directory doesn't exist, a log message is displayed
 
 3. **Naming**: All parameters are prefixed with `/{generalPrefix}/` where slashes replace dashes
-   - Example: If `generalPrefix` is `my-app-dev`, parameters are created under `/my/app/dev/`
+    - Example: If `generalPrefix` is `my-app-dev`, parameters are created under `/my/app/dev/`
 
 4. **KMS Encryption**:
-   - If a KMS key is provided and parameter type is `SecureString`, the parameter will be encrypted
-   - For other types, the KMS key is not used
+    - If a KMS key is provided and parameter type is `SecureString`, the parameter will be encrypted
+    - For other types, the KMS key is not used
 
 5. **Tags**: Each parameter is tagged with:
-   - General tags from the config
-   - `Name`: The full parameter path
-   - `Source`: The directory name (`_general` or stack name)
+    - General tags from the config
+    - `Name`: The full parameter path
+    - `Source`: The directory name (`_general` or stack name)

@@ -3,10 +3,10 @@
  */
 import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
-import * as fs from 'fs';
 import {InitConfig} from "../types/module";
 import {getInit} from "../config";
 import {LambdaRole} from "../modules/LambdaRole";
+import {General} from "../common/General";
 
 export type LambdaExportBackupResult = {
     lambdaFunction: aws.lambda.Function;
@@ -69,36 +69,37 @@ class LambdaExportBackup {
             snsArn,
             ssmKmsKey ? pulumi.output(ssmKmsKey).apply(key => key.arn) : pulumi.output(undefined)
         ]).apply(([bucket, sns, ssmKmsArn]) => {
-            let policyStr = fs.readFileSync(__dirname + '/../resources/lambdas/export_backup/policy.json', 'utf8')
-                .replace(/rep_region/g, this.config.region)
-                .replace(/rep_accountid/g, accountId)
-                .replace(/rep_bucket_name/g, bucket)
-                .replace(/rep_sns_arn/g, sns)
-                .replace(/rep_log_grup/g, lambdaFullName);
+            // Render policy using General.renderPolicy with additional context
+            const policyFilePath = __dirname + '/../resources/lambdas/export_backup/policy.json';
+            const policyOutput = General.renderTemplate(policyFilePath, {
+                bucketName: bucket,
+                snsArn: sns,
+                logGroup: lambdaFullName
+            });
 
-            const policy = JSON.parse(policyStr);
+            return policyOutput.apply(policy => {
+                // Add SSM permissions if secure params are enabled
+                if (enableParamsSecure && ssmKmsArn) {
+                    policy.Statement.push({
+                        Effect: "Allow",
+                        Action: [
+                            "ssm:GetParameter",
+                            "ssm:GetParameters"
+                        ],
+                        Resource: `arn:aws:ssm:${this.config.region}:${accountId}:parameter${paramStorePath}`
+                    });
+                    policy.Statement.push({
+                        Effect: "Allow",
+                        Action: [
+                            "kms:Decrypt",
+                            "kms:GenerateDataKey"
+                        ],
+                        Resource: ssmKmsArn
+                    });
+                }
 
-            // Add SSM permissions if secure params are enabled
-            if (enableParamsSecure && ssmKmsArn) {
-                policy.Statement.push({
-                    Effect: "Allow",
-                    Action: [
-                        "ssm:GetParameter",
-                        "ssm:GetParameters"
-                    ],
-                    Resource: `arn:aws:ssm:${this.config.region}:${accountId}:parameter${paramStorePath}`
-                });
-                policy.Statement.push({
-                    Effect: "Allow",
-                    Action: [
-                        "kms:Decrypt",
-                        "kms:GenerateDataKey"
-                    ],
-                    Resource: ssmKmsArn
-                });
-            }
-
-            return policyStr;
+                return JSON.stringify(policy);
+            });
         });
 
         const lambdaRole = await LambdaRole.getInstance().main(

@@ -8,7 +8,7 @@
         "s3:GetReplicationConfiguration",
         "s3:ListBucket"
       ],
-      "Resource": "arn:aws:s3:::rep_bucket_prefix*"
+      "Resource": "arn:aws:s3:::{{bucketPrefix}}*"
     },
     {
       "Sid": "GetObjectsFromSource",
@@ -20,7 +20,7 @@
         "s3:GetObjectRetention",
         "s3:GetObjectLegalHold"
       ],
-      "Resource": "arn:aws:s3:::rep_bucket_prefix*/*"
+      "Resource": "arn:aws:s3:::{{bucketPrefix}}*/*"
     },
     {
       "Sid": "ReplicateToDestination",
@@ -31,7 +31,7 @@
         "s3:ReplicateTags",
         "s3:ObjectOwnerOverrideToBucketOwner"
       ],
-      "Resource": "arn:aws:s3:::rep_bucket_prefix*/*"
+      "Resource": "arn:aws:s3:::{{bucketPrefix}}*/*"
     },
     {
       "Sid": "DecryptSourceKMS",
@@ -40,10 +40,10 @@
         "kms:Decrypt",
         "kms:DescribeKey"
       ],
-      "Resource": "rep_source_kms_arn",
+      "Resource": "{{sourceKmsArn}}",
       "Condition": {
         "StringLike": {
-          "kms:ViaService": "s3.rep_source_region.amazonaws.com"
+          "kms:ViaService": "s3.{{sourceRegion}}.amazonaws.com"
         }
       }
     },
@@ -54,10 +54,10 @@
         "kms:Encrypt",
         "kms:GenerateDataKey"
       ],
-      "Resource": "rep_destination_kms_arn",
+      "Resource": "{{destinationKmsArn}}",
       "Condition": {
         "StringLike": {
-          "kms:ViaService": "s3.rep_destination_region.amazonaws.com"
+          "kms:ViaService": "s3.{{destinationRegion}}.amazonaws.com"
         }
       }
     }

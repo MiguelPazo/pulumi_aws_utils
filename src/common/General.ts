@@ -2,9 +2,9 @@
  * Created by Miguel Pazo (https://miguelpazo.com)
  */
 import * as pulumi from "@pulumi/pulumi";
-import * as aws from "@pulumi/aws";
 import * as archiver from "archiver";
 import * as fs from "fs";
+import * as Handlebars from "handlebars";
 import {getInit} from "../config";
 
 class General {
@@ -41,33 +41,51 @@ class General {
         return null;
     }
 
-    /**
-     * Apply standard replacements to a text string
-     * @param text - The text content to process
-     * @param accountId - AWS account ID
-     * @returns Processed text with replacements applied
-     */
-    static renderText(text: string, accountId: string): string {
-        const config = getInit();
-
-        return text
-            .replace(/rep_region/g, config.region)
-            .replace(/rep_accountid/g, accountId)
-            .replace(/rep_general_prefix_multiregion/g, config.generalPrefixMultiregion || config.generalPrefix)
-            .replace(/rep_general_prefix/g, config.generalPrefix)
-            .replace(/rep_stack_alias/g, config.stackAlias || config.stack)
-            .replace(/rep_project/g, config.project)
-            .replace(/rep_stack/g, config.stack);
-    }
-
-    static renderPolicy(filePolicy: string): pulumi.Output<any> {
+    static renderTemplate(filePolicy: string, additionalContext?: any, convertToJson: boolean = true): pulumi.Output<any> {
         const config = getInit();
 
         return pulumi.all([config.accountId]).apply(([accountId]) => {
             const fileContent = fs.readFileSync(filePolicy, 'utf8');
-            const renderedContent = General.renderText(fileContent, accountId);
 
-            return Promise.resolve(JSON.parse(renderedContent));
+            // Compile Handlebars template
+            const template = Handlebars.compile(fileContent, {
+                strict: false,
+                noEscape: true
+            });
+
+            // Prepare template context
+            const context = {
+                region: config.region,
+                regionReplica: config.regionReplica || config.region,
+                regionPrimary: config.regionPrimary || config.region,
+                accountId: accountId,
+                generalPrefix: config.generalPrefix,
+                generalPrefixMultiregion: config.generalPrefixMultiregion || config.generalPrefix,
+                stackAlias: config.stackAlias || config.stack,
+                project: config.project,
+                stack: config.stack,
+                multiRegion: config.multiRegion || false,
+                failoverReplica: config.failoverReplica || false,
+                ...additionalContext
+            };
+
+            // Render template
+            const renderedContent = template(context);
+
+            // Convert to JSON if requested (default behavior)
+            if (convertToJson) {
+                try {
+                    const policy = JSON.parse(renderedContent);
+                    return Promise.resolve(policy);
+                } catch (error) {
+                    console.error(`Error parsing JSON from rendered template: ${filePolicy}`);
+                    console.error('Rendered content:', renderedContent);
+                    throw new Error(`Failed to parse JSON from template ${filePolicy}: ${error.message}`);
+                }
+            }
+
+            // Return rendered content as string
+            return Promise.resolve(renderedContent);
         });
     }
 }

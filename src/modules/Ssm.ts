@@ -5,7 +5,7 @@ import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
 import {getInit} from "../config";
 import {InitConfig} from "../types/module";
-import * as fs from 'fs';
+import {General} from "../common/General";
 
 class Ssm {
     private static __instance: Ssm;
@@ -73,11 +73,13 @@ class Ssm {
         /**
          * IAM
          */
-        let policyJson = pulumi.all([s3Logs.bucket]).apply(data => {
-            let policyStr = fs.readFileSync(__dirname + '/../resources/ec2/ssm.json', 'utf8')
-                .replace(/rep_bucket_name/g, data[0]);
+        let policyJson = pulumi.all([s3Logs.bucket]).apply(bucketName => {
+            const policyFilePath = __dirname + '/../resources/ec2/ssm.json';
+            const policyOutput = General.renderTemplate(policyFilePath, {
+                bucketName: bucketName
+            });
 
-            return Promise.resolve(JSON.parse(policyStr));
+            return policyOutput.apply(policy => Promise.resolve(policy));
         });
 
         const policySsm = new aws.iam.Policy(`${this.config.project}-policy-ssm`, {

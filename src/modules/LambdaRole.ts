@@ -3,10 +3,10 @@
  */
 import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
-import * as fs from 'fs';
 import {LambdaConfig} from "../types";
 import {InitConfig} from "../types/module";
 import {getInit} from "../config";
+import {General} from "../common/General";
 
 class LambdaRole {
     private static __instance: LambdaRole;
@@ -33,18 +33,8 @@ class LambdaRole {
         /**
          * Policy
          */
-        const policyJson = policy || pulumi.all([this.config.accountId]).apply(data => {
-            let policyStr = fs.readFileSync(policyFilePath, 'utf8')
-                .replace(/rep_region/g, aws.config.region)
-                .replace(/rep_accountid/g, data[0])
-                .replace(/rep_stack_alias/g, this.config.stackAlias)
-                .replace(/rep_stack/g, this.config.stack)
-                .replace(/rep_project/g, this.config.project)
-                .replace(/rep_general_prefix_multiregion/g, this.config.generalPrefixMultiregion)
-                .replace(/rep_general_prefix/g, this.config.generalPrefix)
-                .replace(/rep_log_grup/g, `${this.config.generalPrefix}-${lambda.name}`);
-
-            return Promise.resolve(JSON.parse(policyStr));
+        const policyJson = policy || General.renderTemplate(policyFilePath, {
+            logGroup: `${this.config.generalPrefix}-${lambda.name}`
         });
 
         const lambdaPolicy = new aws.iam.Policy(`${this.config.project}-${lambda.name}-lambda-policy`, {

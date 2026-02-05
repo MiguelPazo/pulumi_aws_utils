@@ -77,14 +77,9 @@ class ParamStore {
         kmsKey?: pulumi.Input<aws.kms.Key | aws.kms.ReplicaKey>
     ): Promise<void> {
         try {
-            // Get accountId for replacements
-            const accountId = await this.config.accountId;
-
-            // Read file and apply standard replacements using General.renderText
-            const fileContent = fs.readFileSync(filePath, 'utf8');
-            const renderedContent = General.renderText(fileContent, accountId);
-
-            const params: SsmParamConfig[] = JSON.parse(renderedContent);
+            // Render file using Handlebars template with General.renderPolicy
+            const paramsOutput = General.renderTemplate(filePath);
+            const params: SsmParamConfig[] = await General.getValue(paramsOutput);
 
             if (!Array.isArray(params)) {
                 console.warn(`ParamStore: File '${fileName}' in directory '${dirName}' does not contain an array of parameters`);
@@ -95,7 +90,7 @@ class ParamStore {
 
             for (const param of params) {
                 // Process value if it's a file reference [[filename.json]]
-                const processedParam = this.processParamValue(param, dirPath, accountId);
+                const processedParam = await this.processParamValue(param, dirPath);
                 this.createSsmParameter(processedParam, dirName, kmsKey);
             }
         } catch (error) {
@@ -107,11 +102,10 @@ class ParamStore {
      * Process parameter value to check if it's a file reference [[filename.json]]
      * If it is, read the file from dirPath/values/ and convert to JSON string
      */
-    private processParamValue(
+    private async processParamValue(
         param: SsmParamConfig,
-        dirPath: string,
-        accountId: string
-    ): SsmParamConfig {
+        dirPath: string
+    ): Promise<SsmParamConfig> {
         const value = param.value;
 
         // Check if value starts with [[ and ends with ]]
@@ -129,14 +123,9 @@ class ParamStore {
                     throw new Error(`File not found: ${valuesPath}`);
                 }
 
-                // Read file content
-                const fileContent = fs.readFileSync(valuesPath, 'utf8');
-
-                // Apply standard replacements using General.renderText
-                const renderedContent = General.renderText(fileContent, accountId);
-
-                // Parse JSON to validate it
-                const jsonContent = JSON.parse(renderedContent);
+                // Render file using Handlebars template with General.renderPolicy
+                const jsonContentOutput = General.renderTemplate(valuesPath);
+                const jsonContent = await General.getValue(jsonContentOutput);
 
                 // Convert back to string (minified JSON)
                 const jsonString = JSON.stringify(jsonContent);

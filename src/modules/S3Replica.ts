@@ -3,10 +3,10 @@
  */
 import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
-import * as fs from 'fs';
 import {InitConfig} from "../types/module";
 import {S3ReplicaConfig, S3ReplicaResult} from "../types";
 import {getInit} from "../config";
+import {General} from "../common/General";
 
 class S3Replica {
     private static __instance: S3Replica;
@@ -73,14 +73,16 @@ class S3Replica {
                       ]) => {
                 const bucketPrefix = `${this.config.generalPrefix}-${accountId}`;
 
-                const policyStr = fs.readFileSync(__dirname + '/../resources/s3/replication_policy.json', 'utf8')
-                    .replace(/rep_bucket_prefix/g, bucketPrefix)
-                    .replace(/rep_source_region/g, srcRegion)
-                    .replace(/rep_destination_region/g, dstRegion)
-                    .replace(/rep_source_kms_arn/g, srcKms)
-                    .replace(/rep_destination_kms_arn/g, destKms);
+                const policyFilePath = __dirname + '/../resources/s3/replication_policy.json';
+                const policyOutput = General.renderTemplate(policyFilePath, {
+                    bucketPrefix: bucketPrefix,
+                    sourceRegion: srcRegion,
+                    destinationRegion: dstRegion,
+                    sourceKmsArn: srcKms,
+                    destinationKmsArn: destKms
+                });
 
-                return JSON.parse(policyStr);
+                return policyOutput.apply(policy => policy);
             });
 
             replicationPolicy = new aws.iam.Policy(`${this.config.project}-${roleName}-policy`, {

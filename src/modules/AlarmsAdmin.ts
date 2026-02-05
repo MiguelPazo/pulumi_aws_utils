@@ -241,7 +241,7 @@ class AlarmsAdmin {
         const alarm = new aws.cloudwatch.MetricAlarm(
             `${this.config.project}-cis-unauthorized-api-calls-alarm`,
             {
-                name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/UnauthorizedAPICalls`),
+                name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/${this.config.project}/${this.config.stackAlias || this.config.stack}/UnauthorizedAPICalls`),
                 comparisonOperator: "GreaterThanOrEqualToThreshold",
                 evaluationPeriods: 1,
                 metricName: metricName,
@@ -256,7 +256,7 @@ class AlarmsAdmin {
                     ...this.config.generalTags,
                     CIS: "3.1",
                     service_name: "alarm-admin",
-                    Name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/UnauthorizedAPICalls`)
+                    Name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/${this.config.project}/${this.config.stackAlias || this.config.stack}/UnauthorizedAPICalls`)
                 }
             },
             {dependsOn: [metricFilter]}
@@ -293,7 +293,7 @@ class AlarmsAdmin {
         const alarm = new aws.cloudwatch.MetricAlarm(
             `${this.config.project}-cis-console-signin-without-mfa-alarm`,
             {
-                name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/ConsoleSignInWithoutMFA`),
+                name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/${this.config.project}/${this.config.stackAlias || this.config.stack}/ConsoleSignInWithoutMFA`),
                 comparisonOperator: "GreaterThanOrEqualToThreshold",
                 evaluationPeriods: 1,
                 metricName: metricName,
@@ -308,7 +308,7 @@ class AlarmsAdmin {
                     ...this.config.generalTags,
                     CIS: "3.2",
                     service_name: "alarm-admin",
-                    Name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/ConsoleSignInWithoutMFA`)
+                    Name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/${this.config.project}/${this.config.stackAlias || this.config.stack}/ConsoleSignInWithoutMFA`)
                 }
             },
             {dependsOn: [metricFilter]}
@@ -345,7 +345,7 @@ class AlarmsAdmin {
         const alarm = new aws.cloudwatch.MetricAlarm(
             `${this.config.project}-cis-root-account-usage-alarm`,
             {
-                name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/RootAccountUsage`),
+                name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/${this.config.project}/${this.config.stackAlias || this.config.stack}/RootAccountUsage`),
                 comparisonOperator: "GreaterThanOrEqualToThreshold",
                 evaluationPeriods: 1,
                 metricName: metricName,
@@ -360,7 +360,7 @@ class AlarmsAdmin {
                     ...this.config.generalTags,
                     CIS: "3.3",
                     service_name: "alarm-admin",
-                    Name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/RootAccountUsage`)
+                    Name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/${this.config.project}/${this.config.stackAlias || this.config.stack}/RootAccountUsage`)
                 }
             },
             {dependsOn: [metricFilter]}
@@ -397,7 +397,7 @@ class AlarmsAdmin {
         const alarm = new aws.cloudwatch.MetricAlarm(
             `${this.config.project}-cis-iam-policy-changes-alarm`,
             {
-                name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/IAMPolicyChanges`),
+                name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/${this.config.project}/${this.config.stackAlias || this.config.stack}/IAMPolicyChanges`),
                 comparisonOperator: "GreaterThanOrEqualToThreshold",
                 evaluationPeriods: 1,
                 metricName: metricName,
@@ -412,7 +412,7 @@ class AlarmsAdmin {
                     ...this.config.generalTags,
                     CIS: "3.4",
                     service_name: "alarm-admin",
-                    Name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/IAMPolicyChanges`)
+                    Name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/${this.config.project}/${this.config.stackAlias || this.config.stack}/IAMPolicyChanges`)
                 }
             },
             {dependsOn: [metricFilter]}
@@ -449,7 +449,7 @@ class AlarmsAdmin {
         const alarm = new aws.cloudwatch.MetricAlarm(
             `${this.config.project}-cis-cloudtrail-changes-alarm`,
             {
-                name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/CloudTrailConfigChanges`),
+                name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/${this.config.project}/${this.config.stackAlias || this.config.stack}/CloudTrailConfigChanges`),
                 comparisonOperator: "GreaterThanOrEqualToThreshold",
                 evaluationPeriods: 1,
                 metricName: metricName,
@@ -464,7 +464,7 @@ class AlarmsAdmin {
                     ...this.config.generalTags,
                     CIS: "3.5",
                     service_name: "alarm-admin",
-                    Name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/CloudTrailConfigChanges`)
+                    Name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/${this.config.project}/${this.config.stackAlias || this.config.stack}/CloudTrailConfigChanges`)
                 }
             },
             {dependsOn: [metricFilter]}
@@ -501,7 +501,7 @@ class AlarmsAdmin {
         const alarm = new aws.cloudwatch.MetricAlarm(
             `${this.config.project}-cis-console-auth-failures-alarm`,
             {
-                name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/ConsoleAuthenticationFailures`),
+                name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/${this.config.project}/${this.config.stackAlias || this.config.stack}/ConsoleAuthenticationFailures`),
                 comparisonOperator: "GreaterThanOrEqualToThreshold",
                 evaluationPeriods: 1,
                 metricName: metricName,
@@ -516,7 +516,7 @@ class AlarmsAdmin {
                     ...this.config.generalTags,
                     CIS: "3.6",
                     service_name: "alarm-admin",
-                    Name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/ConsoleAuthenticationFailures`)
+                    Name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/${this.config.project}/${this.config.stackAlias || this.config.stack}/ConsoleAuthenticationFailures`)
                 }
             },
             {dependsOn: [metricFilter]}
@@ -553,7 +553,7 @@ class AlarmsAdmin {
         const alarm = new aws.cloudwatch.MetricAlarm(
             `${this.config.project}-cis-disable-delete-kms-alarm`,
             {
-                name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/DisableOrDeleteKMSKeys`),
+                name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/${this.config.project}/${this.config.stackAlias || this.config.stack}/DisableOrDeleteKMSKeys`),
                 comparisonOperator: "GreaterThanOrEqualToThreshold",
                 evaluationPeriods: 1,
                 metricName: metricName,
@@ -568,7 +568,7 @@ class AlarmsAdmin {
                     ...this.config.generalTags,
                     CIS: "3.7",
                     service_name: "alarm-admin",
-                    Name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/DisableOrDeleteKMSKeys`)
+                    Name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/${this.config.project}/${this.config.stackAlias || this.config.stack}/DisableOrDeleteKMSKeys`)
                 }
             },
             {dependsOn: [metricFilter]}
@@ -605,7 +605,7 @@ class AlarmsAdmin {
         const alarm = new aws.cloudwatch.MetricAlarm(
             `${this.config.project}-cis-s3-bucket-policy-changes-alarm`,
             {
-                name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/S3BucketPolicyChanges`),
+                name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/${this.config.project}/${this.config.stackAlias || this.config.stack}/S3BucketPolicyChanges`),
                 comparisonOperator: "GreaterThanOrEqualToThreshold",
                 evaluationPeriods: 1,
                 metricName: metricName,
@@ -620,7 +620,7 @@ class AlarmsAdmin {
                     ...this.config.generalTags,
                     CIS: "3.8",
                     service_name: "alarm-admin",
-                    Name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/S3BucketPolicyChanges`)
+                    Name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/${this.config.project}/${this.config.stackAlias || this.config.stack}/S3BucketPolicyChanges`)
                 }
             },
             {dependsOn: [metricFilter]}
@@ -657,7 +657,7 @@ class AlarmsAdmin {
         const alarm = new aws.cloudwatch.MetricAlarm(
             `${this.config.project}-cis-aws-config-changes-alarm`,
             {
-                name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/AWSConfigChanges`),
+                name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/${this.config.project}/${this.config.stackAlias || this.config.stack}/AWSConfigChanges`),
                 comparisonOperator: "GreaterThanOrEqualToThreshold",
                 evaluationPeriods: 1,
                 metricName: metricName,
@@ -672,7 +672,7 @@ class AlarmsAdmin {
                     ...this.config.generalTags,
                     CIS: "3.9",
                     service_name: "alarm-admin",
-                    Name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/AWSConfigChanges`)
+                    Name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/${this.config.project}/${this.config.stackAlias || this.config.stack}/AWSConfigChanges`)
                 }
             },
             {dependsOn: [metricFilter]}
@@ -709,7 +709,7 @@ class AlarmsAdmin {
         const alarm = new aws.cloudwatch.MetricAlarm(
             `${this.config.project}-cis-security-group-changes-alarm`,
             {
-                name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/SecurityGroupChanges`),
+                name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/${this.config.project}/${this.config.stackAlias || this.config.stack}/SecurityGroupChanges`),
                 comparisonOperator: "GreaterThanOrEqualToThreshold",
                 evaluationPeriods: 1,
                 metricName: metricName,
@@ -724,7 +724,7 @@ class AlarmsAdmin {
                     ...this.config.generalTags,
                     CIS: "3.10",
                     service_name: "alarm-admin",
-                    Name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/SecurityGroupChanges`)
+                    Name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/${this.config.project}/${this.config.stackAlias || this.config.stack}/SecurityGroupChanges`)
                 }
             },
             {dependsOn: [metricFilter]}
@@ -761,7 +761,7 @@ class AlarmsAdmin {
         const alarm = new aws.cloudwatch.MetricAlarm(
             `${this.config.project}-cis-network-acl-changes-alarm`,
             {
-                name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/NetworkACLChanges`),
+                name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/${this.config.project}/${this.config.stackAlias || this.config.stack}/NetworkACLChanges`),
                 comparisonOperator: "GreaterThanOrEqualToThreshold",
                 evaluationPeriods: 1,
                 metricName: metricName,
@@ -776,7 +776,7 @@ class AlarmsAdmin {
                     ...this.config.generalTags,
                     CIS: "3.11",
                     service_name: "alarm-admin",
-                    Name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/NetworkACLChanges`)
+                    Name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/${this.config.project}/${this.config.stackAlias || this.config.stack}/NetworkACLChanges`)
                 }
             },
             {dependsOn: [metricFilter]}
@@ -813,7 +813,7 @@ class AlarmsAdmin {
         const alarm = new aws.cloudwatch.MetricAlarm(
             `${this.config.project}-cis-network-gateway-changes-alarm`,
             {
-                name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/NetworkGatewayChanges`),
+                name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/${this.config.project}/${this.config.stackAlias || this.config.stack}/NetworkGatewayChanges`),
                 comparisonOperator: "GreaterThanOrEqualToThreshold",
                 evaluationPeriods: 1,
                 metricName: metricName,
@@ -828,7 +828,7 @@ class AlarmsAdmin {
                     ...this.config.generalTags,
                     CIS: "3.12",
                     service_name: "alarm-admin",
-                    Name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/NetworkGatewayChanges`)
+                    Name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/${this.config.project}/${this.config.stackAlias || this.config.stack}/NetworkGatewayChanges`)
                 }
             },
             {dependsOn: [metricFilter]}
@@ -865,7 +865,7 @@ class AlarmsAdmin {
         const alarm = new aws.cloudwatch.MetricAlarm(
             `${this.config.project}-cis-route-table-changes-alarm`,
             {
-                name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/RouteTableChanges`),
+                name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/${this.config.project}/${this.config.stackAlias || this.config.stack}/RouteTableChanges`),
                 comparisonOperator: "GreaterThanOrEqualToThreshold",
                 evaluationPeriods: 1,
                 metricName: metricName,
@@ -880,7 +880,7 @@ class AlarmsAdmin {
                     ...this.config.generalTags,
                     CIS: "3.13",
                     service_name: "alarm-admin",
-                    Name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/RouteTableChanges`)
+                    Name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/${this.config.project}/${this.config.stackAlias || this.config.stack}/RouteTableChanges`)
                 }
             },
             {dependsOn: [metricFilter]}
@@ -917,7 +917,7 @@ class AlarmsAdmin {
         const alarm = new aws.cloudwatch.MetricAlarm(
             `${this.config.project}-cis-vpc-changes-alarm`,
             {
-                name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/VPCChanges`),
+                name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/${this.config.project}/${this.config.stackAlias || this.config.stack}/VPCChanges`),
                 comparisonOperator: "GreaterThanOrEqualToThreshold",
                 evaluationPeriods: 1,
                 metricName: metricName,
@@ -932,7 +932,7 @@ class AlarmsAdmin {
                     ...this.config.generalTags,
                     CIS: "3.14",
                     service_name: "alarm-admin",
-                    Name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/VPCChanges`)
+                    Name: pulumi.output(this.config.accountId).apply(accountId => `AWS-ALARM/${accountId}/Admin/${this.config.project}/${this.config.stackAlias || this.config.stack}/VPCChanges`)
                 }
             },
             {dependsOn: [metricFilter]}

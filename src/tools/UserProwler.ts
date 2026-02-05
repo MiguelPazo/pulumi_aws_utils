@@ -2,10 +2,10 @@
  * Created by Miguel Pazo (https://miguelpazo.com)
  */
 import * as aws from "@pulumi/aws";
-import * as fs from 'fs';
 import {InitConfig} from "../types/module";
 import {UserProwlerConfig} from "../types";
 import {getInit} from "../config";
+import {General} from "../common/General";
 
 export type UserProwlerResult = {
     group: aws.iam.Group;
@@ -50,12 +50,13 @@ class UserProwler {
         /**
          * Create IAM Policy from prowler_policy.json
          */
-        const policyDocument = fs.readFileSync(__dirname + '/../resources/iam/prowler_policy.json', 'utf8');
+        const policyFilePath = __dirname + '/../resources/iam/prowler_policy.json';
+        const policyOutput = General.renderTemplate(policyFilePath);
 
         const policy = new aws.iam.Policy(`${this.config.project}-${groupName}-policy`, {
             name: `${groupFullName}-policy`,
             description: "Prowler security audit policy - read-only access for security assessments",
-            policy: policyDocument,
+            policy: policyOutput.apply(p => JSON.stringify(p)),
             tags: {
                 ...this.config.generalTags,
                 Name: `${groupFullName}-policy`,

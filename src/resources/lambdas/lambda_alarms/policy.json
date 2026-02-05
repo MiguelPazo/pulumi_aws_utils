@@ -7,21 +7,21 @@
         "logs:CreateLogStream",
         "logs:CreateLogGroup"
       ],
-      "Resource": "arn:aws:logs:rep_region:rep_accountid:log-group:/aws/lambda/rep_log_grup*:*"
+      "Resource": "arn:aws:logs:{{region}}:{{accountId}}:log-group:/aws/lambda/{{logGroup}}*:*"
     },
     {
       "Effect": "Allow",
       "Action": [
         "logs:PutLogEvents"
       ],
-      "Resource": "arn:aws:logs:rep_region:rep_accountid:log-group:/aws/lambda/rep_log_grup*:*:*"
+      "Resource": "arn:aws:logs:{{region}}:{{accountId}}:log-group:/aws/lambda/{{logGroup}}*:*:*"
     },
     {
       "Effect": "Allow",
       "Action": [
         "sns:Publish"
       ],
-      "Resource": "rep_sns_arn"
+      "Resource": "{{snsArn}}"
     },
     {
       "Effect": "Allow",
@@ -29,7 +29,7 @@
         "kms:Decrypt",
         "kms:GenerateDataKey"
       ],
-      "Resource": "rep_kms_key_arn"
+      "Resource": "{{kmsKeyArn}}"
     },
     {
       "Effect": "Allow",

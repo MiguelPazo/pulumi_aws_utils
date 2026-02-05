@@ -11,7 +11,7 @@ import {
 import {PublishCommand, SNSClient} from "@aws-sdk/client-sns";
 import {ListObjectsV2Command, PutObjectCommand, S3Client} from "@aws-sdk/client-s3";
 import {CreateJobCommand, DescribeJobCommand, S3ControlClient} from "@aws-sdk/client-s3-control";
-import {SSMClient, GetParameterCommand} from "@aws-sdk/client-ssm";
+import {GetParameterCommand, SSMClient} from "@aws-sdk/client-ssm";
 
 // Global variables for environment configuration
 let ENV_CONFIG = null;

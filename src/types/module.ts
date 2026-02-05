@@ -21,5 +21,6 @@ export type InitConfig = {
     multiRegion?: boolean;
     failoverReplica?: boolean;
     regionReplica?: string;
+    regionPrimary?: string;
     providerReplica?: aws.Provider;
 }

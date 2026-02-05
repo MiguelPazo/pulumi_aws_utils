@@ -2,7 +2,7 @@
   {
     "name": "/database/host",
     "type": "String",
-    "value": "db.rep_stack.rep_region.rds.amazonaws.com",
+    "value": "db.{{stack}}.{{region}}.rds.amazonaws.com",
     "description": "Database host endpoint"
   },
   {
@@ -21,19 +21,19 @@
   {
     "name": "/aws/account-id",
     "type": "String",
-    "value": "rep_accountid",
+    "value": "{{accountId}}",
     "description": "AWS Account ID"
   },
   {
     "name": "/aws/region",
     "type": "String",
-    "value": "rep_region",
+    "value": "{{region}}",
     "description": "AWS Region"
   },
   {
     "name": "/app/prefix",
     "type": "String",
-    "value": "rep_general_prefix",
+    "value": "{{generalPrefix}}",
     "description": "General prefix for resources"
   },
   {

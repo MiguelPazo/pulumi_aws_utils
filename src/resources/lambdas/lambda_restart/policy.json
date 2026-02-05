@@ -7,14 +7,14 @@
         "logs:CreateLogStream",
         "logs:CreateLogGroup"
       ],
-      "Resource": "arn:aws:logs:rep_region:rep_accountid:log-group:/aws/lambda/rep_log_grup*:*"
+      "Resource": "arn:aws:logs:{{region}}:{{accountId}}:log-group:/aws/lambda/{{logGroup}}*:*"
     },
     {
       "Effect": "Allow",
       "Action": [
         "logs:PutLogEvents"
       ],
-      "Resource": "arn:aws:logs:rep_region:rep_accountid:log-group:/aws/lambda/rep_log_grup*:*:*"
+      "Resource": "arn:aws:logs:{{region}}:{{accountId}}:log-group:/aws/lambda/{{logGroup}}*:*:*"
     },
     {
       "Effect": "Allow",
@@ -28,7 +28,7 @@
       "Resource": "*",
       "Condition": {
         "StringEquals": {
-          "aws:RequestedRegion": "rep_region"
+          "aws:RequestedRegion": "{{region}}"
         }
       }
     },

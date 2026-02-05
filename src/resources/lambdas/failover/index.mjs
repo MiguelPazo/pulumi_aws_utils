@@ -3,55 +3,26 @@
  * Lambda Function for Multi-Region Failover Operations
  */
 
+import {DescribeDBClustersCommand, FailoverGlobalClusterCommand, RDSClient} from "@aws-sdk/client-rds";
 import {
-    RDSClient,
-    DescribeGlobalClustersCommand,
-    FailoverGlobalClusterCommand,
-    DescribeDBClustersCommand
-} from "@aws-sdk/client-rds";
-import {
-    EFSClient,
-    DescribeReplicationConfigurationsCommand,
     DeleteReplicationConfigurationCommand,
-    DescribeFileSystemsCommand
+    DescribeFileSystemsCommand,
+    DescribeReplicationConfigurationsCommand,
+    EFSClient
 } from "@aws-sdk/client-efs";
+import {GetBucketReplicationCommand, S3Client} from "@aws-sdk/client-s3";
+import {CloudFrontClient, GetDistributionConfigCommand, UpdateDistributionCommand} from "@aws-sdk/client-cloudfront";
+import {ChangeResourceRecordSetsCommand, GetChangeCommand, Route53Client} from "@aws-sdk/client-route53";
+import {PublishCommand, SNSClient} from "@aws-sdk/client-sns";
+import {CloudWatchClient, GetMetricStatisticsCommand} from "@aws-sdk/client-cloudwatch";
+import {DescribeServicesCommand, ECSClient, UpdateServiceCommand} from "@aws-sdk/client-ecs";
 import {
-    S3Client,
-    GetBucketReplicationCommand
-} from "@aws-sdk/client-s3";
-import {
-    CloudFrontClient,
-    GetDistributionConfigCommand,
-    UpdateDistributionCommand
-} from "@aws-sdk/client-cloudfront";
-import {
-    Route53Client,
-    ChangeResourceRecordSetsCommand,
-    GetChangeCommand
-} from "@aws-sdk/client-route53";
-import {
-    SNSClient,
-    PublishCommand
-} from "@aws-sdk/client-sns";
-import {
-    CloudWatchClient,
-    GetMetricStatisticsCommand
-} from "@aws-sdk/client-cloudwatch";
-import {
-    ECSClient,
-    DescribeServicesCommand,
-    UpdateServiceCommand
-} from "@aws-sdk/client-ecs";
-import {
-    EventBridgeClient,
     DescribeRuleCommand,
+    DisableRuleCommand,
     EnableRuleCommand,
-    DisableRuleCommand
+    EventBridgeClient
 } from "@aws-sdk/client-eventbridge";
-import {
-    SSMClient,
-    GetParameterCommand
-} from "@aws-sdk/client-ssm";
+import {GetParameterCommand, SSMClient} from "@aws-sdk/client-ssm";
 
 // Global variables for environment configuration
 let ENV_CONFIG = null;

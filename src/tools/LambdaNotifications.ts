@@ -3,10 +3,10 @@
  */
 import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
-import * as fs from 'fs';
 import {InitConfig} from "../types/module";
 import {getInit} from "../config";
 import {LambdaRole} from "../modules/LambdaRole";
+import {General} from "../common/General";
 
 export type LambdaNotificationsResult = {
     lambdaFunction: aws.lambda.Function;
@@ -71,34 +71,35 @@ class LambdaNotifications {
             accountId,
             ssmKmsKey ? pulumi.output(ssmKmsKey).apply(key => key.arn) : pulumi.output(undefined)
         ]).apply(([accId, ssmKmsArn]) => {
-            let policyStr = fs.readFileSync(__dirname + '/../resources/lambdas/lambda_notifications/policy.json', 'utf8')
-                .replace(/rep_region/g, this.config.region)
-                .replace(/rep_accountid/g, accId)
-                .replace(/rep_log_grup/g, lambdaFullName);
+            // Render policy using General.renderPolicy with additional context
+            const policyFilePath = __dirname + '/../resources/lambdas/lambda_notifications/policy.json';
+            const policyOutput = General.renderTemplate(policyFilePath, {
+                logGroup: lambdaFullName
+            });
 
-            const policy = JSON.parse(policyStr);
+            return policyOutput.apply(policy => {
+                // Add SSM permissions if secure params are enabled
+                if (enableParamsSecure && ssmKmsArn) {
+                    policy.Statement.push({
+                        Effect: "Allow",
+                        Action: [
+                            "ssm:GetParameter",
+                            "ssm:GetParameters"
+                        ],
+                        Resource: `arn:aws:ssm:${this.config.region}:${accId}:parameter${paramStorePath}`
+                    });
+                    policy.Statement.push({
+                        Effect: "Allow",
+                        Action: [
+                            "kms:Decrypt",
+                            "kms:GenerateDataKey"
+                        ],
+                        Resource: ssmKmsArn
+                    });
+                }
 
-            // Add SSM permissions if secure params are enabled
-            if (enableParamsSecure && ssmKmsArn) {
-                policy.Statement.push({
-                    Effect: "Allow",
-                    Action: [
-                        "ssm:GetParameter",
-                        "ssm:GetParameters"
-                    ],
-                    Resource: `arn:aws:ssm:${this.config.region}:${accId}:parameter${paramStorePath}`
-                });
-                policy.Statement.push({
-                    Effect: "Allow",
-                    Action: [
-                        "kms:Decrypt",
-                        "kms:GenerateDataKey"
-                    ],
-                    Resource: ssmKmsArn
-                });
-            }
-
-            return Promise.resolve(policy);
+                return Promise.resolve(policy);
+            });
         });
 
         const lambdaRole = await LambdaRole.getInstance().main(

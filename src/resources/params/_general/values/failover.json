@@ -5,7 +5,9 @@
     {
       "distributionId": "E1234567890ABC",
       "type": "backend",
-      "aliasesToRemove": ["api.example.com"],
+      "aliasesToRemove": [
+        "api.example.com"
+      ],
       "aliasesToAdd": [],
       "shouldDisable": true,
       "shouldEnable": false
@@ -14,14 +16,18 @@
       "distributionId": "E0987654321DEF",
       "type": "backend",
       "aliasesToRemove": [],
-      "aliasesToAdd": ["api.example.com"],
+      "aliasesToAdd": [
+        "api.example.com"
+      ],
       "shouldDisable": false,
       "shouldEnable": true
     },
     {
       "distributionId": "E1111111111FED",
       "type": "frontend",
-      "aliasesToRemove": ["app.example.com"],
+      "aliasesToRemove": [
+        "app.example.com"
+      ],
       "aliasesToAdd": [],
       "shouldDisable": true,
       "shouldEnable": false
@@ -30,22 +36,24 @@
       "distributionId": "E2222222222GHI",
       "type": "frontend",
       "aliasesToRemove": [],
-      "aliasesToAdd": ["app.example.com"],
+      "aliasesToAdd": [
+        "app.example.com"
+      ],
       "shouldDisable": false,
       "shouldEnable": true
     }
   ],
   "s3Buckets": [
     {
-      "bucketName": "rep_general_prefix_multiregion-rep_accountid-assets"
+      "bucketName": "{{generalPrefixMultiregion}}-{{accountId}}-assets"
     },
     {
-      "bucketName": "rep_general_prefix_multiregion-rep_accountid-uploads"
+      "bucketName": "{{generalPrefixMultiregion}}-{{accountId}}-uploads"
     }
   ],
   "rds": {
-    "globalClusterId": "rep_general_prefix_multiregion-postgres-global",
-    "secondaryClusterId": "rep_general_prefix_multiregion-postgres-rep_stack-us-west-2",
+    "globalClusterId": "{{generalPrefixMultiregion}}-postgres-global",
+    "secondaryClusterId": "{{generalPrefixMultiregion}}-postgres-{{stack}}-us-west-2",
     "secondaryClusterRegion": "us-west-2"
   },
   "efs": [
@@ -55,12 +63,12 @@
   ],
   "ecsServices": [
     {
-      "clusterName": "rep_general_prefix-ecs-cluster",
-      "serviceName": "rep_general_prefix-backend"
+      "clusterName": "{{generalPrefix}}-ecs-cluster",
+      "serviceName": "{{generalPrefix}}-backend"
     },
     {
-      "clusterName": "rep_general_prefix-ecs-cluster",
-      "serviceName": "rep_general_prefix-worker"
+      "clusterName": "{{generalPrefix}}-ecs-cluster",
+      "serviceName": "{{generalPrefix}}-worker"
     }
   ],
   "eventBridgeRules": [
