@@ -27,6 +27,7 @@ class StepFunctionFailover {
     async main(moduleConfig: StepFunctionFailoverModuleConfig): Promise<StepFunctionFailoverResult> {
         const {
             parameterStoreConfigPath,
+            failoverStatusPath,
             snsArn,
             cwLogsKmsKey,
             lambdaKmsKey,
@@ -71,7 +72,7 @@ class StepFunctionFailover {
             }
         });
 
-        // Attach policy to invoke lambda and read SSM parameters
+        // Attach policy to invoke lambda and read/write SSM parameters
         new aws.iam.RolePolicy(`${this.config.project}-failover-sfn-policy`, {
             role: stateMachineRole.id,
             policy: lambdaFailover.lambdaFunction.arn.apply(lambdaArn => JSON.stringify({
@@ -91,6 +92,14 @@ class StepFunctionFailover {
                             "ssm:GetParameters"
                         ],
                         Resource: `arn:aws:ssm:${this.config.region}:${accountId}:parameter${parameterStoreConfigPath}`
+                    },
+                    {
+                        Effect: "Allow",
+                        Action: [
+                            "ssm:PutParameter",
+                            "ssm:GetParameter"
+                        ],
+                        Resource: `arn:aws:ssm:${this.config.region}:${accountId}:parameter${failoverStatusPath}`
                     }
                 ]
             }))
@@ -103,6 +112,30 @@ class StepFunctionFailover {
             lambdaFailover.lambdaFunction.arn,
             snsArn
         ]).apply(([lambdaArn, sns]) => {
+            // Helper function to create status tracking step
+            const createStatusTrackingStep = (stepName: string, nextStep: string) => ({
+                Type: "Task",
+                Resource: "arn:aws:states:::lambda:invoke",
+                Parameters: {
+                    FunctionName: lambdaArn,
+                    Payload: {
+                        action: "update-failover-status",
+                        parameterName: failoverStatusPath,
+                        "stepName": stepName,
+                        "executionArn.$": "$$.Execution.Id"
+                    }
+                },
+                ResultPath: null,
+                Catch: [
+                    {
+                        ErrorEquals: ["States.ALL"],
+                        Next: nextStep,
+                        ResultPath: "$.statusUpdateError"
+                    }
+                ],
+                Next: nextStep
+            });
+
             return JSON.stringify({
                 Comment: "Multi-Region Failover Automation",
                 StartAt: "LoadConfiguration",
@@ -118,7 +151,139 @@ class StepFunctionFailover {
                         ResultSelector: {
                             "value.$": "States.StringToJson($.Parameter.Value)"
                         },
-                        Next: "SendStartNotification"
+                        Next: "GetFailoverStatus"
+                    },
+                    GetFailoverStatus: {
+                        Type: "Task",
+                        Resource: "arn:aws:states:::lambda:invoke",
+                        Parameters: {
+                            FunctionName: lambdaArn,
+                            Payload: {
+                                action: "get-failover-status",
+                                parameterName: failoverStatusPath
+                            }
+                        },
+                        ResultPath: "$.failoverStatus",
+                        ResultSelector: {
+                            "status.$": "$.Payload.status",
+                            "lastSuccessfulStep.$": "$.Payload.lastSuccessfulStep",
+                            "executionArn.$": "$.Payload.executionArn",
+                            "timestamp.$": "$.Payload.timestamp"
+                        },
+                        Catch: [
+                            {
+                                ErrorEquals: ["States.ALL"],
+                                ResultPath: "$.failoverStatusError",
+                                Next: "DetermineStartPoint"
+                            }
+                        ],
+                        Next: "DetermineStartPoint"
+                    },
+                    DetermineStartPoint: {
+                        Type: "Choice",
+                        Choices: [
+                            {
+                                Variable: "$.failoverStatus.lastSuccessfulStep",
+                                StringEquals: "TrafficStopped",
+                                Next: "NotifyResumingFromTrafficStopped"
+                            },
+                            {
+                                Variable: "$.failoverStatus.lastSuccessfulStep",
+                                StringEquals: "DataMigrationComplete",
+                                Next: "NotifyResumingFromDataMigration"
+                            },
+                            {
+                                Variable: "$.failoverStatus.lastSuccessfulStep",
+                                StringEquals: "ServicesRestarted",
+                                Next: "NotifyResumingFromServicesRestarted"
+                            },
+                            {
+                                Variable: "$.failoverStatus.lastSuccessfulStep",
+                                StringEquals: "CloudFrontEnabled",
+                                Next: "NotifyResumingFromCloudFrontEnabled"
+                            },
+                            {
+                                Variable: "$.failoverStatus.lastSuccessfulStep",
+                                StringEquals: "FailoverComplete",
+                                Next: "NotifyAlreadyCompleted"
+                            }
+                        ],
+                        Default: "SendStartNotification"
+                    },
+                    NotifyResumingFromTrafficStopped: {
+                        Type: "Task",
+                        Resource: "arn:aws:states:::lambda:invoke",
+                        Parameters: {
+                            FunctionName: lambdaArn,
+                            Payload: {
+                                action: "notify",
+                                snsArn: sns,
+                                subject: "Resuming Failover: From S3 Validation",
+                                "message.$": "States.Format('Resuming failover from previous execution. Last successful step: TrafficStopped. Continuing from S3 replication validation. Previous execution: {}', $.failoverStatus.executionArn)"
+                            }
+                        },
+                        ResultPath: null,
+                        Next: "ValidateS3Replication"
+                    },
+                    NotifyResumingFromDataMigration: {
+                        Type: "Task",
+                        Resource: "arn:aws:states:::lambda:invoke",
+                        Parameters: {
+                            FunctionName: lambdaArn,
+                            Payload: {
+                                action: "notify",
+                                snsArn: sns,
+                                subject: "Resuming Failover: From ECS Services",
+                                "message.$": "States.Format('Resuming failover from previous execution. Last successful step: DataMigrationComplete. Continuing from ECS services update. Previous execution: {}', $.failoverStatus.executionArn)"
+                            }
+                        },
+                        ResultPath: null,
+                        Next: "CheckIfEcsServicesUpdateExists"
+                    },
+                    NotifyResumingFromServicesRestarted: {
+                        Type: "Task",
+                        Resource: "arn:aws:states:::lambda:invoke",
+                        Parameters: {
+                            FunctionName: lambdaArn,
+                            Payload: {
+                                action: "notify",
+                                snsArn: sns,
+                                subject: "Resuming Failover: From EventBridge Rules",
+                                "message.$": "States.Format('Resuming failover from previous execution. Last successful step: ServicesRestarted. Continuing from EventBridge rules management. Previous execution: {}', $.failoverStatus.executionArn)"
+                            }
+                        },
+                        ResultPath: null,
+                        Next: "CheckIfEventBridgeRulesExist"
+                    },
+                    NotifyResumingFromCloudFrontEnabled: {
+                        Type: "Task",
+                        Resource: "arn:aws:states:::lambda:invoke",
+                        Parameters: {
+                            FunctionName: lambdaArn,
+                            Payload: {
+                                action: "notify",
+                                snsArn: sns,
+                                subject: "Resuming Failover: From Route53 Update",
+                                "message.$": "States.Format('Resuming failover from previous execution. Last successful step: CloudFrontEnabled. Continuing from Route53 DNS updates. Previous execution: {}', $.failoverStatus.executionArn)"
+                            }
+                        },
+                        ResultPath: null,
+                        Next: "UpdateRoute53Records"
+                    },
+                    NotifyAlreadyCompleted: {
+                        Type: "Task",
+                        Resource: "arn:aws:states:::lambda:invoke",
+                        Parameters: {
+                            FunctionName: lambdaArn,
+                            Payload: {
+                                action: "notify",
+                                snsArn: sns,
+                                subject: "Failover Already Completed",
+                                "message.$": "States.Format('Failover process was already completed in previous execution: {}. Last completion timestamp: {}', $.failoverStatus.executionArn, $.failoverStatus.timestamp)"
+                            }
+                        },
+                        ResultPath: null,
+                        End: true
                     },
                     SendStartNotification: {
                         Type: "Task",
@@ -259,8 +424,9 @@ class StepFunctionFailover {
                             }
                         },
                         ResultPath: null,
-                        Next: "ValidateS3Replication"
+                        Next: "TrackTrafficStopped"
                     },
+                    TrackTrafficStopped: createStatusTrackingStep("TrafficStopped", "ValidateS3Replication"),
 
                     // Step 2: Validate S3 Replication
                     ValidateS3Replication: {
@@ -529,13 +695,173 @@ class StepFunctionFailover {
                             }
                         },
                         ResultPath: null,
-                        Next: "RestartEcsServices"
+                        Next: "TrackDataMigrationComplete"
+                    },
+                    TrackDataMigrationComplete: createStatusTrackingStep("DataMigrationComplete", "CheckIfEcsServicesUpdateExists"),
+
+                    // Check if ECS Services Update array has elements
+                    CheckIfEcsServicesUpdateExists: {
+                        Type: "Choice",
+                        Choices: [
+                            {
+                                Variable: "$.config.value.ecsServicesUpdate[0]",
+                                IsPresent: true,
+                                Next: "UpdateEcsServices"
+                            }
+                        ],
+                        Default: "SkipEcsServicesUpdate"
                     },
 
-                    // Step 5: Restart ECS Services to ensure fresh connections
+                    SkipEcsServicesUpdate: {
+                        Type: "Pass",
+                        Result: {
+                            skipped: true,
+                            message: "ECS Services Update configuration not found, skipping ECS service updates"
+                        },
+                        ResultPath: "$.ecsUpdateResults",
+                        Next: "CheckIfEcsServicesRestartExists"
+                    },
+
+                    // Step 5a: Update ECS Services with specific task definitions
+                    UpdateEcsServices: {
+                        Type: "Map",
+                        ItemsPath: "$.config.value.ecsServicesUpdate",
+                        MaxConcurrency: 3,
+                        Iterator: {
+                            StartAt: "UpdateService",
+                            States: {
+                                UpdateService: {
+                                    Type: "Task",
+                                    Resource: "arn:aws:states:::lambda:invoke",
+                                    Parameters: {
+                                        FunctionName: lambdaArn,
+                                        Payload: {
+                                            action: "update-ecs-service",
+                                            "clusterName.$": "$.clusterName",
+                                            "serviceName.$": "$.serviceName",
+                                            "taskDefinition.$": "$.taskDefinition",
+                                            "taskDefinitionRevision.$": "$.taskDefinitionRevision"
+                                        }
+                                    },
+                                    ResultPath: "$.updateResult",
+                                    ResultSelector: {
+                                        "clusterName.$": "$.Payload.clusterName",
+                                        "serviceName.$": "$.Payload.serviceName",
+                                        "taskDefinition.$": "$.Payload.taskDefinition",
+                                        "desiredCount.$": "$.Payload.desiredCount",
+                                        "deploymentId.$": "$.Payload.deploymentId",
+                                        "status.$": "$.Payload.status"
+                                    },
+                                    Retry: [
+                                        {
+                                            ErrorEquals: ["States.ALL"],
+                                            IntervalSeconds: 15,
+                                            MaxAttempts: 3,
+                                            BackoffRate: 1.5
+                                        }
+                                    ],
+                                    Next: "WaitForUpdateDeployment"
+                                },
+                                WaitForUpdateDeployment: {
+                                    Type: "Wait",
+                                    Seconds: 30,
+                                    Next: "CheckUpdateDeployment"
+                                },
+                                CheckUpdateDeployment: {
+                                    Type: "Task",
+                                    Resource: "arn:aws:states:::lambda:invoke",
+                                    Parameters: {
+                                        FunctionName: lambdaArn,
+                                        Payload: {
+                                            action: "check-ecs-deployment",
+                                            "clusterName.$": "$.updateResult.clusterName",
+                                            "serviceName.$": "$.updateResult.serviceName",
+                                            "deploymentId.$": "$.updateResult.deploymentId"
+                                        }
+                                    },
+                                    ResultPath: "$.deploymentCheckResult",
+                                    ResultSelector: {
+                                        "isComplete.$": "$.Payload.isComplete",
+                                        "isFailed.$": "$.Payload.isFailed",
+                                        "status.$": "$.Payload.status",
+                                        "runningCount.$": "$.Payload.runningCount",
+                                        "desiredCount.$": "$.Payload.desiredCount"
+                                    },
+                                    Next: "IsUpdateDeploymentComplete"
+                                },
+                                IsUpdateDeploymentComplete: {
+                                    Type: "Choice",
+                                    Choices: [
+                                        {
+                                            Variable: "$.deploymentCheckResult.isComplete",
+                                            BooleanEquals: true,
+                                            Next: "UpdateComplete"
+                                        },
+                                        {
+                                            Variable: "$.deploymentCheckResult.isFailed",
+                                            BooleanEquals: true,
+                                            Next: "UpdateFailed"
+                                        }
+                                    ],
+                                    Default: "WaitForUpdateDeployment"
+                                },
+                                UpdateFailed: {
+                                    Type: "Fail",
+                                    Error: "EcsServiceUpdateFailed",
+                                    Cause: "ECS service update deployment failed"
+                                },
+                                UpdateComplete: {
+                                    Type: "Pass",
+                                    End: true
+                                }
+                            }
+                        },
+                        ResultPath: "$.ecsUpdateResults",
+                        Next: "NotifyEcsUpdateComplete"
+                    },
+                    NotifyEcsUpdateComplete: {
+                        Type: "Task",
+                        Resource: "arn:aws:states:::lambda:invoke",
+                        Parameters: {
+                            FunctionName: lambdaArn,
+                            Payload: {
+                                action: "notify",
+                                snsArn: sns,
+                                subject: "ECS Services Updated",
+                                "message.$": "States.Format('All ECS services have been updated with specific task definitions. Total services updated: {}', States.ArrayLength($.ecsUpdateResults))"
+                            }
+                        },
+                        ResultPath: null,
+                        Next: "CheckIfEcsServicesRestartExists"
+                    },
+
+                    // Check if ECS Services Restart array has elements
+                    CheckIfEcsServicesRestartExists: {
+                        Type: "Choice",
+                        Choices: [
+                            {
+                                Variable: "$.config.value.ecsServicesRestart[0]",
+                                IsPresent: true,
+                                Next: "RestartEcsServices"
+                            }
+                        ],
+                        Default: "SkipEcsServicesRestart"
+                    },
+
+                    SkipEcsServicesRestart: {
+                        Type: "Pass",
+                        Result: {
+                            skipped: true,
+                            message: "ECS Services Restart configuration not found, skipping ECS service restarts"
+                        },
+                        ResultPath: "$.ecsRestartResults",
+                        Next: "CheckIfEventBridgeRulesExist"
+                    },
+
+                    // Step 5b: Restart ECS Services to ensure fresh connections
                     RestartEcsServices: {
                         Type: "Map",
-                        ItemsPath: "$.config.value.ecsServices",
+                        ItemsPath: "$.config.value.ecsServicesRestart",
                         MaxConcurrency: 3,
                         Iterator: {
                             StartAt: "RestartService",
@@ -568,6 +894,58 @@ class StepFunctionFailover {
                                             BackoffRate: 1.5
                                         }
                                     ],
+                                    Next: "WaitForRestartDeployment"
+                                },
+                                WaitForRestartDeployment: {
+                                    Type: "Wait",
+                                    Seconds: 30,
+                                    Next: "CheckRestartDeployment"
+                                },
+                                CheckRestartDeployment: {
+                                    Type: "Task",
+                                    Resource: "arn:aws:states:::lambda:invoke",
+                                    Parameters: {
+                                        FunctionName: lambdaArn,
+                                        Payload: {
+                                            action: "check-ecs-deployment",
+                                            "clusterName.$": "$.restartResult.clusterName",
+                                            "serviceName.$": "$.restartResult.serviceName",
+                                            "deploymentId.$": "$.restartResult.deploymentId"
+                                        }
+                                    },
+                                    ResultPath: "$.deploymentCheckResult",
+                                    ResultSelector: {
+                                        "isComplete.$": "$.Payload.isComplete",
+                                        "isFailed.$": "$.Payload.isFailed",
+                                        "status.$": "$.Payload.status",
+                                        "runningCount.$": "$.Payload.runningCount",
+                                        "desiredCount.$": "$.Payload.desiredCount"
+                                    },
+                                    Next: "IsRestartDeploymentComplete"
+                                },
+                                IsRestartDeploymentComplete: {
+                                    Type: "Choice",
+                                    Choices: [
+                                        {
+                                            Variable: "$.deploymentCheckResult.isComplete",
+                                            BooleanEquals: true,
+                                            Next: "RestartComplete"
+                                        },
+                                        {
+                                            Variable: "$.deploymentCheckResult.isFailed",
+                                            BooleanEquals: true,
+                                            Next: "RestartFailed"
+                                        }
+                                    ],
+                                    Default: "WaitForRestartDeployment"
+                                },
+                                RestartFailed: {
+                                    Type: "Fail",
+                                    Error: "EcsServiceRestartFailed",
+                                    Cause: "ECS service restart deployment failed"
+                                },
+                                RestartComplete: {
+                                    Type: "Pass",
                                     End: true
                                 }
                             }
@@ -588,8 +966,9 @@ class StepFunctionFailover {
                             }
                         },
                         ResultPath: null,
-                        Next: "CheckIfEventBridgeRulesExist"
+                        Next: "TrackServicesRestarted"
                     },
+                    TrackServicesRestarted: createStatusTrackingStep("ServicesRestarted", "CheckIfEventBridgeRulesExist"),
 
                     // Check if EventBridge rules configuration exists
                     CheckIfEventBridgeRulesExist: {
@@ -879,8 +1258,9 @@ class StepFunctionFailover {
                             }
                         },
                         ResultPath: null,
-                        Next: "UpdateRoute53Records"
+                        Next: "TrackCloudFrontEnabled"
                     },
+                    TrackCloudFrontEnabled: createStatusTrackingStep("CloudFrontEnabled", "UpdateRoute53Records"),
 
                     // Step 8: Update Route53 DNS Records
                     UpdateRoute53Records: {
@@ -1086,8 +1466,9 @@ class StepFunctionFailover {
                             }
                         },
                         ResultPath: null,
-                        Next: "SendSuccessNotification"
+                        Next: "TrackFailoverComplete"
                     },
+                    TrackFailoverComplete: createStatusTrackingStep("FailoverComplete", "SendSuccessNotification"),
 
                     // Final Success Notification
                     SendSuccessNotification: {

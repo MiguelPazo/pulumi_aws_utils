@@ -33,8 +33,14 @@ class CloudFrontFrontend {
             certificate,
             waf,
             customErrorResponses,
-            dnsRoute53
+            dnsRoute53,
+            isOriginReplica = false
         } = config;
+
+        // Determine which prefix to use based on isOriginReplica
+        const bucketPrefix = isOriginReplica
+            ? this.config.generalPrefixMultiregion
+            : this.config.generalPrefix;
         // Create CloudFront distribution
         const cdn = new aws.cloudfront.Distribution(`${this.config.project}-${name}-cf`, {
             enabled: true,
@@ -47,7 +53,7 @@ class CloudFrontFrontend {
             origins: [
                 {
                     originId: name,
-                    domainName: pulumi.interpolate`${this.config.generalPrefixMultiregion}-${this.config.accountId}-${name}.s3.${this.config.region}.amazonaws.com`,
+                    domainName: pulumi.interpolate`${bucketPrefix}-${this.config.accountId}-${name}.s3.${this.config.region}.amazonaws.com`,
                     originAccessControlId: cfbase.oac.id
                 }
             ],

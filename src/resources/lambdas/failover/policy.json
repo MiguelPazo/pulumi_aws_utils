@@ -101,7 +101,8 @@
       "Effect": "Allow",
       "Action": [
         "ssm:GetParameter",
-        "ssm:GetParameters"
+        "ssm:GetParameters",
+        "ssm:PutParameter"
       ],
       "Resource": "arn:aws:ssm:*:{{accountId}}:parameter/*"
     }

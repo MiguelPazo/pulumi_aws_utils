@@ -49,6 +49,8 @@ export type FailoverS3Config = {
 export type FailoverEcsConfig = {
     clusterName: string;
     serviceName: string;
+    taskDefinition?: string;
+    taskDefinitionRevision?: string;
 };
 
 export type FailoverRoute53Config = {
@@ -63,13 +65,15 @@ export type FailoverConfiguration = {
     rds: FailoverRdsConfig;
     efs: FailoverEfsConfig[];
     s3Buckets: FailoverS3Config[];
-    ecsServices: FailoverEcsConfig[];
+    ecsServicesUpdate: FailoverEcsConfig[];
+    ecsServicesRestart: FailoverEcsConfig[];
     route53Records: FailoverRoute53Config[];
     secondaryRegion: string;
 };
 
 export type StepFunctionFailoverModuleConfig = {
     parameterStoreConfigPath: string;
+    failoverStatusPath: string;
     snsArn: pulumi.Output<string>;
     cwLogsKmsKey: pulumi.Input<aws.kms.Key | aws.kms.ReplicaKey>;
     lambdaKmsKey?: pulumi.Input<aws.kms.Key>;

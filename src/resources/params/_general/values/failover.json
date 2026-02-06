@@ -61,7 +61,15 @@
       "sourceFileSystemId": "fs-0123456789abcdef0"
     }
   ],
-  "ecsServices": [
+  "ecsServicesUpdate": [
+    {
+      "clusterName": "{{generalPrefix}}-ecs-cluster",
+      "serviceName": "{{generalPrefix}}-backend",
+      "taskDefinition": "{{generalPrefix}}-backend",
+      "taskDefinitionRevision": "42"
+    }
+  ],
+  "ecsServicesRestart": [
     {
       "clusterName": "{{generalPrefix}}-ecs-cluster",
       "serviceName": "{{generalPrefix}}-backend"

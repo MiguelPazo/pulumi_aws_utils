@@ -133,7 +133,15 @@ files using the syntax `[[filename.json]]`:
       "sourceFileSystemId": "fs-0123456789abcdef0"
     }
   ],
-  "ecsServices": [
+  "ecsServicesUpdate": [
+    {
+      "clusterName": "rep_general_prefix-ecs-cluster",
+      "serviceName": "rep_general_prefix-backend",
+      "taskDefinition": "rep_general_prefix-backend",
+      "taskDefinitionRevision": "42"
+    }
+  ],
+  "ecsServicesRestart": [
     {
       "clusterName": "rep_general_prefix-ecs-cluster",
       "serviceName": "rep_general_prefix-backend"
@@ -163,6 +171,23 @@ files using the syntax `[[filename.json]]`:
 }
 ```
 
+**Example with empty ECS arrays (minimal configuration):**
+
+```json
+{
+  "primaryRegion": "us-east-1",
+  "secondaryRegion": "us-west-2",
+  "cloudFront": [...],
+  "s3Buckets": [...],
+  "rds": {...},
+  "efs": [...],
+  "ecsServicesUpdate": [],
+  "ecsServicesRestart": [],
+  "eventBridgeRules": [...],
+  "route53Records": [...]
+}
+```
+
 **Configuration Fields:**
 
 - **primaryRegion** (required): The primary AWS region where resources are currently running
@@ -175,7 +200,12 @@ files using the syntax `[[filename.json]]`:
 - **s3Buckets** (optional): Array of S3 buckets to validate replication status
 - **rds** (optional): RDS Aurora Global Cluster configuration for promotion
 - **efs** (optional): Array of EFS filesystems to disable replication (uses `sourceFileSystemId` from primary region)
-- **ecsServices** (optional): Array of ECS services to restart after failover
+- **ecsServicesUpdate** (required): Array of ECS services to update with specific task definitions (can be empty array `[]`)
+    - **clusterName** (required): Name of the ECS cluster
+    - **serviceName** (required): Name of the ECS service
+    - **taskDefinition** (required): Task definition family name
+    - **taskDefinitionRevision** (required): Task definition revision number to deploy
+- **ecsServicesRestart** (required): Array of ECS services to restart after failover (can be empty array `[]`)
 - **eventBridgeRules** (optional): Array of EventBridge rules to enable/disable during failover
     - **ruleName** (required): Name of the EventBridge rule
     - **targetRegion** (required): AWS region where the rule is located

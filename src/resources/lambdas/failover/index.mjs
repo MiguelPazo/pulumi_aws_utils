@@ -22,7 +22,7 @@ import {
     EnableRuleCommand,
     EventBridgeClient
 } from "@aws-sdk/client-eventbridge";
-import {GetParameterCommand, SSMClient} from "@aws-sdk/client-ssm";
+import {GetParameterCommand, PutParameterCommand, SSMClient} from "@aws-sdk/client-ssm";
 
 // Global variables for environment configuration
 let ENV_CONFIG = null;
@@ -95,6 +95,10 @@ export const handler = async (event) => {
                 return await checkEfsStatus(event);
             case 'check-s3-replication':
                 return await checkS3Replication(event);
+            case 'update-ecs-service':
+                return await updateEcsService(event);
+            case 'check-ecs-deployment':
+                return await checkEcsDeployment(event);
             case 'restart-ecs-service':
                 return await restartEcsService(event);
             case 'disable-eventbridge-rule':
@@ -115,6 +119,10 @@ export const handler = async (event) => {
                 return await checkRoute53Change(event);
             case 'notify':
                 return await sendNotification(event);
+            case 'update-failover-status':
+                return await updateFailoverStatus(event);
+            case 'get-failover-status':
+                return await getFailoverStatus(event);
             default:
                 throw new Error(`Unknown action: ${action}`);
         }
@@ -305,6 +313,129 @@ async function checkS3Replication(event) {
         isSynced,
         latency,
         replicationEnabled: !!replicationConfig.ReplicationConfiguration
+    };
+}
+
+/**
+ * Update ECS service with a specific task definition and revision
+ */
+async function updateEcsService(event) {
+    const {clusterName, serviceName, taskDefinition, taskDefinitionRevision} = event;
+
+    console.log(`Updating ECS service ${serviceName} in cluster ${clusterName} with task definition ${taskDefinition}:${taskDefinitionRevision}`);
+
+    // Build full task definition ARN
+    const fullTaskDefinition = `${taskDefinition}:${taskDefinitionRevision}`;
+
+    // Get current service configuration to preserve desired count
+    const describeCommand = new DescribeServicesCommand({
+        cluster: clusterName,
+        services: [serviceName]
+    });
+
+    const describeResponse = await ecsClient.send(describeCommand);
+
+    if (!describeResponse.services || describeResponse.services.length === 0) {
+        throw new Error(`Service ${serviceName} not found in cluster ${clusterName}`);
+    }
+
+    const service = describeResponse.services[0];
+    const currentDesiredCount = service.desiredCount;
+
+    console.log(`Current desired count: ${currentDesiredCount}`);
+
+    // Update service with new task definition
+    const updateCommand = new UpdateServiceCommand({
+        cluster: clusterName,
+        service: serviceName,
+        taskDefinition: fullTaskDefinition,
+        desiredCount: currentDesiredCount,
+        forceNewDeployment: false
+    });
+
+    const updateResponse = await ecsClient.send(updateCommand);
+
+    return {
+        statusCode: 200,
+        clusterName,
+        serviceName,
+        taskDefinition: fullTaskDefinition,
+        desiredCount: currentDesiredCount,
+        deploymentId: updateResponse.service.deployments[0]?.id,
+        status: 'update-initiated'
+    };
+}
+
+/**
+ * Check ECS deployment status
+ */
+async function checkEcsDeployment(event) {
+    const {clusterName, serviceName, deploymentId} = event;
+
+    console.log(`Checking ECS deployment ${deploymentId} for service ${serviceName} in cluster ${clusterName}`);
+
+    const describeCommand = new DescribeServicesCommand({
+        cluster: clusterName,
+        services: [serviceName]
+    });
+
+    const describeResponse = await ecsClient.send(describeCommand);
+
+    if (!describeResponse.services || describeResponse.services.length === 0) {
+        throw new Error(`Service ${serviceName} not found in cluster ${clusterName}`);
+    }
+
+    const service = describeResponse.services[0];
+
+    // Find the specific deployment
+    const deployment = service.deployments.find(d => d.id === deploymentId);
+
+    if (!deployment) {
+        // Deployment might have completed and been removed
+        // Check if there's only one deployment with status PRIMARY
+        const primaryDeployment = service.deployments.find(d => d.status === 'PRIMARY');
+        if (service.deployments.length === 1 && primaryDeployment) {
+            return {
+                statusCode: 200,
+                isComplete: true,
+                isFailed: false,
+                status: 'PRIMARY',
+                clusterName,
+                serviceName,
+                deploymentId
+            };
+        }
+
+        return {
+            statusCode: 200,
+            isComplete: false,
+            isFailed: true,
+            status: 'NOT_FOUND',
+            clusterName,
+            serviceName,
+            deploymentId
+        };
+    }
+
+    // Check deployment status
+    const isComplete = deployment.status === 'PRIMARY' &&
+                      deployment.runningCount === deployment.desiredCount &&
+                      service.deployments.length === 1;
+
+    const isFailed = deployment.rolloutState === 'FAILED' ||
+                     deployment.status === 'INACTIVE';
+
+    return {
+        statusCode: 200,
+        isComplete,
+        isFailed,
+        status: deployment.status,
+        rolloutState: deployment.rolloutState,
+        runningCount: deployment.runningCount,
+        desiredCount: deployment.desiredCount,
+        clusterName,
+        serviceName,
+        deploymentId
     };
 }
 
@@ -794,4 +925,77 @@ async function sendNotification(event) {
         statusCode: 200,
         status: 'notification-sent'
     };
+}
+
+/**
+ * Update failover status in SSM Parameter Store
+ */
+async function updateFailoverStatus(event) {
+    const {parameterName, stepName, executionArn} = event;
+
+    console.log(`Updating failover status to step: ${stepName}`);
+
+    const ssmClient = new SSMClient({});
+
+    const statusData = {
+        lastSuccessfulStep: stepName,
+        executionArn: executionArn,
+        timestamp: new Date().toISOString()
+    };
+
+    const command = new PutParameterCommand({
+        Name: parameterName,
+        Value: JSON.stringify(statusData),
+        Type: 'String',
+        Overwrite: true
+    });
+
+    await ssmClient.send(command);
+
+    return {
+        statusCode: 200,
+        status: 'status-updated',
+        stepName,
+        timestamp: statusData.timestamp
+    };
+}
+
+/**
+ * Get failover status from SSM Parameter Store
+ */
+async function getFailoverStatus(event) {
+    const {parameterName} = event;
+
+    console.log(`Getting failover status from parameter: ${parameterName}`);
+
+    const ssmClient = new SSMClient({});
+
+    try {
+        const command = new GetParameterCommand({
+            Name: parameterName
+        });
+
+        const response = await ssmClient.send(command);
+        const statusData = JSON.parse(response.Parameter.Value);
+
+        return {
+            statusCode: 200,
+            status: 'status-retrieved',
+            lastSuccessfulStep: statusData.lastSuccessfulStep,
+            executionArn: statusData.executionArn,
+            timestamp: statusData.timestamp
+        };
+    } catch (error) {
+        if (error.name === 'ParameterNotFound') {
+            console.log(`Failover status parameter not found. This is the first execution.`);
+            return {
+                statusCode: 200,
+                status: 'not-found',
+                lastSuccessfulStep: null,
+                executionArn: null,
+                timestamp: null
+            };
+        }
+        throw error;
+    }
 }

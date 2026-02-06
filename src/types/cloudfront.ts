@@ -14,6 +14,7 @@ export type CloudFrontFrontendModuleConfig = {
     waf: pulumi.Output<aws.wafv2.WebAcl>;
     customErrorResponses?: aws.types.input.cloudfront.DistributionCustomErrorResponse[];
     dnsRoute53?: string;
+    isOriginReplica?: boolean;
 };
 
 export type CloudFrontBackendModuleConfig = {
