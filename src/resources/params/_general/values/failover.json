@@ -1,8 +1,10 @@
 {
+  "_comment": "Multi-region failover configuration - This file contains all resources to manage during failover",
   "primaryRegion": "us-east-1",
   "secondaryRegion": "us-west-2",
   "cloudFront": [
     {
+      "hostedZoneId": "Z1234567890ABC",
       "distributionId": "E1234567890ABC",
       "type": "backend",
       "aliasesToRemove": [
@@ -13,6 +15,7 @@
       "shouldEnable": false
     },
     {
+      "hostedZoneId": "Z1234567890ABC",
       "distributionId": "E0987654321DEF",
       "type": "backend",
       "aliasesToRemove": [],
@@ -23,6 +26,7 @@
       "shouldEnable": true
     },
     {
+      "hostedZoneId": "Z1234567890ABC",
       "distributionId": "E1111111111FED",
       "type": "frontend",
       "aliasesToRemove": [
@@ -33,6 +37,7 @@
       "shouldEnable": false
     },
     {
+      "hostedZoneId": "Z1234567890ABC",
       "distributionId": "E2222222222GHI",
       "type": "frontend",
       "aliasesToRemove": [],
@@ -45,15 +50,17 @@
   ],
   "s3Buckets": [
     {
-      "bucketName": "{{generalPrefixMultiregion}}-{{accountId}}-assets"
+      "bucketName": "{{generalPrefixMultiregion}}-{{accountId}}-assets",
+      "region": "us-east-1"
     },
     {
       "bucketName": "{{generalPrefixMultiregion}}-{{accountId}}-uploads"
     }
   ],
   "rds": {
+    "_comment": "secondaryClusterArn must be the full ARN, not just the cluster identifier",
     "globalClusterId": "{{generalPrefixMultiregion}}-postgres-global",
-    "secondaryClusterId": "{{generalPrefixMultiregion}}-postgres-{{stack}}-us-west-2",
+    "secondaryClusterArn": "arn:aws:rds:us-west-2:{{accountId}}:cluster:{{generalPrefixMultiregion}}-postgres-{{stack}}-us-west-2",
     "secondaryClusterRegion": "us-west-2"
   },
   "efs": [
@@ -61,60 +68,45 @@
       "sourceFileSystemId": "fs-0123456789abcdef0"
     }
   ],
-  "ecsServicesUpdate": [
+  "ecsServices": [
     {
       "clusterName": "{{generalPrefix}}-ecs-cluster",
       "serviceName": "{{generalPrefix}}-backend",
-      "taskDefinition": "{{generalPrefix}}-backend",
-      "taskDefinitionRevision": "42"
-    }
-  ],
-  "ecsServicesRestart": [
-    {
-      "clusterName": "{{generalPrefix}}-ecs-cluster",
-      "serviceName": "{{generalPrefix}}-backend"
+      "region": "us-west-2"
     },
     {
       "clusterName": "{{generalPrefix}}-ecs-cluster",
       "serviceName": "{{generalPrefix}}-worker"
+    },
+    {
+      "clusterName": "{{generalPrefix}}-ecs-cluster",
+      "serviceName": "{{generalPrefix}}-scheduler"
     }
   ],
   "eventBridgeRules": [
     {
       "ruleName": "scheduled-backup",
-      "targetRegion": "us-east-1",
+      "region": "us-east-1",
       "shouldDisable": true,
       "shouldEnable": false
     },
     {
       "ruleName": "scheduled-data-sync",
-      "targetRegion": "us-east-1",
+      "region": "us-east-1",
       "shouldDisable": true,
       "shouldEnable": false
     },
     {
       "ruleName": "scheduled-backup",
-      "targetRegion": "us-west-2",
+      "region": "us-west-2",
       "shouldDisable": false,
       "shouldEnable": true
     },
     {
       "ruleName": "scheduled-data-sync",
-      "targetRegion": "us-west-2",
+      "region": "us-west-2",
       "shouldDisable": false,
       "shouldEnable": true
-    }
-  ],
-  "route53Records": [
-    {
-      "hostedZoneId": "Z1234567890ABC",
-      "recordName": "app.example.com",
-      "newTargetDnsName": "d111111abcdef8.cloudfront.net"
-    },
-    {
-      "hostedZoneId": "Z1234567890ABC",
-      "recordName": "api.example.com",
-      "newTargetDnsName": "my-api-alb-west-123456789.us-west-2.elb.amazonaws.com"
     }
   ]
 }

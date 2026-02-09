@@ -120,12 +120,16 @@ files using the syntax `[[filename.json]]`:
   ],
   "s3Buckets": [
     {
-      "bucketName": "rep_general_prefix_multiregion-rep_accountid-assets"
+      "bucketName": "rep_general_prefix_multiregion-rep_accountid-assets",
+      "region": "us-east-1"
+    },
+    {
+      "bucketName": "rep_general_prefix_multiregion-rep_accountid-uploads"
     }
   ],
   "rds": {
     "globalClusterId": "rep_general_prefix_multiregion-postgres-global",
-    "secondaryClusterId": "rep_general_prefix_multiregion-postgres-rep_stack-us-west-2",
+    "secondaryClusterArn": "arn:aws:rds:us-west-2:rep_accountid:cluster:rep_general_prefix_multiregion-postgres-rep_stack-us-west-2",
     "secondaryClusterRegion": "us-west-2"
   },
   "efs": [
@@ -133,30 +137,28 @@ files using the syntax `[[filename.json]]`:
       "sourceFileSystemId": "fs-0123456789abcdef0"
     }
   ],
-  "ecsServicesUpdate": [
+  "ecsServices": [
     {
       "clusterName": "rep_general_prefix-ecs-cluster",
       "serviceName": "rep_general_prefix-backend",
-      "taskDefinition": "rep_general_prefix-backend",
-      "taskDefinitionRevision": "42"
-    }
-  ],
-  "ecsServicesRestart": [
+      "forceUpdate": true,
+      "region": "us-west-2"
+    },
     {
       "clusterName": "rep_general_prefix-ecs-cluster",
-      "serviceName": "rep_general_prefix-backend"
+      "serviceName": "rep_general_prefix-worker"
     }
   ],
   "eventBridgeRules": [
     {
       "ruleName": "scheduled-backup",
-      "targetRegion": "us-east-1",
+      "region": "us-east-1",
       "shouldDisable": true,
       "shouldEnable": false
     },
     {
       "ruleName": "scheduled-backup",
-      "targetRegion": "us-west-2",
+      "region": "us-west-2",
       "shouldDisable": false,
       "shouldEnable": true
     }
@@ -171,7 +173,7 @@ files using the syntax `[[filename.json]]`:
 }
 ```
 
-**Example with empty ECS arrays (minimal configuration):**
+**Example with empty ECS array (minimal configuration):**
 
 ```json
 {
@@ -181,8 +183,7 @@ files using the syntax `[[filename.json]]`:
   "s3Buckets": [...],
   "rds": {...},
   "efs": [...],
-  "ecsServicesUpdate": [],
-  "ecsServicesRestart": [],
+  "ecsServices": [],
   "eventBridgeRules": [...],
   "route53Records": [...]
 }
@@ -198,17 +199,21 @@ files using the syntax `[[filename.json]]`:
     - **aliasesToRemove** (optional): Array of domain aliases to remove before disabling
     - **shouldDisable** (required): Whether to disable this distribution during failover
 - **s3Buckets** (optional): Array of S3 buckets to validate replication status
+    - **bucketName** (required): Name of the S3 bucket
+    - **region** (optional): AWS region where the bucket is located. If not specified, uses `primaryRegion`
 - **rds** (optional): RDS Aurora Global Cluster configuration for promotion
+    - **globalClusterId** (required): The identifier of the Aurora Global Database cluster
+    - **secondaryClusterArn** (required): The full ARN of the secondary cluster to promote (e.g., `arn:aws:rds:us-west-2:123456789012:cluster:my-cluster-name`)
+    - **secondaryClusterRegion** (required): The AWS region where the secondary cluster is located
 - **efs** (optional): Array of EFS filesystems to disable replication (uses `sourceFileSystemId` from primary region)
-- **ecsServicesUpdate** (required): Array of ECS services to update with specific task definitions (can be empty array `[]`)
+- **ecsServices** (required): Array of ECS services to manage during failover (can be empty array `[]`)
     - **clusterName** (required): Name of the ECS cluster
     - **serviceName** (required): Name of the ECS service
-    - **taskDefinition** (required): Task definition family name
-    - **taskDefinitionRevision** (required): Task definition revision number to deploy
-- **ecsServicesRestart** (required): Array of ECS services to restart after failover (can be empty array `[]`)
+    - **forceUpdate** (optional, boolean): If `true`, updates the service to the latest revision of its current task definition family. If `false` or omitted, restarts the service with the same task definition (force new deployment). Default: `false`
+    - **region** (optional): AWS region where the ECS service is located. If not specified, uses `secondaryRegion`
 - **eventBridgeRules** (optional): Array of EventBridge rules to enable/disable during failover
     - **ruleName** (required): Name of the EventBridge rule
-    - **targetRegion** (required): AWS region where the rule is located
+    - **region** (required): AWS region where the rule is located
     - **shouldDisable** (required): `true` to disable the rule during the first phase (typically primary region rules)
     - **shouldEnable** (required): `true` to enable the rule during the second phase (typically secondary region rules)
     - **Note**: Rules are processed in two sequential phases to prevent desynchronization:

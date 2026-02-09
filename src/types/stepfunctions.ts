@@ -21,6 +21,7 @@ export type ExportFinalBackupResult = {
 };
 
 export type FailoverCloudFrontConfig = {
+    hostedZoneId: string;
     distributionId: string;
     aliasesToRemove?: string[];
     aliasesToAdd?: string[];
@@ -43,21 +44,20 @@ export type FailoverEfsConfig = {
 
 export type FailoverS3Config = {
     bucketName: string;
-    replicationRuleName?: string;
+    region?: string;
 };
 
 export type FailoverEcsConfig = {
     clusterName: string;
     serviceName: string;
-    taskDefinition?: string;
-    taskDefinitionRevision?: string;
+    region?: string;
 };
 
-export type FailoverRoute53Config = {
-    hostedZoneId: string;
-    recordName: string;
-    newTargetDnsName: string;
-    newTargetZoneId: string;
+export type FailoverEventBridgeConfig = {
+    ruleName: string;
+    region: string;
+    shouldDisable: boolean;
+    shouldEnable: boolean;
 };
 
 export type FailoverConfiguration = {
@@ -65,9 +65,8 @@ export type FailoverConfiguration = {
     rds: FailoverRdsConfig;
     efs: FailoverEfsConfig[];
     s3Buckets: FailoverS3Config[];
-    ecsServicesUpdate: FailoverEcsConfig[];
-    ecsServicesRestart: FailoverEcsConfig[];
-    route53Records: FailoverRoute53Config[];
+    ecsServices: FailoverEcsConfig[];
+    eventBridgeRules: FailoverEventBridgeConfig[];
     secondaryRegion: string;
 };
 
@@ -76,7 +75,7 @@ export type StepFunctionFailoverModuleConfig = {
     failoverStatusPath: string;
     snsArn: pulumi.Output<string>;
     cwLogsKmsKey: pulumi.Input<aws.kms.Key | aws.kms.ReplicaKey>;
-    lambdaKmsKey?: pulumi.Input<aws.kms.Key>;
+    lambdaKmsKey?: pulumi.Input<aws.kms.Key | aws.kms.ReplicaKey>;
     enableParamsSecure?: boolean;
     ssmKmsKey?: pulumi.Input<aws.kms.Key | aws.kms.ReplicaKey>;
 };
@@ -85,4 +84,5 @@ export type StepFunctionFailoverResult = {
     stateMachine: aws.sfn.StateMachine;
     stateMachineRole: aws.iam.Role;
     lambdaFunction: aws.lambda.Function;
+    lambdaRole: aws.iam.Role;
 };
