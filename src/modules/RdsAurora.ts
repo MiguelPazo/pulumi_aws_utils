@@ -156,6 +156,7 @@ class RdsAurora {
             dbClusterParameterGroupName: clusterParameterGroup?.name,
             vpcSecurityGroupIds: [securityGroup.id],
             storageEncrypted: true,
+            port: auroraConfig.port,
             kmsKeyId: kms.arn,
             backupRetentionPeriod: auroraConfig.backupRetentionPeriod || 7,
             preferredBackupWindow: auroraConfig.preferredBackupWindow || "05:00-06:00",
@@ -190,14 +191,12 @@ class RdsAurora {
                 clusterConfig.databaseName = auroraConfig.databaseName;
                 clusterConfig.masterUsername = auroraConfig.username;
                 clusterConfig.masterPassword = auroraConfig.password;
-                clusterConfig.port = auroraConfig.port;
             }
         } else {
             // Standard single-region cluster
             clusterConfig.databaseName = auroraConfig.databaseName;
             clusterConfig.masterUsername = auroraConfig.username;
             clusterConfig.masterPassword = auroraConfig.password;
-            clusterConfig.port = auroraConfig.port;
         }
 
         const cluster = new aws.rds.Cluster(
@@ -230,6 +229,48 @@ class RdsAurora {
                 }
             });
             instances.push(instance);
+        }
+
+        /**
+         * Aurora Autoscaling (optional)
+         */
+        let autoscalingTarget: aws.appautoscaling.Target | undefined;
+        let autoscalingPolicy: aws.appautoscaling.Policy | undefined;
+
+        if (auroraConfig.autoscaling) {
+            const {
+                minCapacity,
+                maxCapacity,
+                targetMetric,
+                targetValue,
+                scaleInCooldown,
+                scaleOutCooldown
+            } = auroraConfig.autoscaling;
+
+            // Register the Aurora cluster as a scalable target
+            autoscalingTarget = new aws.appautoscaling.Target(`${this.config.project}-${auroraConfig.engine}-${auroraConfig.name}-autoscaling-target`, {
+                maxCapacity: maxCapacity,
+                minCapacity: minCapacity,
+                resourceId: pulumi.interpolate`cluster:${cluster.clusterIdentifier}`,
+                scalableDimension: "rds:cluster:ReadReplicaCount",
+                serviceNamespace: "rds",
+            });
+
+            // Create autoscaling policy based on target tracking
+            autoscalingPolicy = new aws.appautoscaling.Policy(`${this.config.project}-${auroraConfig.engine}-${auroraConfig.name}-autoscaling-policy`, {
+                policyType: "TargetTrackingScaling",
+                resourceId: autoscalingTarget.resourceId,
+                scalableDimension: autoscalingTarget.scalableDimension,
+                serviceNamespace: autoscalingTarget.serviceNamespace,
+                targetTrackingScalingPolicyConfiguration: {
+                    predefinedMetricSpecification: {
+                        predefinedMetricType: targetMetric,
+                    },
+                    targetValue: targetValue,
+                    scaleInCooldown: scaleInCooldown || 300,
+                    scaleOutCooldown: scaleOutCooldown || 300,
+                },
+            });
         }
 
         /**
@@ -287,6 +328,8 @@ class RdsAurora {
             securityGroup,
             clusterParameterGroup,
             parameterGroup,
+            autoscalingTarget,
+            autoscalingPolicy,
         } as RdsAuroraResult
     }
 }

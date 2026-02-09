@@ -32,6 +32,15 @@ export type RdsResult = {
     securityGroup: aws.ec2.SecurityGroup;
 };
 
+export type RdsAuroraAutoscalingConfig = {
+    minCapacity: number;
+    maxCapacity: number;
+    targetMetric: "RDSReaderAverageCPUUtilization" | "RDSReaderAverageDatabaseConnections";
+    targetValue: number;
+    scaleInCooldown?: number;
+    scaleOutCooldown?: number;
+};
+
 export type RdsAuroraConfig = {
     name: string;
     engine: string;
@@ -60,6 +69,7 @@ export type RdsAuroraConfig = {
     globalClusterIdentifier?: pulumi.Output<string>;
     isSecondaryCluster?: boolean;
     sourceRegion?: string;
+    autoscaling?: RdsAuroraAutoscalingConfig;
 };
 
 export type RdsAuroraResult = {
@@ -69,6 +79,8 @@ export type RdsAuroraResult = {
     securityGroup: aws.ec2.SecurityGroup;
     clusterParameterGroup?: aws.rds.ClusterParameterGroup;
     parameterGroup?: aws.rds.ParameterGroup;
+    autoscalingTarget?: aws.appautoscaling.Target;
+    autoscalingPolicy?: aws.appautoscaling.Policy;
 };
 
 export type RdsAuroraGlobalModuleConfig = {
