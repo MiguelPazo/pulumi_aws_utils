@@ -58,7 +58,8 @@ class AlarmsAdmin {
             const {metricFilter, alarm} = this.createUnauthorizedApiCallsMetric(
                 cisConfig.cloudTrailLogGroupName,
                 actionArn,
-                namespace
+                namespace,
+                cisConfig.excludeUnauthorizedApiCallsEventSources
             );
             metricFilters.push(metricFilter);
             alarms.push(alarm);
@@ -219,16 +220,26 @@ class AlarmsAdmin {
     private createUnauthorizedApiCallsMetric(
         logGroupName: pulumi.Input<string>,
         actionArn: pulumi.Input<string>,
-        namespace: string
+        namespace: string,
+        excludeEventSources?: string[]
     ): { metricFilter: aws.cloudwatch.LogMetricFilter; alarm: aws.cloudwatch.MetricAlarm } {
         const metricName = "UnauthorizedAPICalls";
+
+        // Build filter pattern with exclusions
+        let pattern = '{ ($.errorCode = "*UnauthorizedOperation") || ($.errorCode = "AccessDenied*") }';
+
+        if (excludeEventSources && excludeEventSources.length > 0) {
+            // Build exclusion conditions
+            const exclusions = excludeEventSources.map(source => `($.eventSource != "${source}")`).join(' && ');
+            pattern = `{ (($.errorCode = "*UnauthorizedOperation") || ($.errorCode = "AccessDenied*")) && ${exclusions} }`;
+        }
 
         const metricFilter = new aws.cloudwatch.LogMetricFilter(
             `${this.config.project}-cis-unauthorized-api-calls-filter`,
             {
                 name: `${this.config.generalPrefix}-UnauthorizedAPICalls`,
                 logGroupName: logGroupName,
-                pattern: '{ ($.errorCode = "*UnauthorizedOperation") || ($.errorCode = "AccessDenied*") }',
+                pattern: pattern,
                 metricTransformation: {
                     name: metricName,
                     namespace: namespace,

@@ -32,7 +32,8 @@ class StepFunctionFailover {
             cwLogsKmsKey,
             lambdaKmsKey,
             enableParamsSecure,
-            ssmKmsKey
+            ssmKmsKey,
+            defaultPolicy = true
         } = moduleConfig;
 
         const accountId = await this.config.accountId;
@@ -73,37 +74,39 @@ class StepFunctionFailover {
         });
 
         // Attach policy to invoke lambda and read/write SSM parameters
-        new aws.iam.RolePolicy(`${this.config.project}-failover-sfn-policy`, {
-            role: stateMachineRole.id,
-            policy: lambdaFailover.lambdaFunction.arn.apply(lambdaArn => JSON.stringify({
-                Version: "2012-10-17",
-                Statement: [
-                    {
-                        Effect: "Allow",
-                        Action: [
-                            "lambda:InvokeFunction"
-                        ],
-                        Resource: lambdaArn
-                    },
-                    {
-                        Effect: "Allow",
-                        Action: [
-                            "ssm:GetParameter",
-                            "ssm:GetParameters"
-                        ],
-                        Resource: `arn:aws:ssm:${this.config.region}:${accountId}:parameter${parameterStoreConfigPath}`
-                    },
-                    {
-                        Effect: "Allow",
-                        Action: [
-                            "ssm:PutParameter",
-                            "ssm:GetParameter"
-                        ],
-                        Resource: `arn:aws:ssm:${this.config.region}:${accountId}:parameter${failoverStatusPath}`
-                    }
-                ]
-            }))
-        });
+        if (defaultPolicy) {
+            new aws.iam.RolePolicy(`${this.config.project}-failover-sfn-policy`, {
+                role: stateMachineRole.id,
+                policy: lambdaFailover.lambdaFunction.arn.apply(lambdaArn => JSON.stringify({
+                    Version: "2012-10-17",
+                    Statement: [
+                        {
+                            Effect: "Allow",
+                            Action: [
+                                "lambda:InvokeFunction"
+                            ],
+                            Resource: lambdaArn
+                        },
+                        {
+                            Effect: "Allow",
+                            Action: [
+                                "ssm:GetParameter",
+                                "ssm:GetParameters"
+                            ],
+                            Resource: `arn:aws:ssm:${this.config.region}:${accountId}:parameter${parameterStoreConfigPath}`
+                        },
+                        {
+                            Effect: "Allow",
+                            Action: [
+                                "ssm:PutParameter",
+                                "ssm:GetParameter"
+                            ],
+                            Resource: `arn:aws:ssm:${this.config.region}:${accountId}:parameter${failoverStatusPath}`
+                        }
+                    ]
+                }))
+            });
+        }
 
         /**
          * Step Functions State Machine Definition

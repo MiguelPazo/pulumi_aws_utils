@@ -78,6 +78,7 @@ export type StepFunctionFailoverModuleConfig = {
     lambdaKmsKey?: pulumi.Input<aws.kms.Key | aws.kms.ReplicaKey>;
     enableParamsSecure?: boolean;
     ssmKmsKey?: pulumi.Input<aws.kms.Key | aws.kms.ReplicaKey>;
+    defaultPolicy?: boolean;
 };
 
 export type StepFunctionFailoverResult = {

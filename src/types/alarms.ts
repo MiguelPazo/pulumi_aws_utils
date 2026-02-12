@@ -138,6 +138,8 @@ export type AlarmsAdminConfig = {
     enableNetworkGatewayChanges?: boolean; // Default: true
     enableRouteTableChanges?: boolean; // Default: true
     enableVpcChanges?: boolean; // Default: true
+    // Exclude specific event sources from UnauthorizedApiCalls metric
+    excludeUnauthorizedApiCallsEventSources?: string[]; // Example: ["frauddetector.amazonaws.com", "macie2.amazonaws.com"]
 };
 
 export type AlarmsAdminResult = {
