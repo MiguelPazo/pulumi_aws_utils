@@ -8,7 +8,7 @@ import {CertificatesResult, CloudFrontBaseResult} from "./base";
 export type CloudFrontFrontendModuleConfig = {
     name: string;
     aliasDns: string[];
-    cfbase: pulumi.Output<CloudFrontBaseResult>;
+    cfBase: pulumi.Output<CloudFrontBaseResult>;
     s3Logs: pulumi.Output<aws.s3.Bucket>;
     certificate: CertificatesResult;
     waf: pulumi.Output<aws.wafv2.WebAcl>;
@@ -24,7 +24,7 @@ export type CloudFrontBackendModuleConfig = {
     vpcOriginDns: pulumi.Output<string>;
     vpcOriginPath: string;
     apigw: pulumi.Output<aws.apigateway.RestApi>;
-    cfbase: pulumi.Output<CloudFrontBaseResult>;
+    cfBase: pulumi.Output<CloudFrontBaseResult>;
     s3Logs: pulumi.Output<aws.s3.Bucket>;
     certificate: CertificatesResult;
     waf: pulumi.Output<aws.wafv2.WebAcl>;

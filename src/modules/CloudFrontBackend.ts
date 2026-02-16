@@ -32,7 +32,7 @@ class CloudFrontBackend {
             vpcOriginDns,
             vpcOriginPath,
             apigw,
-            cfbase,
+            cfBase,
             s3Logs,
             certificate,
             waf,
@@ -60,7 +60,7 @@ class CloudFrontBackend {
                 }
             ],
 
-            defaultCacheBehavior: pulumi.output(cfbase).apply(base => ({
+            defaultCacheBehavior: pulumi.output(cfBase).apply(base => ({
                 targetOriginId: name,
                 viewerProtocolPolicy: "redirect-to-https",
                 allowedMethods: ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT", "DELETE"],

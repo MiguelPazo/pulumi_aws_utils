@@ -28,7 +28,7 @@ class CloudFrontFrontend {
         const {
             name,
             aliasDns,
-            cfbase,
+            cfBase,
             s3Logs,
             certificate,
             waf,
@@ -54,11 +54,11 @@ class CloudFrontFrontend {
                 {
                     originId: name,
                     domainName: pulumi.interpolate`${bucketPrefix}-${this.config.accountId}-${name}.s3.${this.config.region}.amazonaws.com`,
-                    originAccessControlId: cfbase.oac.id
+                    originAccessControlId: cfBase.oac.id
                 }
             ],
 
-            defaultCacheBehavior: pulumi.output(cfbase).apply(base => ({
+            defaultCacheBehavior: pulumi.output(cfBase).apply(base => ({
                 targetOriginId: name,
                 viewerProtocolPolicy: "redirect-to-https",
                 allowedMethods: ["GET", "HEAD", "OPTIONS"],
