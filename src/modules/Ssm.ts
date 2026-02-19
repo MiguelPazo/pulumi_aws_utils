@@ -25,7 +25,7 @@ class Ssm {
 
     async main(
         ec2Role: pulumi.Output<aws.iam.Role>,
-        logGroupKmsKey: pulumi.Output<aws.kms.Key>,
+        logGroupKmsKey: pulumi.Output<aws.kms.Key | aws.kms.ReplicaKey>,
         s3Logs: pulumi.Output<aws.s3.Bucket>
     ): Promise<void> {
         /**
