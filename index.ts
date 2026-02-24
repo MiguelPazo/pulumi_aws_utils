@@ -53,6 +53,7 @@ import {LambdaExportBackup} from "./src/tools/LambdaExportBackup";
 import {LambdaFailover} from "./src/tools/LambdaFailover";
 import {ExportFinalBackup} from "./src/modules/ExportFinalBackup";
 import {Route53} from "./src/modules/Route53";
+import {SSMAssociations} from "./src/modules/SSMAssociations";
 import {StepFunctionFailover} from "./src/modules/StepFunctionFailover";
 
 export const AwsUtilsInit = {
@@ -105,6 +106,7 @@ export const AwsUtilsModules = {
     Secrets,
     Sqs,
     Ssm,
+    SSMAssociations,
     StepFunctionFailover,
     ApiGatewayVpcLink,
     NlbListener,

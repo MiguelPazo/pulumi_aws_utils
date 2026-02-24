@@ -16,3 +16,18 @@ export type ParamStoreModuleConfig = {
     paramsPath: string;
     kmsKey?: pulumi.Input<aws.kms.Key | aws.kms.ReplicaKey>;
 };
+
+export type SSMAssociationsModuleConfig = {
+    schedule?: string;
+    operatingSystem?: string;
+    patchClassification?: string[];
+    rebootOption?: string;
+    tagKey?: string;
+    tagValue?: string;
+};
+
+export type SSMAssociationsResult = {
+    patchBaseline: aws.ssm.PatchBaseline;
+    patchGroup: aws.ssm.PatchGroup;
+    association: aws.ssm.Association;
+};
