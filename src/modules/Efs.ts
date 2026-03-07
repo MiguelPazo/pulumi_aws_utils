@@ -116,20 +116,19 @@ class Efs {
         /**
          * EFS File System
          */
+        const throughputMode = efsConfig.throughputMode || "bursting";
+
         const fileSystem = new aws.efs.FileSystem(`${this.config.project}-efs-${efsConfig.name}`, {
             creationToken: `${this.config.generalPrefix}-efs-${efsConfig.name}`,
             performanceMode: efsConfig.performanceMode || "generalPurpose",
-            throughputMode: efsConfig.throughputMode || "provisioned",
-            provisionedThroughputInMibps: efsConfig.provisionedThroughputInMibps || 100,
+            throughputMode: throughputMode,
+            provisionedThroughputInMibps: throughputMode === "provisioned" ? (efsConfig.provisionedThroughputInMibps || 100) : undefined,
             encrypted: true,
             kmsKeyId: kms.arn,
             lifecyclePolicies: efsConfig.lifecyclePolicy ? [{
                 transitionToIa: efsConfig.lifecyclePolicy.transitionToIa || "AFTER_30_DAYS",
                 transitionToPrimaryStorageClass: efsConfig.lifecyclePolicy.transitionToPrimaryStorageClass || "AFTER_1_ACCESS"
             }] : undefined,
-            // protection: {
-            //     replicationOverwrite: efsConfig.enableReplicationOverwrite ? "DISABLED" : "ENABLED"
-            // },
             tags: {
                 ...this.config.generalTags,
                 ...tags,
