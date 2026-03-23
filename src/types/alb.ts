@@ -44,6 +44,7 @@ export type AlbModuleConfig = {
     createRoute53Record?: boolean;
     phz?: pulumi.Output<PhzResult>;
     createDefaultListener?: boolean;
+    idleTimeout?: number;
 };
 
 export type AlbListenerModuleConfig = {

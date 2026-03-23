@@ -35,6 +35,7 @@ class Alb {
             createRoute53Record = true,
             phz,
             createDefaultListener = false,
+            idleTimeout = 60,
         } = albConfig;
 
         const securityGroup = new aws.ec2.SecurityGroup(`${this.config.project}-${name}-alb-sg`, {
@@ -64,6 +65,8 @@ class Alb {
             enableDeletionProtection: this.config.deleteProtection,
             internal: internal,
             loadBalancerType: aws.alb.LoadBalancerType.Application,
+            idleTimeout: idleTimeout,
+            dropInvalidHeaderFields: true,
             enableCrossZoneLoadBalancing: true,
             subnets: internal ? vpc.privateSubnetIds : vpc.publicSubnetIds,
             securityGroups: [securityGroup.id],

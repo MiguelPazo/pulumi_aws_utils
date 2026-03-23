@@ -34,15 +34,15 @@ class EcsService {
             targetGroups,
             containerDefinitions,
             cmDomain,
-            efs,
-            efsAccessPoint,
-            efsDirectory,
+            efsVolumes,
             provider = "FARGATE",
             ecrImage,
             envTask,
             createService = true,
             cwConfig
         } = config;
+
+        const resolvedEfsVolumes = efsVolumes || [];
 
         /**
          * Task Execute Role
@@ -151,17 +151,17 @@ class EcsService {
                 operatingSystemFamily: "LINUX",
                 cpuArchitecture: "X86_64"
             },
-            volumes: efs ? [{
-                name: "efs",
+            volumes: resolvedEfsVolumes.map(vol => ({
+                name: vol.name,
                 efsVolumeConfiguration: {
-                    fileSystemId: efs.id,
+                    fileSystemId: vol.efs.id,
                     transitEncryption: 'ENABLED',
                     authorizationConfig: {
-                        accessPointId: efsAccessPoint.id,
+                        accessPointId: vol.efsAccessPoint.id,
                         iam: 'ENABLED',
                     }
                 }
-            }] : [],
+            })),
             containerDefinitions: containerDefinitions || pulumi.all([logGroup.name, ecrImage]).apply(x => {
                 return JSON.stringify([
                     {
@@ -181,11 +181,11 @@ class EcsService {
                         essential: true,
                         environment: envTask || [],
                         environmentFiles: [],
-                        mountPoints: efs ? [{
-                            sourceVolume: "efs",
-                            containerPath: efsDirectory,
+                        mountPoints: resolvedEfsVolumes.map(vol => ({
+                            sourceVolume: vol.name,
+                            containerPath: vol.efsDirectory,
                             readOnly: false
-                        }] : [],
+                        })),
                         volumesFrom: [],
                         logConfiguration: {
                             logDriver: "awslogs",

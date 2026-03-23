@@ -13,7 +13,11 @@ import {UtilsInfra} from './src/common/UtilsInfra';
  */
 import {Alarms} from './src/modules/Alarms';
 import {AlarmsAdmin} from './src/modules/AlarmsAdmin';
-import {AlarmsAdminEB} from './src/modules/AlarmsAdminEB';
+import {AlarmsCIS} from './src/modules/AlarmsCIS';
+import {AlarmsGuardDuty} from './src/modules/AlarmsGuardDuty';
+import {AlarmsInspector} from './src/modules/AlarmsInspector';
+import {AlarmsSecurityHub} from './src/modules/AlarmsSecurityHub';
+
 import {Alb} from './src/modules/Alb';
 import {AlbListener} from './src/modules/AlbListener';
 import {ApiGateway} from './src/modules/ApiGateway';
@@ -77,7 +81,10 @@ export const AwsUtilsTools = {
 export const AwsUtilsModules = {
     Alarms,
     AlarmsAdmin,
-    AlarmsAdminEB,
+    AlarmsCIS,
+    AlarmsGuardDuty,
+    AlarmsInspector,
+    AlarmsSecurityHub,
     Alb,
     AlbListener,
     ApiGateway,

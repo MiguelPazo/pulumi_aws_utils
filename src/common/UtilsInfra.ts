@@ -98,9 +98,25 @@ class UtilsInfra {
         generalTags,
         provider?: aws.Provider,
         keyAlgorithm: CertificateKeyAlgorithm = CertificateKeyAlgorithm.RSA_2048,
-        domainsAlt: string[] = []
+        domainsAlt: string[] = [],
+        enableCaaRecords: boolean = true
     ): Promise<any> {
         const certOps: any = provider ? {provider: provider, dependsOn: [zone]} : {dependsOn: [zone]};
+
+        if (enableCaaRecords) {
+            new aws.route53.Record(`${domain}-caa`, {
+                name: domain,
+                zoneId: zone.zoneId,
+                type: "CAA",
+                records: [
+                    '0 issue "amazon.com"',
+                    '0 issuewild "amazon.com"',
+                    '0 issue "amazontrust.com"',
+                    '0 issuewild "amazontrust.com"',
+                ],
+                ttl: 3600
+            });
+        }
 
         const certificate = new aws.acm.Certificate(`${domain}-certificate`, {
             domainName: domain,

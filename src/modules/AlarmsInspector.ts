@@ -3,33 +3,33 @@
  */
 import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
-import {AlarmsAdminConfig, AlarmsAdminResult} from "../types";
+import {AlarmsInspectorConfig, AlarmsInspectorResult} from "../types";
 import {InitConfig} from "../types/module";
 import {getInit} from "../config";
 
-class AlarmsAdmin {
-    private static __instance: AlarmsAdmin;
+class AlarmsInspector {
+    private static __instance: AlarmsInspector;
     private config: InitConfig;
 
     constructor() {
         this.config = getInit();
     }
 
-    public static getInstance(): AlarmsAdmin {
+    public static getInstance(): AlarmsInspector {
         if (this.__instance == null) {
-            this.__instance = new AlarmsAdmin();
+            this.__instance = new AlarmsInspector();
         }
 
         return this.__instance;
     }
 
-    async main(adminConfig: AlarmsAdminConfig): Promise<AlarmsAdminResult> {
+    async main(inspectorConfig: AlarmsInspectorConfig): Promise<AlarmsInspectorResult> {
         const metricFilters: aws.cloudwatch.LogMetricFilter[] = [];
         const alarms: aws.cloudwatch.MetricAlarm[] = [];
-        const namespace = `${this.config.generalPrefix}/general`;
+        const namespace = `${this.config.generalPrefix}/inspector`;
 
         // Prioritize lambdaAlarmsArn over snsTopicArn
-        const actionArn = adminConfig.lambdaAlarmsArn || adminConfig.snsTopicArn;
+        const actionArn = inspectorConfig.lambdaAlarmsArn || inspectorConfig.snsTopicArn;
 
         if (!actionArn) {
             throw new Error("Either lambdaAlarmsArn or snsTopicArn must be provided");
@@ -37,25 +37,46 @@ class AlarmsAdmin {
 
         const metrics: { enabled: boolean; shortName: string; metricName: string; pattern: string; description: string }[] = [
             {
-                enabled: adminConfig.enableAdministratorAccessAttached !== false,
-                shortName: "admin-access-attached",
-                metricName: "AdministratorAccessAttached",
-                pattern: '{ ($.eventSource = "iam.amazonaws.com") && (($.eventName = "AttachRolePolicy") || ($.eventName = "AttachUserPolicy") || ($.eventName = "AttachGroupPolicy")) && ($.requestParameters.policyArn = "*AdministratorAccess") }',
-                description: "Monitors when AdministratorAccess policy is attached to a role, user, or group"
+                enabled: inspectorConfig.monitorEcrCriticalVulnerability !== false,
+                shortName: "insp-ecr-critical",
+                metricName: "EcrCriticalVulnerability",
+                pattern: '{ $.detail.severity = "CRITICAL" && $.detail.type = "PACKAGE_VULNERABILITY" && $.detail.resources[0].type = "AWS_ECR_CONTAINER_IMAGE" }',
+                description: "Inspector: Critical vulnerability found in ECR container image"
             },
             {
-                enabled: adminConfig.enableRoute53DnsChanges !== false,
-                shortName: "route53-dns-changes",
-                metricName: "Route53DnsChanges",
-                pattern: '{ ($.eventSource = "route53.amazonaws.com") && (($.eventName = "ChangeResourceRecordSets") || ($.eventName = "CreateHostedZone") || ($.eventName = "DeleteHostedZone")) }',
-                description: "Monitors Route53 DNS record changes (ChangeResourceRecordSets, CreateHostedZone, DeleteHostedZone)"
+                enabled: inspectorConfig.monitorEcrHighVulnerability !== false,
+                shortName: "insp-ecr-high",
+                metricName: "EcrHighVulnerability",
+                pattern: '{ $.detail.severity = "HIGH" && $.detail.type = "PACKAGE_VULNERABILITY" && $.detail.resources[0].type = "AWS_ECR_CONTAINER_IMAGE" }',
+                description: "Inspector: High vulnerability found in ECR container image"
+            },
+            {
+                enabled: inspectorConfig.monitorEc2CriticalVulnerability !== false,
+                shortName: "insp-ec2-critical",
+                metricName: "Ec2CriticalVulnerability",
+                pattern: '{ $.detail.severity = "CRITICAL" && $.detail.type = "PACKAGE_VULNERABILITY" && $.detail.resources[0].type = "AWS_EC2_INSTANCE" }',
+                description: "Inspector: Critical vulnerability found in EC2 instance"
+            },
+            {
+                enabled: inspectorConfig.monitorEc2HighVulnerability !== false,
+                shortName: "insp-ec2-high",
+                metricName: "Ec2HighVulnerability",
+                pattern: '{ $.detail.severity = "HIGH" && $.detail.type = "PACKAGE_VULNERABILITY" && $.detail.resources[0].type = "AWS_EC2_INSTANCE" }',
+                description: "Inspector: High vulnerability found in EC2 instance"
+            },
+            {
+                enabled: inspectorConfig.monitorEc2NetworkReachability !== false,
+                shortName: "insp-ec2-network-reach",
+                metricName: "Ec2NetworkReachability",
+                pattern: '{ $.detail.type = "NETWORK_REACHABILITY" && $.detail.resources[0].type = "AWS_EC2_INSTANCE" }',
+                description: "Inspector: Network reachability issue found in EC2 instance"
             }
         ];
 
         for (const metric of metrics) {
             if (metric.enabled) {
                 const {metricFilter, alarm} = this.createMetric(
-                    adminConfig.logGroupName,
+                    inspectorConfig.logGroupName,
                     actionArn,
                     namespace,
                     metric.shortName,
@@ -125,4 +146,4 @@ class AlarmsAdmin {
     }
 }
 
-export {AlarmsAdmin}
+export {AlarmsInspector}

@@ -49,6 +49,13 @@ export type EcsClusterModuleConfig = {
     provider?: string;
 };
 
+export type EfsVolumeConfig = {
+    name: string;
+    efs: pulumi.Output<aws.efs.FileSystem>;
+    efsAccessPoint: pulumi.Output<aws.efs.AccessPoint>;
+    efsDirectory: string;
+};
+
 export type EcsServiceModuleConfig = {
     service: EcsServiceConfig;
     ecsCluster: pulumi.Output<aws.ecs.Cluster>;
@@ -59,9 +66,7 @@ export type EcsServiceModuleConfig = {
     targetGroups?: pulumi.Output<aws.lb.TargetGroup>[];
     containerDefinitions?: any;
     cmDomain?: aws.servicediscovery.Service;
-    efs?: pulumi.Output<aws.efs.FileSystem>;
-    efsAccessPoint?: pulumi.Output<aws.efs.AccessPoint>;
-    efsDirectory?: string;
+    efsVolumes?: EfsVolumeConfig[];
     provider?: string;
     ecrImage?: pulumi.Output<string>;
     envTask?: { name: string; value: string }[];

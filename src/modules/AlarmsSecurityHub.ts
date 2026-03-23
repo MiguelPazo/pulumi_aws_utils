@@ -3,33 +3,33 @@
  */
 import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
-import {AlarmsAdminConfig, AlarmsAdminResult} from "../types";
+import {AlarmsSecurityHubConfig, AlarmsSecurityHubResult} from "../types";
 import {InitConfig} from "../types/module";
 import {getInit} from "../config";
 
-class AlarmsAdmin {
-    private static __instance: AlarmsAdmin;
+class AlarmsSecurityHub {
+    private static __instance: AlarmsSecurityHub;
     private config: InitConfig;
 
     constructor() {
         this.config = getInit();
     }
 
-    public static getInstance(): AlarmsAdmin {
+    public static getInstance(): AlarmsSecurityHub {
         if (this.__instance == null) {
-            this.__instance = new AlarmsAdmin();
+            this.__instance = new AlarmsSecurityHub();
         }
 
         return this.__instance;
     }
 
-    async main(adminConfig: AlarmsAdminConfig): Promise<AlarmsAdminResult> {
+    async main(shConfig: AlarmsSecurityHubConfig): Promise<AlarmsSecurityHubResult> {
         const metricFilters: aws.cloudwatch.LogMetricFilter[] = [];
         const alarms: aws.cloudwatch.MetricAlarm[] = [];
-        const namespace = `${this.config.generalPrefix}/general`;
+        const namespace = `${this.config.generalPrefix}/securityhub`;
 
         // Prioritize lambdaAlarmsArn over snsTopicArn
-        const actionArn = adminConfig.lambdaAlarmsArn || adminConfig.snsTopicArn;
+        const actionArn = shConfig.lambdaAlarmsArn || shConfig.snsTopicArn;
 
         if (!actionArn) {
             throw new Error("Either lambdaAlarmsArn or snsTopicArn must be provided");
@@ -37,25 +37,46 @@ class AlarmsAdmin {
 
         const metrics: { enabled: boolean; shortName: string; metricName: string; pattern: string; description: string }[] = [
             {
-                enabled: adminConfig.enableAdministratorAccessAttached !== false,
-                shortName: "admin-access-attached",
-                metricName: "AdministratorAccessAttached",
-                pattern: '{ ($.eventSource = "iam.amazonaws.com") && (($.eventName = "AttachRolePolicy") || ($.eventName = "AttachUserPolicy") || ($.eventName = "AttachGroupPolicy")) && ($.requestParameters.policyArn = "*AdministratorAccess") }',
-                description: "Monitors when AdministratorAccess policy is attached to a role, user, or group"
+                enabled: shConfig.monitorS3DisableBlockPublicAccess !== false,
+                shortName: "sh-s3-disable-block-public-access",
+                metricName: "S3DisableBlockPublicAccess",
+                pattern: '{ $.detail.findings[0].Compliance.Status = "FAILED" && $.detail.findings[0].Compliance.SecurityControlId = "S3.1" }',
+                description: "SecurityHub S3.1 - S3 general purpose bucket has Block Public Access settings disabled"
             },
             {
-                enabled: adminConfig.enableRoute53DnsChanges !== false,
-                shortName: "route53-dns-changes",
-                metricName: "Route53DnsChanges",
-                pattern: '{ ($.eventSource = "route53.amazonaws.com") && (($.eventName = "ChangeResourceRecordSets") || ($.eventName = "CreateHostedZone") || ($.eventName = "DeleteHostedZone")) }',
-                description: "Monitors Route53 DNS record changes (ChangeResourceRecordSets, CreateHostedZone, DeleteHostedZone)"
+                enabled: shConfig.monitorS3PublicRead !== false,
+                shortName: "sh-s3-public-read",
+                metricName: "S3PublicRead",
+                pattern: '{ $.detail.findings[0].Compliance.Status = "FAILED" && $.detail.findings[0].Compliance.SecurityControlId = "S3.2" }',
+                description: "SecurityHub S3.2 - S3 general purpose bucket has public read access"
+            },
+            {
+                enabled: shConfig.monitorS3PublicWrite !== false,
+                shortName: "sh-s3-public-write",
+                metricName: "S3PublicWrite",
+                pattern: '{ $.detail.findings[0].Compliance.Status = "FAILED" && $.detail.findings[0].Compliance.SecurityControlId = "S3.3" }',
+                description: "SecurityHub S3.3 - S3 general purpose bucket has public write access"
+            },
+            {
+                enabled: shConfig.monitorS3ServerSideEncryption !== false,
+                shortName: "sh-s3-server-side-encryption",
+                metricName: "S3ServerSideEncryption",
+                pattern: '{ $.detail.findings[0].Compliance.Status = "FAILED" && $.detail.findings[0].Compliance.SecurityControlId = "S3.6" }',
+                description: "SecurityHub S3.6 - S3 general purpose bucket policy should restrict access to other AWS accounts"
+            },
+            {
+                enabled: shConfig.monitorS3BlockPublicAccess !== false,
+                shortName: "sh-s3-block-public-access",
+                metricName: "S3BlockPublicAccess",
+                pattern: '{ $.detail.findings[0].Compliance.Status = "FAILED" && $.detail.findings[0].Compliance.SecurityControlId = "S3.8" }',
+                description: "SecurityHub S3.8 - S3 Block Public Access setting is not enabled at bucket level"
             }
         ];
 
         for (const metric of metrics) {
             if (metric.enabled) {
                 const {metricFilter, alarm} = this.createMetric(
-                    adminConfig.logGroupName,
+                    shConfig.logGroupName,
                     actionArn,
                     namespace,
                     metric.shortName,
@@ -125,4 +146,4 @@ class AlarmsAdmin {
     }
 }
 
-export {AlarmsAdmin}
+export {AlarmsSecurityHub}

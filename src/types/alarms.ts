@@ -90,39 +90,11 @@ export type AlarmsResult = {
     lambdaNotificationsSnsSubscription?: aws.sns.TopicSubscription;
 };
 
-export type AlarmsAdminEBConfig = {
-    snsArn: pulumi.Input<string>;
-    kmsKey: pulumi.Output<aws.kms.Key>;
-    lambdaFunction: aws.lambda.Function;
-    monitorVpcChanges?: boolean;
-    monitorRouteTableChanges?: boolean;
-    monitorSecurityGroupChanges?: boolean;
-    monitorNetworkAclChanges?: boolean;
-    monitorInternetGatewayChanges?: boolean;
-    monitorNetworkGatewayChanges?: boolean;
-    monitorAwsConfigChanges?: boolean;
-    monitorCloudTrailChanges?: boolean;
-    monitorKmsChanges?: boolean;
-    monitorS3Changes?: boolean;
-    monitorIamChanges?: boolean;
-    monitorConsoleLoginFailures?: boolean;
-    monitorRootAccountAccess?: boolean;
-    monitorAccessWithoutMfa?: boolean;
-    monitorUnauthorizedAccess?: boolean;
-};
 
-export type AlarmsAdminEBResult = {
-    logGroup: aws.cloudwatch.LogGroup;
-    logGroupPolicy: aws.cloudwatch.LogResourcePolicy;
-    eventRules: aws.cloudwatch.EventRule[];
-    eventTargets: aws.cloudwatch.EventTarget[];
-};
-
-export type AlarmsAdminConfig = {
-    cloudTrailLogGroupName: pulumi.Input<string>;
+export type AlarmsCISConfig = {
+    logGroupName: pulumi.Input<string>;
     snsTopicArn?: pulumi.Input<string>;
     lambdaAlarmsArn?: pulumi.Input<string>;
-    alarmNamespace?: string; // Default: "CISBenchmark"
     // All controls are enabled by default (true). Set to false to disable.
     enableUnauthorizedApiCalls?: boolean; // Default: true
     enableConsoleSignInWithoutMfa?: boolean; // Default: true
@@ -140,6 +112,78 @@ export type AlarmsAdminConfig = {
     enableVpcChanges?: boolean; // Default: true
     // Exclude specific event sources from UnauthorizedApiCalls metric
     excludeUnauthorizedApiCallsEventSources?: string[]; // Example: ["frauddetector.amazonaws.com", "macie2.amazonaws.com"]
+};
+
+export type AlarmsCISResult = {
+    metricFilters: aws.cloudwatch.LogMetricFilter[];
+    alarms: aws.cloudwatch.MetricAlarm[];
+};
+
+export type AlarmsGuardDutyConfig = {
+    logGroupName: pulumi.Input<string>;
+    snsTopicArn?: pulumi.Input<string>;
+    lambdaAlarmsArn?: pulumi.Input<string>;
+    // All controls are enabled by default (true). Set to false to disable.
+    monitorCredentialExfiltrationOutsideAws?: boolean; // Default: true
+    monitorCredentialExfiltrationInsideAws?: boolean; // Default: true
+    monitorConsoleLoginUnusualIp?: boolean; // Default: true
+    monitorAnomalousCredentialAccess?: boolean; // Default: true
+    monitorMaliciousIpCaller?: boolean; // Default: true
+    monitorEcsReverseShell?: boolean; // Default: true
+    monitorEcsSuspiciousTool?: boolean; // Default: true
+    monitorEcsNewBinaryExecuted?: boolean; // Default: true
+    monitorEcsProcessDiscovered?: boolean; // Default: true
+    monitorEcsProcessInjected?: boolean; // Default: true
+    monitorEcsCGroupsReleaseAgent?: boolean; // Default: true
+    monitorEc2MetadataServiceAccess?: boolean; // Default: true
+    monitorEcsMetadataServiceAccess?: boolean; // Default: true
+};
+
+export type AlarmsGuardDutyResult = {
+    metricFilters: aws.cloudwatch.LogMetricFilter[];
+    alarms: aws.cloudwatch.MetricAlarm[];
+};
+
+export type AlarmsSecurityHubConfig = {
+    logGroupName: pulumi.Input<string>;
+    snsTopicArn?: pulumi.Input<string>;
+    lambdaAlarmsArn?: pulumi.Input<string>;
+    // All controls are enabled by default (true). Set to false to disable.
+    monitorS3DisableBlockPublicAccess?: boolean; // Default: true - S3.1
+    monitorS3PublicRead?: boolean; // Default: true - S3.2
+    monitorS3PublicWrite?: boolean; // Default: true - S3.3
+    monitorS3ServerSideEncryption?: boolean; // Default: true - S3.6
+    monitorS3BlockPublicAccess?: boolean; // Default: true - S3.8
+};
+
+export type AlarmsSecurityHubResult = {
+    metricFilters: aws.cloudwatch.LogMetricFilter[];
+    alarms: aws.cloudwatch.MetricAlarm[];
+};
+
+export type AlarmsInspectorConfig = {
+    logGroupName: pulumi.Input<string>;
+    snsTopicArn?: pulumi.Input<string>;
+    lambdaAlarmsArn?: pulumi.Input<string>;
+    // All controls are enabled by default (true). Set to false to disable.
+    monitorEcrCriticalVulnerability?: boolean; // Default: true
+    monitorEcrHighVulnerability?: boolean; // Default: true
+    monitorEc2CriticalVulnerability?: boolean; // Default: true
+    monitorEc2HighVulnerability?: boolean; // Default: true
+    monitorEc2NetworkReachability?: boolean; // Default: true
+};
+
+export type AlarmsInspectorResult = {
+    metricFilters: aws.cloudwatch.LogMetricFilter[];
+    alarms: aws.cloudwatch.MetricAlarm[];
+};
+
+export type AlarmsAdminConfig = {
+    logGroupName: pulumi.Input<string>;
+    snsTopicArn?: pulumi.Input<string>;
+    lambdaAlarmsArn?: pulumi.Input<string>;
+    enableRoute53DnsChanges?: boolean; // Default: true
+    enableAdministratorAccessAttached?: boolean; // Default: true
 };
 
 export type AlarmsAdminResult = {
