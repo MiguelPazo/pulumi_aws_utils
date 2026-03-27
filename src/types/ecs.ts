@@ -44,7 +44,7 @@ export type EcsServiceConfig = {
 };
 
 export type EcsClusterModuleConfig = {
-    logGroupKmsKey: pulumi.Output<aws.kms.Key>;
+    logGroupKmsKey?: pulumi.Output<aws.kms.Key>;
     clusterName?: string;
     provider?: string;
 };

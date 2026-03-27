@@ -34,7 +34,7 @@ class EcsCluster {
         const logGroup = new aws.cloudwatch.LogGroup(`${generalPrefixObj}-ecs-loggroup`, {
             name: `/aws/ecs/cluster/${generalPrefix}`,
             retentionInDays: this.config.cloudwatchRetentionLogs,
-            kmsKeyId: logGroupKmsKey.arn,
+            kmsKeyId: logGroupKmsKey ? logGroupKmsKey.arn : undefined,
             tags: {
                 ...this.config.generalTags,
                 Name: `/aws/ecs/cluster/${generalPrefix}`

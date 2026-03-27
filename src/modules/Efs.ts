@@ -180,6 +180,52 @@ class Efs {
         }
 
         /**
+         * File System Policy - Enforce TLS
+         */
+        new aws.efs.FileSystemPolicy(`${this.config.project}-efs-${efsConfig.name}-policy`, {
+            fileSystemId: fileSystem.id,
+            policy: pulumi.all([this.config.accountId, fileSystem.arn]).apply(([accountId, fsArn]) => {
+                return JSON.stringify({
+                    Version: "2012-10-17",
+                    Statement: [
+                        {
+                            Sid: "NonSecureTransport",
+                            Effect: "Deny",
+                            Principal: {
+                                AWS: "*"
+                            },
+                            Action: "*",
+                            Resource: fsArn,
+                            Condition: {
+                                Bool: {
+                                    "aws:SecureTransport": "false"
+                                }
+                            }
+                        },
+                        {
+                            Sid: "NonSecureTransportAccessedViaMountTarget",
+                            Effect: "Allow",
+                            Principal: {
+                                AWS: "*"
+                            },
+                            Action: [
+                                "elasticfilesystem:ClientWrite",
+                                "elasticfilesystem:ClientRootAccess",
+                                "elasticfilesystem:ClientMount"
+                            ],
+                            Resource: fsArn,
+                            Condition: {
+                                Bool: {
+                                    "elasticfilesystem:AccessedViaMountTarget": "true"
+                                }
+                            }
+                        }
+                    ]
+                });
+            })
+        });
+
+        /**
          * Handle multi-region replication
          */
         if (multiRegion && !failoverReplica) {

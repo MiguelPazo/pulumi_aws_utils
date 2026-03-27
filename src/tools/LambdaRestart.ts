@@ -48,7 +48,10 @@ class LambdaRestart {
                 type: "SecureString",
                 keyId: pulumi.output(ssmKmsKey).apply(key => key.id),
                 value: JSON.stringify({
-                    LOG_LEVEL: "INFO"
+                    LOG_LEVEL: "INFO",
+                    ...(config.redisHost ? {REDIS_HOST: config.redisHost} : {}),
+                    ...(config.redisPort ? {REDIS_PORT: config.redisPort} : {}),
+                    ...(config.redisAuth ? {REDIS_AUTH: config.redisAuth} : {}),
                 }),
                 tags: {
                     ...this.config.generalTags,
@@ -139,11 +142,17 @@ class LambdaRestart {
             },
             environment: enableParamsSecure ? {
                 variables: {
-                    PARAM_STORE_PATH: paramStorePath
+                    PARAM_STORE_PATH: paramStorePath,
+                    ...(config.redisHost ? {REDIS_HOST: config.redisHost} : {}),
+                    ...(config.redisPort ? {REDIS_PORT: config.redisPort} : {}),
+                    ...(config.redisAuth ? {REDIS_AUTH: config.redisAuth} : {}),
                 }
             } : {
                 variables: {
-                    LOG_LEVEL: "INFO"
+                    LOG_LEVEL: "INFO",
+                    ...(config.redisHost ? {REDIS_HOST: config.redisHost} : {}),
+                    ...(config.redisPort ? {REDIS_PORT: config.redisPort} : {}),
+                    ...(config.redisAuth ? {REDIS_AUTH: config.redisAuth} : {}),
                 }
             },
             tags: {

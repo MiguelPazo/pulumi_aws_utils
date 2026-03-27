@@ -9,4 +9,7 @@ export type LambdaRestartConfig = {
         cluster_name: string;
         service_name: string;
     };
+    redisHost?: string;
+    redisPort?: string;
+    redisAuth?: string;
 };

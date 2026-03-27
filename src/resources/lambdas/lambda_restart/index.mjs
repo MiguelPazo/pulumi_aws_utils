@@ -1,5 +1,6 @@
 import {DescribeServicesCommand, ECSClient, UpdateServiceCommand} from '@aws-sdk/client-ecs';
 import {GetParameterCommand, SSMClient} from '@aws-sdk/client-ssm';
+import net from 'net';
 
 // Global variables for environment configuration
 let ENV_CONFIG = null;
@@ -43,6 +44,60 @@ async function loadEnvironment() {
     return ENV_CONFIG;
 }
 
+/**
+ * Execute FLUSHALL on a Redis instance using raw RESP protocol
+ */
+async function redisFlushAll(host, port, authToken) {
+    return new Promise((resolve, reject) => {
+        const socket = new net.Socket();
+        let response = '';
+
+        socket.setTimeout(10000);
+
+        socket.connect(parseInt(port), host, () => {
+            console.log(`Connected to Redis at ${host}:${port}`);
+
+            if (authToken) {
+                socket.write(`*2\r\n$4\r\nAUTH\r\n$${authToken.length}\r\n${authToken}\r\n`);
+            } else {
+                socket.write("*1\r\n$8\r\nFLUSHALL\r\n");
+            }
+        });
+
+        socket.on('data', (data) => {
+            response += data.toString();
+
+            if (authToken && response.includes('+OK') && !response.includes('FLUSHALL')) {
+                console.log('Redis AUTH successful');
+                response = '';
+                socket.write("*1\r\n$8\r\nFLUSHALL\r\n");
+                return;
+            }
+
+            if (response.includes('+OK') || response.includes('-')) {
+                socket.write("*1\r\n$4\r\nQUIT\r\n");
+                socket.end();
+
+                if (response.includes('-ERR') || response.includes('-NOAUTH')) {
+                    reject(new Error(`Redis error: ${response.trim()}`));
+                } else {
+                    console.log('Redis FLUSHALL executed successfully');
+                    resolve(response.trim());
+                }
+            }
+        });
+
+        socket.on('timeout', () => {
+            socket.destroy();
+            reject(new Error('Redis connection timeout'));
+        });
+
+        socket.on('error', (err) => {
+            reject(new Error(`Redis connection error: ${err.message}`));
+        });
+    });
+}
+
 // Initialize ECS client
 const ecsClient = new ECSClient({});
 
@@ -66,6 +121,16 @@ export const handler = async (event, context) => {
 
         if (!clusterName || !serviceName) {
             throw new Error('cluster_name and service_name are required in the event');
+        }
+
+        // Execute Redis FLUSHALL if REDIS_HOST is configured
+        const redisHost = config.REDIS_HOST || process.env.REDIS_HOST;
+        if (redisHost) {
+            const redisPort = config.REDIS_PORT || process.env.REDIS_PORT || '6379';
+            const redisAuth = config.REDIS_AUTH || process.env.REDIS_AUTH;
+
+            console.log(`Executing FLUSHALL on Redis at ${redisHost}:${redisPort}`);
+            await redisFlushAll(redisHost, redisPort, redisAuth);
         }
 
         console.log(`Restarting ECS service: ${serviceName} in cluster: ${clusterName}`);
