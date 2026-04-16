@@ -30,7 +30,6 @@ export type ApiGatewayModuleConfig = {
 };
 
 export type ApiGatewayVpcLinkResult = {
-    nlb: aws.lb.LoadBalancer;
-    vpcLink: aws.apigateway.VpcLink;
+    vpcLink: aws.apigatewayv2.VpcLink;
     securityGroup: aws.ec2.SecurityGroup;
 };

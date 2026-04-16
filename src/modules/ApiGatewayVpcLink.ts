@@ -27,17 +27,17 @@ class ApiGatewayVpcLink {
         name: string,
         vpc: pulumi.Output<VpcImportResult>
     ): Promise<ApiGatewayVpcLinkResult> {
-        const securityGroup = new aws.ec2.SecurityGroup(`${this.config.project}-${name}-apigw-nlb-sg`, {
-            name: `${this.config.generalPrefixShort}-${name}-apigw-nlb-sg`,
-            description: `${this.config.generalPrefixShort}-${name}-apigw-nlb-sg`,
+        const securityGroup = new aws.ec2.SecurityGroup(`${this.config.project}-${name}-apigw-vpclink-sg`, {
+            name: `${this.config.generalPrefixShort}-${name}-apigw-vpclink-sg`,
+            description: `${this.config.generalPrefixShort}-${name}-apigw-vpclink-sg`,
             vpcId: vpc.id,
             tags: {
                 ...this.config.generalTags,
-                Name: `${this.config.generalPrefixShort}-${name}-apigw-nlb-sg`,
+                Name: `${this.config.generalPrefixShort}-${name}-apigw-vpclink-sg`,
             },
         });
 
-        new aws.vpc.SecurityGroupEgressRule(`${this.config.project}-${name}-apigw-nlb-sg-rule-1`, {
+        new aws.vpc.SecurityGroupEgressRule(`${this.config.project}-${name}-apigw-vpclink-sg-rule-1`, {
             securityGroupId: securityGroup.id,
             description: "Egress to all",
             ipProtocol: aws.ec2.ProtocolType.All,
@@ -46,25 +46,10 @@ class ApiGatewayVpcLink {
             cidrIpv4: "0.0.0.0/0"
         });
 
-        const nlb = new aws.lb.LoadBalancer(`${this.config.project}-${name}-apigw-nlb`, {
-            name: `${this.config.generalPrefix}-${name}-apigw-nlb`,
-            enableDeletionProtection: this.config.deleteProtection,
-            internal: true,
-            loadBalancerType: aws.alb.LoadBalancerType.Network,
-            enableCrossZoneLoadBalancing: true,
-            subnets: vpc.privateSubnetIds,
-            securityGroups: [securityGroup.id],
-            enforceSecurityGroupInboundRulesOnPrivateLinkTraffic: "off",
-            tags: {
-                ...this.config.generalTags,
-                Name: `${this.config.generalPrefix}-${name}-apigw-nlb`,
-            }
-        });
-
-        const vpcLink = new aws.apigateway.VpcLink(`${this.config.project}-${name}-apigw-vpclink`, {
+        const vpcLink = new aws.apigatewayv2.VpcLink(`${this.config.project}-${name}-apigw-vpclink`, {
             name: `${this.config.generalPrefix}-${name}-apigw-vpclink`,
-            description: `${this.config.generalPrefix}-${name}-apigw-vpclink`,
-            targetArn: nlb.arn,
+            securityGroupIds: [securityGroup.id],
+            subnetIds: vpc.privateSubnetIds,
             tags: {
                 ...this.config.generalTags,
                 Name: `${this.config.generalPrefix}-${name}-apigw-vpclink`,
@@ -72,7 +57,6 @@ class ApiGatewayVpcLink {
         });
 
         return {
-            nlb,
             vpcLink,
             securityGroup
         } as ApiGatewayVpcLinkResult
