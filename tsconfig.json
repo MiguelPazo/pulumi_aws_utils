@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
     "strict": false,
+    "declaration": true,
     "outDir": "bin",
     "target": "es2020",
     "module": "commonjs",

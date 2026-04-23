@@ -1,11 +1,10 @@
 {
   "name": "@miguelpazo/pulumi_aws_toolkit",
-  "main": "index.ts",
-  "version": "1.0.0",
+  "main": "bin/index.js",
+  "types": "bin/index.d.ts",
+  "version": "1.0.1",
   "description": "Reusable Pulumi TypeScript modules for AWS: networking, compute, data, security, observability and multi-region failover.",
   "files": [
-    "index.ts",
-    "src/",
     "bin/"
   ],
   "engines": {
@@ -14,8 +13,9 @@
   },
   "scripts": {
     "clean": "rimraf bin",
-    "build": "tsc",
-    "rebuild": "npm run clean && npm run build"
+    "build": "tsc && copyfiles -u 1 \"src/resources/**/*\" bin/",
+    "rebuild": "npm run clean && npm run build",
+    "prepublishOnly": "npm run rebuild"
   },
   "keywords": [
     "typescript",
@@ -41,6 +41,7 @@
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^20.9.1",
+    "copyfiles": "^2.4.1",
     "rimraf": "^6.1.3",
     "typescript": "^5.0.0"
   },
