@@ -224,7 +224,7 @@ files using the syntax `[[filename.json]]`:
 ## Usage Example
 
 ```typescript
-import {AwsUtilsModules} from 'pulumi_aws_utils';
+import {AwsUtilsModules} from '@miguelpazo/pulumi_aws_tools';
 
 const kmsKey = await AwsUtilsModules.Kms.getInstance().main({
     name: 'ssm-params'

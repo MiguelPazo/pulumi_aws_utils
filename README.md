@@ -1,4 +1,4 @@
-# @miguelpazo/pulumi_aws_utils
+# @miguelpazo/pulumi_aws_tools
 
 ![](https://img.shields.io/badge/LastVersion-v1.0.0-green.svg)
 ![](https://img.shields.io/badge/Status-Stable-green.svg)
@@ -24,7 +24,7 @@ This library is intended to be used **as a dependency** — it is not a deployab
 ## Installation
 
 ```bash
-npm install @miguelpazo/pulumi_aws_utils
+npm install @miguelpazo/pulumi_aws_tools
 ```
 
 Pulumi peer dependencies must already exist in the consuming project.
@@ -41,7 +41,7 @@ import {
     AwsUtilsModules,
     AwsUtilsTools,
     AwsUtilsCommon,
-} from "@miguelpazo/pulumi_aws_utils";
+} from "@miguelpazo/pulumi_aws_tools";
 
 const providerVirginia = new aws.Provider("provider-virginia", {region: "us-east-1"});
 
