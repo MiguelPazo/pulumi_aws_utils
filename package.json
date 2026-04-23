@@ -1,8 +1,13 @@
 {
-  "name": "@miguelpazo/pulumi_aws_tools",
+  "name": "@miguelpazo/pulumi_aws_toolkit",
   "main": "index.ts",
   "version": "1.0.0",
   "description": "Reusable Pulumi TypeScript modules for AWS: networking, compute, data, security, observability and multi-region failover.",
+  "files": [
+    "index.ts",
+    "src/",
+    "bin/"
+  ],
   "engines": {
     "node": ">=22.14.0",
     "npm": ">=10.9.2"
