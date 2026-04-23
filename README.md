@@ -1,6 +1,6 @@
 # @miguelpazo/pulumi_aws_toolkit
 
-![](https://img.shields.io/badge/LastVersion-v1.0.1-green.svg)
+![](https://img.shields.io/badge/LastVersion-v1.0.2-green.svg)
 ![](https://img.shields.io/badge/Status-Stable-green.svg)
 ![](https://img.shields.io/badge/Pulumi-3.213%2B-8A3391.svg)
 ![](https://img.shields.io/badge/AWS-Provider%207.15%2B-FF9900.svg)
