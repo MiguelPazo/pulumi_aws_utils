@@ -2,6 +2,7 @@
   "name": "@miguelpazo/pulumi_aws_utils",
   "main": "index.ts",
   "version": "1.0.0",
+  "description": "Reusable Pulumi TypeScript modules for AWS: networking, compute, data, security, observability and multi-region failover.",
   "engines": {
     "node": ">=22.14.0",
     "npm": ">=10.9.2"
@@ -12,8 +13,23 @@
   "keywords": [
     "typescript",
     "pulumi",
-    "aws"
+    "aws",
+    "infrastructure-as-code",
+    "iac",
+    "ecs",
+    "rds",
+    "cloudfront",
+    "multi-region",
+    "failover"
   ],
+  "homepage": "https://github.com/MiguelPazo/pulumi_aws_utils#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MiguelPazo/pulumi_aws_utils.git"
+  },
+  "bugs": {
+    "url": "https://github.com/MiguelPazo/pulumi_aws_utils/issues"
+  },
   "author": "Miguel Pazo <https://miguelpazo.com>",
   "license": "MIT",
   "devDependencies": {
